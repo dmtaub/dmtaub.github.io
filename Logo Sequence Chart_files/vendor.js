@@ -3727,15 +3727,15 @@ if(hostname && (self.location.protocol === "https:" || urlParts.hostname === "0.
 	protocol = self.location.protocol;
 }
 
-var socketUrl = url.format({
+/*var socketUrl = url.format({
 	protocol: protocol,
 	auth: urlParts.auth,
 	hostname: hostname,
 	port: (urlParts.port === "0") ? self.location.port : urlParts.port,
 	pathname: urlParts.path == null || urlParts.path === "/" ? "/sockjs-node" : urlParts.path
 });
-
-socket(socketUrl, onSocketMsg);
+*/
+//socket(socketUrl, onSocketMsg);
 
 function reloadApp() {
 	if(hot) {
