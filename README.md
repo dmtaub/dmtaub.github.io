@@ -1,0 +1,2 @@
+# static-home
+Static homepage
