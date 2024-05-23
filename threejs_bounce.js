@@ -15,8 +15,11 @@ function init() {
     // Set up renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-    
+
+    // Append renderer to the div with class="interactive"
+    const container = document.querySelector('.interactive');
+    container.appendChild(renderer.domElement);
+
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
     windowWidth = window.innerWidth;
