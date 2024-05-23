@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DT's Personal Webpage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+        .interactive {
+            width: 100%;
+            height: 400px;
+            background-color: #e2e2e2;
+            text-align: center;
+            line-height: 400px;
+            font-size: 20px;
+            color: #666;
+            margin-top: 20px;
+        }
+        nav {
+            margin: 20px 0;
+            text-align: center;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #333;
+        }
+    </style>
+    <script>
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+        }
+        window.addEventListener('hashchange', () => {
+            const sectionId = location.hash.substring(1);
+            showSection(sectionId);
+        });
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialSectionId = location.hash.substring(1) || 'interests';
+            showSection(initialSectionId);
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <h1>DT's Personal Webpage</h1>
+    </header>
+    <nav>
+        <a href="#interests">Interests</a>
+        <a href="#projects">Projects</a>
+        <a href="#philosophy">Philosophy</a>
+    </nav>
+    <div class="container">
+        <div class="section" id="interests">
+            <h2>Interests</h2>
+            <p>Here you can write about your interests, such as hobbies, professional interests, or any activities you enjoy.</p>
+        </div>
+        <div class="section" id="projects">
+            <h2>Projects</h2>
+            <p>Describe some of your key projects here. You can include links, images, and brief descriptions of each project.</p>
+        </div>
+        <div class="section" id="philosophy">
+            <h2>Philosophy</h2>
+            <p>Share your personal or professional philosophy here. This could include your approach to work, life, or any guiding principles you follow.</p>
+        </div>
+        <div class="interactive">
+            Placeholder for interactive 3D elements or a game to showcase your expertise.
+        </div>
+    </div>
+    <footer>
+        <p>© 2024 DT. All rights reserved.</p>
+    </footer>
+</body>
+</html>
