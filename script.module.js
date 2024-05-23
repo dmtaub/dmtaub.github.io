@@ -20,6 +20,5 @@ export function init(){
     });
 }
 
-window.
 // create bindings when first loaded
 init();
