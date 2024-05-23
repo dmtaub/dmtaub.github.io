@@ -2,7 +2,13 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.m
 
 let scene, camera, renderer;
 let ball, ballVelocity;
-let windowWidth, windowHeight;
+let container, containerWidth, containerHeight;
+
+
+export function start(){
+    init();
+    animate();
+}
 
 function init() {
     // Set up scene
@@ -14,16 +20,14 @@ function init() {
     
     // Set up renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    // Append renderer to the div with class="interactive"
-    const container = document.querySelector('.interactive');
+    container = document.querySelector('.interactive');
+    containerWidth = container.clientWidth;
+    containerHeight = container.clientHeight;
+    renderer.setSize(containerWidth, containerHeight);
     container.appendChild(renderer.domElement);
-
+    
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
-    windowWidth = window.innerWidth;
-    windowHeight = window.innerHeight;
     
     // Create a ball
     const geometry = new THREE.SphereGeometry(0.5, 32, 32);
@@ -41,11 +45,11 @@ function animate() {
     // Update ball position
     ball.position.add(ballVelocity);
     
-    // Check for collisions with the viewport edges
-    if (ball.position.x + 0.5 > windowWidth / window.innerWidth * 2 - 1 || ball.position.x - 0.5 < -windowWidth / window.innerWidth * 2) {
+    // Check for collisions with the container edges
+    if (ball.position.x + 0.5 > containerWidth / window.innerWidth * 2 - 1 || ball.position.x - 0.5 < -containerWidth / window.innerWidth * 2) {
         ballVelocity.x = -ballVelocity.x;
     }
-    if (ball.position.y + 0.5 > windowHeight / window.innerHeight * 2 - 1 || ball.position.y - 0.5 < -windowHeight / window.innerHeight * 2) {
+    if (ball.position.y + 0.5 > containerHeight / window.innerHeight * 2 - 1 || ball.position.y - 0.5 < -containerHeight / window.innerHeight * 2) {
         ballVelocity.y = -ballVelocity.y;
     }
     
@@ -53,16 +57,11 @@ function animate() {
 }
 
 function onWindowResize() {
-    windowWidth = window.innerWidth;
-    windowHeight = window.innerHeight;
+    containerWidth = container.clientWidth;
+    containerHeight = container.clientHeight;
     
-    camera.aspect = windowWidth / windowHeight;
+    camera.aspect = containerWidth / containerHeight;
     camera.updateProjectionMatrix();
     
-    renderer.setSize(windowWidth, windowHeight);
+    renderer.setSize(containerWidth, containerHeight);
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    init();
-    animate();
-});

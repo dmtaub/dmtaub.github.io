@@ -1,3 +1,5 @@
+import { start } from './threejs_bounce.js';
+
 
 export function showSection(sectionId) {
     const sections = document.querySelectorAll('.section');
@@ -22,4 +24,5 @@ export function init(){
 // create bindings when first loaded
 document.addEventListener('DOMContentLoaded', () => {
     init();
+    start();
 });
