@@ -3,7 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.m
 let scene, camera, renderer;
 let ball, ballVelocity;
 let container, containerWidth, containerHeight;
-
+const ballRadius = 0.5;
 
 export function start(){
     init();
@@ -33,7 +33,7 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
 
     // Create a ball
-    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const geometry = new THREE.SphereGeometry(ballRadius, 32, 32);
     const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
     ball = new THREE.Mesh(geometry, material);
     scene.add(ball);
@@ -48,13 +48,19 @@ function animate() {
     // Update ball position
     ball.position.add(ballVelocity);
 
+    // Calculate the boundaries for collision detection
+    const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+    const frustumWidth = frustumHeight * camera.aspect;
+    const ballRadius = 0.5;
+    
     // Check for collisions with the container edges
-    if (ball.position.x + 0.5 > containerWidth / window.innerWidth * 2 - 1 || ball.position.x - 0.5 < -containerWidth / window.innerWidth * 2) {
+    if (ball.position.x + ballRadius > frustumWidth / 2 || ball.position.x - ballRadius < -frustumWidth / 2) {
         ballVelocity.x = -ballVelocity.x;
     }
-    if (ball.position.y + 0.5 > containerHeight / window.innerHeight * 2 - 1 || ball.position.y - 0.5 < -containerHeight / window.innerHeight * 2) {
+    if (ball.position.y + ballRadius > frustumHeight / 2 || ball.position.y - ballRadius < -frustumHeight / 2) {
         ballVelocity.y = -ballVelocity.y;
     }
+    
 
     renderer.render(scene, camera);
 }
