@@ -10,15 +10,16 @@ export function showSection(sectionId) {
     }
 }
 export function init(){
+    const initialSectionId = location.hash.substring(1) || 'interests';
+    showSection(initialSectionId);
+
     window.addEventListener('hashchange', () => {
         const sectionId = location.hash.substring(1);
         showSection(sectionId);
     });
-    document.addEventListener('DOMContentLoaded', () => {
-        const initialSectionId = location.hash.substring(1) || 'interests';
-        showSection(initialSectionId);
-    });
 }
 
 // create bindings when first loaded
-init();
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});
