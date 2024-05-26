@@ -15,21 +15,21 @@ header {
 }
 
 header img.header-robot {
-    width: 150px; /* Adjust the size as needed */
+    width: 15%; /* Adjust the size as needed */
     height: auto;
-    margin: 0 10px; /* Adjust spacing as needed */
+    margin: auto; /* Adjust spacing as needed */
 }
 
 
 .header-title h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 1.75em; /* Responsive font size */
     color: #fff;
 }
 
 .header-title h2 {
     margin: 0;
-    font-size: 16px;
+    font-size: 1.25em; /* Responsive font size */
     font-style: italic;
     color: #fff;
 }
@@ -80,4 +80,29 @@ nav a {
     margin: 0 10px;
     text-decoration: none;
     color: #333;
+}
+
+
+@media (max-width: 600px) {
+    header {
+        flex-direction: column; /* Stack items vertically */
+    }
+
+    header img.header-robot {
+        width: 40%; /* Make images larger on small screens */
+        margin: 10px 0; /* Add margin for spacing */
+    }
+
+    .header-title h1 {
+        font-size: 1.75em; /* Adjust font size for mobile */
+    }
+
+    .header-title h2 {
+        font-size: 1.25em; /* Adjust font size for mobile */
+        margin-bottom: 15px;
+    }
+
+    header img.header-robot:last-child {
+        display: none; /* Hide the second image */
+    }
 }
