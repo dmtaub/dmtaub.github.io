@@ -6,14 +6,38 @@ body {
     color: #333;
 }
 header {
-    background-color: #333;
+    background-color: #999;
     color: #fff;
-    padding: 10px 0;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+header img.header-robot {
+    width: 150px; /* Adjust the size as needed */
+    height: auto;
+    margin: 0 10px; /* Adjust spacing as needed */
+}
+
+
+.header-title h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #fff;
+}
+
+.header-title h2 {
+    margin: 0;
+    font-size: 16px;
+    font-style: italic;
+    color: #fff;
+}
+
 .container {
     width: 80%;
     margin: 20px auto;
+
 }
 h1, h2 {
     color: #333;
@@ -25,13 +49,18 @@ h1, h2 {
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 footer {
-    background-color: #333;
     color: #fff;
     text-align: center;
-    padding: 10px 0;
     position: fixed;
     width: 100%;
     bottom: 0;
+}
+footer p {
+    color: #333;
+    padding: 0px;
+    margin: 1px;
+    text-align: right;
+    opacity: 0.3;
 }
 .interactive {
     width: 100%;

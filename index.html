@@ -5,33 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dan T's Personal Webpage</title>
     <link type="text/css" rel="stylesheet" href="style.css"></style>
+<script type="importmap">
+	{
+		"imports": {
+			"three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+			"three/": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/"
+		}
+	}
+</script>
     <script src="script.module.js" type="module"></script>
     <script src="threejs_bounce.js" type="module"></script>
 </head>
 <body>
     <header>
-        <h1>Dan T's Personal Webpage</h1>
+        <img src="happy_robot.png" alt="Happy Robot" class="header-robot">
+        <div class="header-title">
+            <h1>Daniel M Taub</h1>
+            <h2>Intuiting Innovative Software Solutions</h2>
+        </div>
+        <img src="happy_robot.png" alt="Happy Robot" class="header-robot">
     </header>
+
     <nav>
         <a href="#interests">Interests</a>
         <a href="#projects">Projects</a>
         <a href="#philosophy">Philosophy</a>
     </nav>
     <div class="container">
-        <div class="section" id="interests">
+        <div class="section" id="interests" style="display: none;">
             <h2>Interests</h2>
             <p>Here you can write about your interests, such as hobbies, professional interests, or any activities you enjoy.</p>
         </div>
-        <div class="section" id="projects">
+        <div class="section" id="projects" style="display: none;">
             <h2>Projects</h2>
             <p>Describe some of your key projects here. You can include links, images, and brief descriptions of each project.</p>
         </div>
-        <div class="section" id="philosophy">
+        <div class="section" id="philosophy" style="display: none;">
             <h2>Philosophy</h2>
             <p>Share your personal or professional philosophy here. This could include your approach to work, life, or any guiding principles you follow.</p>
         </div>
         <div class="interactive">
-            Placeholder for interactive 3D elements or a game to showcase your expertise.
+            <!--Placeholder for interactive 3D elements or a game to showcase your expertise.-->
         </div>
     </div>
     <footer>

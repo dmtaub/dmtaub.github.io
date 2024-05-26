@@ -1,5 +1,5 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.module.js';
-
+import * as THREE from 'three';
+// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 let scene, camera, renderer;
 let ball, ballVelocity;
 let container, containerWidth, containerHeight;
@@ -11,6 +11,10 @@ export function start(){
 }
 
 function init() {
+
+    // Set up renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+
     // Set up scene
     scene = new THREE.Scene();
 
@@ -19,12 +23,20 @@ function init() {
     container = document.querySelector('.interactive');
     containerWidth = container.clientWidth;
     containerHeight = container.clientHeight;
+    // This camera has some skew issues:
     camera = new THREE.PerspectiveCamera(75, containerWidth / containerHeight, 0.1, 1000);
     camera.position.z = 5;
+    // better would be:
+    // camera = new THREE.OrthographicCamera(containerWidth / -2, containerWidth / 2, containerHeight / 2, containerHeight / -2, 1, 1000);
+    // camera.position.z = 5;
+    // might not be correct, so lets add controls that output the camera position
+    // const controls = new OrbitControls(camera, renderer.domElement);
+    // controls.addEventListener('change', () => {
+    //     console.log(controls.zoom0);
+    // });
 
 
-    // Set up renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+
 
     renderer.setSize(containerWidth, containerHeight);
     container.appendChild(renderer.domElement);
