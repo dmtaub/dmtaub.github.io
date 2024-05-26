@@ -81,6 +81,21 @@ nav a {
     text-decoration: none;
     color: #333;
 }
+nav a:hover {
+    color: #8A7B9F;
+}
+.social-links {
+    /* display: flex; */
+    gap: 10px; /* Space between icons */
+    align-items: center;
+}
+.social-links a {
+    text-decoration: none;
+}
+.social-links svg {
+    height: 30px; /* Icon size */
+    width: auto;
+}
 
 
 @media (max-width: 600px) {
@@ -102,7 +117,11 @@ nav a {
         margin-bottom: 15px;
     }
 
-    header img.header-robot:last-child {
+    header img.header-robot.last-robot {
         display: none; /* Hide the second image */
+    }
+    .social-links {
+        justify-content: center;
+        margin-top: 10px;
     }
 }
