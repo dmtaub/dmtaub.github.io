@@ -23,19 +23,10 @@ function init() {
     container = document.querySelector('.interactive');
     containerWidth = container.clientWidth;
     containerHeight = container.clientHeight;
+
     // This camera has some skew issues:
-    camera = new THREE.PerspectiveCamera(75, containerWidth / containerHeight, 0.1, 1000);
-    camera.position.z = 5;
-    // better would be:
-    // camera = new THREE.OrthographicCamera(containerWidth / -2, containerWidth / 2, containerHeight / 2, containerHeight / -2, 1, 1000);
-    // camera.position.z = 5;
-    // might not be correct, so lets add controls that output the camera position
-    // const controls = new OrbitControls(camera, renderer.domElement);
-    // controls.addEventListener('change', () => {
-    //     console.log(controls.zoom0);
-    // });
-
-
+    camera = new THREE.PerspectiveCamera(20, containerWidth / containerHeight, 0.1, 100);
+    camera.position.z = 20;
 
 
     renderer.setSize(containerWidth, containerHeight);
@@ -46,9 +37,15 @@ function init() {
 
     // Create a ball
     const geometry = new THREE.SphereGeometry(ballRadius, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
     ball = new THREE.Mesh(geometry, material);
     scene.add(ball);
+
+    // add a light
+
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(0, 0, 10);
+    scene.add(light);
 
     // Set initial velocity
     ballVelocity = new THREE.Vector3(0.05, 0.05, 0);
@@ -72,7 +69,17 @@ function animate() {
     if (ball.position.y + ballRadius > frustumHeight / 2 || ball.position.y - ballRadius < -frustumHeight / 2) {
         ballVelocity.y = -ballVelocity.y;
     }
-    
+
+    // check for collisions with a cube
+    // if (ball.position.x + ballRadius > cube.position.x - cube.scale.x / 2 &&
+    //     ball.position.x - ballRadius < cube.position.x + cube.scale.x / 2 &&
+    //     ball.position.y + ballRadius > cube.position.y - cube.scale.y / 2 &&
+    //     ball.position.y - ballRadius < cube.position.y + cube.scale.y / 2) {
+    //     ballVelocity.x = -ballVelocity.x;
+    //     ballVelocity.y = -ballVelocity.y;
+    // }
+
+    // now render the scene
 
     renderer.render(scene, camera);
 }
