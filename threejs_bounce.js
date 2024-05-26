@@ -61,7 +61,7 @@ function animate() {
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const ballRadius = 0.5;
-    
+
     // Check for collisions with the container edges
     if (ball.position.x + ballRadius > frustumWidth / 2 || ball.position.x - ballRadius < -frustumWidth / 2) {
         ballVelocity.x = -ballVelocity.x;
@@ -69,6 +69,19 @@ function animate() {
     if (ball.position.y + ballRadius > frustumHeight / 2 || ball.position.y - ballRadius < -frustumHeight / 2) {
         ballVelocity.y = -ballVelocity.y;
     }
+
+    // Check for out of bounds, and reset position
+    ball.position.x = Math.max(
+        -frustumWidth / 2 + ballRadius,
+        Math.min(
+            ball.position.x,
+            frustumWidth / 2 - ballRadius));
+    ball.position.y = Math.max(
+        -frustumHeight / 2 + ballRadius,
+        Math.min(
+            ball.position.y,
+             frustumHeight / 2 - ballRadius));
+
 
     // check for collisions with a cube
     // if (ball.position.x + ballRadius > cube.position.x - cube.scale.x / 2 &&
@@ -78,6 +91,7 @@ function animate() {
     //     ballVelocity.x = -ballVelocity.x;
     //     ballVelocity.y = -ballVelocity.y;
     // }
+
 
     // now render the scene
 
