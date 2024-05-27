@@ -47,6 +47,9 @@ header img.main-robot {
     font-size: 1.25em;
     font-style: italic;
     color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .container {
@@ -116,7 +119,29 @@ nav a:hover {
 .social-links svg:hover {
     fill: #333; /* Change color on hover */
 }
+.descriptive-text-container {
+    position: relative;
+    display: inline-block;
+    width: 125px;
+    height: 1.25em;
+    line-height: 1.25em;
+    vertical-align: middle;
+}
 
+.descriptive-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 2s ease-in-out;
+    opacity: 0;
+}
+.adj1, .adj2, .adj3 {
+    display: inline;
+}
+
+.adj1.show, .adj2.show, .adj3.show {
+    opacity: 1;
+}
 
 @media (max-width: 600px) {
     header {
