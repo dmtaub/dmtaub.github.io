@@ -30,9 +30,6 @@ function preload() {
 }
 
 function create() {
-    // Add a simple background color (this was lost in prompt3)
-    this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue color
-
     // Input Events
     cursors = this.input.keyboard.createCursorKeys();
     shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
@@ -41,7 +38,7 @@ function create() {
     level = new Level(this);
 
     // Create Player
-    player = new Player(this, 100, 450);
+    player = new Player(this, 100, 450, { maxHearts: 4 });
 
     // Create the triangle projectile texture
     Projectile.createProjectileTexture(this);
@@ -52,11 +49,12 @@ function update(time, delta) {
     player.update(cursors, shiftKey, time);
 }
 
+// Level Class
 class Level {
-    constructor(scene, platformData = []) {
+    constructor(scene, platformData = [], spikeData = []) {
         this.scene = scene;
-
         this.platforms = scene.physics.add.staticGroup();
+        this.spikes = scene.physics.add.staticGroup();
 
         // Default platform positions
         this.defaultPlatforms = [
@@ -66,11 +64,18 @@ class Level {
             { x: 750, y: 220, width: 150, height: 32, color: 0x8B4513 }   // Platform 3
         ];
 
+        // Default spike positions
+        this.defaultSpikes = [
+            { x: 775, y: 540, width: 50, height: 28, color: 0x808080 } // Grey box on far right of ground
+        ];
+
         // Use provided platform data or default
         this.platformData = platformData.length > 0 ? platformData : this.defaultPlatforms;
+        this.spikeData = spikeData.length > 0 ? spikeData : this.defaultSpikes;
 
-        // Create platforms
+        // Create platforms and spikes
         this.createPlatforms();
+        this.createSpikes();
     }
 
     createPlatforms() {
@@ -81,20 +86,37 @@ class Level {
         });
     }
 
+    createSpikes() {
+        this.spikeData.forEach(data => {
+            let spike = this.scene.add.rectangle(data.x, data.y, data.width, data.height, data.color);
+            this.scene.physics.add.existing(spike, true);
+            this.spikes.add(spike);
+        });
+    }
+
     getPlatforms() {
         return this.platforms;
     }
 
+    getSpikes() {
+        return this.spikes;
+    }
+
     destroy() {
         this.platforms.clear(true, true);
+        this.spikes.clear(true, true);
     }
 }
 
+// Player Class
 class Player {
-    constructor(scene, x = 100, y = 450) {
+    constructor(scene, x = 100, y = 450, options = {}) {
         this.scene = scene;
         this.x = x;
         this.y = y;
+
+        this.maxHearts = options.maxHearts || 4;
+        this.hearts = this.maxHearts; // Player starts with full health
 
         // Create the player as a rectangle
         this.sprite = scene.add.rectangle(this.x, this.y, 32, 48, 0xff0000);
@@ -109,8 +131,48 @@ class Player {
         // Enable collision between the player and the platforms
         scene.physics.add.collider(this.sprite, level.getPlatforms());
 
+        // Collision with spikes
+        scene.physics.add.overlap(this.sprite, level.getSpikes(), this.hitSpike, null, this);
+
         // Group for projectiles
         this.projectiles = scene.physics.add.group();
+
+        // Display hearts
+        this.heartsGroup = scene.add.group();
+        this.createHeartsDisplay();
+    }
+
+    createHeartsDisplay() {
+        // Clear any existing hearts
+        this.heartsGroup.clear(true, true);
+
+        // Create heart shapes
+        for (let i = 0; i < this.maxHearts; i++) {
+            let heartColor = 0xff0000; // Red
+            let x = 20 + i * 20; // Spacing between hearts
+            let y = 20;
+
+            // Use half-heart if necessary
+            if (i < Math.floor(this.hearts)) {
+                // Full heart
+                let heart = this.scene.add.rectangle(x, y, 16, 16, heartColor);
+                this.heartsGroup.add(heart);
+            } else if (i < this.hearts) {
+                // Half heart
+                let heart = this.scene.add.rectangle(x, y, 8, 16, heartColor);
+                this.heartsGroup.add(heart);
+            } else {
+                // Empty heart (gray)
+                let emptyHeartColor = 0x808080; // Gray
+                let heart = this.scene.add.rectangle(x, y, 16, 16, emptyHeartColor);
+                this.heartsGroup.add(heart);
+            }
+        }
+
+        // Set hearts to be fixed to the camera
+        this.heartsGroup.children.each(heart => {
+            heart.setScrollFactor(0);
+        });
     }
 
     update(cursors, shiftKey, time) {
@@ -151,12 +213,32 @@ class Player {
         this.projectiles.add(projectile.sprite);
     }
 
+    hitSpike(playerSprite, spike) {
+        // Reduce health by 0.5
+        this.hearts -= 0.5;
+
+        // Ensure health does not go below zero
+        if (this.hearts < 0) this.hearts = 0;
+
+        // Update hearts display
+        this.createHeartsDisplay();
+
+        // Check if player is dead
+        if (this.hearts <= 0) {
+            // Handle player death (e.g., restart game, show game over screen)
+            // For now, we can just restart the scene
+            this.scene.scene.restart();
+        }
+    }
+
     destroy() {
         this.sprite.destroy();
         this.projectiles.clear(true, true);
+        this.heartsGroup.clear(true, true);
     }
 }
 
+// Projectile Class
 class Projectile {
     constructor(scene, x, y, direction) {
         this.scene = scene;
