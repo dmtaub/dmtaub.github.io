@@ -24,21 +24,28 @@ let player;
 let level;
 let cursors;
 let shiftKey;
+let kinematics;
 
 function preload() {
     // Load assets if any
 }
 
 function create() {
+    // Add a simple background color
+    this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue color
+
     // Input Events
     cursors = this.input.keyboard.createCursorKeys();
     shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
+    // Initialize Kinematics for level 1
+    kinematics = new Kinematics(1);
+
     // Create Level
-    level = new Level(this);
+    level = new Level(this, kinematics);
 
     // Create Player
-    player = new Player(this, 100, 450, { maxHearts: 4 });
+    player = new Player(this, 100, 450, { maxHearts: 4 }, kinematics);
 
     // Create the triangle projectile texture
     Projectile.createProjectileTexture(this);
@@ -49,12 +56,26 @@ function update(time, delta) {
     player.update(cursors, shiftKey, time);
 }
 
+// Kinematics Class
+class Kinematics {
+    static defaultBounceFactor = 0.2;
+    static defaultStarFactor = 0;
+
+    constructor(level = 1, options = {}) {
+        this.level = level;
+        this.bounceFactor = options.bounceFactor || Kinematics.defaultBounceFactor;
+        this.starFactor = options.starFactor !== undefined ? options.starFactor : Kinematics.defaultStarFactor + (level - 1) * 2;
+    }
+}
+
 // Level Class
 class Level {
-    constructor(scene, platformData = [], spikeData = []) {
+    constructor(scene, kinematics, platformData = [], spikeData = []) {
         this.scene = scene;
+        this.kinematics = kinematics;
         this.platforms = scene.physics.add.staticGroup();
         this.spikes = scene.physics.add.staticGroup();
+        this.stars = scene.physics.add.group();
 
         // Default platform positions
         this.defaultPlatforms = [
@@ -76,6 +97,9 @@ class Level {
         // Create platforms and spikes
         this.createPlatforms();
         this.createSpikes();
+
+        // Create stars (collectibles)
+        this.createStars();
     }
 
     createPlatforms() {
@@ -94,6 +118,22 @@ class Level {
         });
     }
 
+    createStars() {
+        // Generate stars based on starFactor from Kinematics
+        let numberOfStars = this.kinematics.starFactor;
+        for (let i = 0; i < numberOfStars; i++) {
+            let x = Phaser.Math.Between(50, 750);
+            let y = Phaser.Math.Between(50, 500);
+            let star = this.scene.add.rectangle(x, y, 14, 14, 0xffff00); // Yellow star
+            this.scene.physics.add.existing(star);
+            star.body.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            this.stars.add(star);
+        }
+
+        // Collide stars with platforms so they land on them
+        this.scene.physics.add.collider(this.stars, this.platforms);
+    }
+
     getPlatforms() {
         return this.platforms;
     }
@@ -102,18 +142,24 @@ class Level {
         return this.spikes;
     }
 
+    getStars() {
+        return this.stars;
+    }
+
     destroy() {
         this.platforms.clear(true, true);
         this.spikes.clear(true, true);
+        this.stars.clear(true, true);
     }
 }
 
 // Player Class
 class Player {
-    constructor(scene, x = 100, y = 450, options = {}) {
+    constructor(scene, x = 100, y = 450, options = {}, kinematics) {
         this.scene = scene;
         this.x = x;
         this.y = y;
+        this.kinematics = kinematics;
 
         this.maxHearts = options.maxHearts || 4;
         this.hearts = this.maxHearts; // Player starts with full health
@@ -121,7 +167,7 @@ class Player {
         // Create the player as a rectangle
         this.sprite = scene.add.rectangle(this.x, this.y, 32, 48, 0xff0000);
         scene.physics.add.existing(this.sprite);
-        this.sprite.body.setBounce(0.2);
+        this.sprite.body.setBounce(this.kinematics.bounceFactor);
         this.sprite.body.setCollideWorldBounds(true);
 
         // Player properties
@@ -133,6 +179,9 @@ class Player {
 
         // Collision with spikes
         scene.physics.add.overlap(this.sprite, level.getSpikes(), this.hitSpike, null, this);
+
+        // Collision with stars
+        scene.physics.add.overlap(this.sprite, level.getStars(), this.collectStar, null, this);
 
         // Group for projectiles
         this.projectiles = scene.physics.add.group();
@@ -229,6 +278,13 @@ class Player {
             // For now, we can just restart the scene
             this.scene.scene.restart();
         }
+    }
+
+    collectStar(playerSprite, star) {
+        // Disable and hide the star
+        star.disableBody(true, true);
+
+        // Optionally, you can add score or other effects here
     }
 
     destroy() {
