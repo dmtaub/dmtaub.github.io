@@ -18,6 +18,12 @@ Next, let's add a "Kinematics" object at the top of the file to keep track of ph
 
 "Kinematics" should include "bounceFactor" for the player (currently at 0.2) and "starFactor" for how many randomized collectible stars there are, per level increasing by 2 each stage, and all stored as an object in "Kinematics" by level.
 ...
+Great! Let's set starFactor to 1, and make sure it's possible to collect them. It should increment a counter at the top left below the squares, ever time we "collect" one. It should store in an Inventory object on the player. The level should also have an inventory object, which is empty for now.
+---
+So, we can't despawn the stars, since "star.disableBody" is not a function
+...
+jumping should be based on the amount of time the key is held, and pressing down should accelerate the fall.
+
 
 -->
 <!DOCTYPE html>

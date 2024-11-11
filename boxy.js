@@ -38,8 +38,8 @@ function create() {
     cursors = this.input.keyboard.createCursorKeys();
     shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
-    // Initialize Kinematics for level 1
-    kinematics = new Kinematics(1);
+    // Initialize Kinematics for level 1 with starFactor 1
+    kinematics = new Kinematics(1, { starFactor: 1 });
 
     // Create Level
     level = new Level(this, kinematics);
@@ -59,12 +59,40 @@ function update(time, delta) {
 // Kinematics Class
 class Kinematics {
     static defaultBounceFactor = 0.2;
-    static defaultStarFactor = 0;
+    static defaultStarFactor = 1; // Set defaultStarFactor to 1
 
     constructor(level = 1, options = {}) {
         this.level = level;
         this.bounceFactor = options.bounceFactor || Kinematics.defaultBounceFactor;
         this.starFactor = options.starFactor !== undefined ? options.starFactor : Kinematics.defaultStarFactor + (level - 1) * 2;
+    }
+}
+
+// Inventory Class
+class Inventory {
+    constructor() {
+        this.items = {};
+    }
+
+    addItem(item, quantity = 1) {
+        if (this.items[item]) {
+            this.items[item] += quantity;
+        } else {
+            this.items[item] = quantity;
+        }
+    }
+
+    getItemCount(item) {
+        return this.items[item] || 0;
+    }
+
+    removeItem(item, quantity = 1) {
+        if (this.items[item]) {
+            this.items[item] -= quantity;
+            if (this.items[item] <= 0) {
+                delete this.items[item];
+            }
+        }
     }
 }
 
@@ -76,6 +104,8 @@ class Level {
         this.platforms = scene.physics.add.staticGroup();
         this.spikes = scene.physics.add.staticGroup();
         this.stars = scene.physics.add.group();
+
+        this.inventory = new Inventory(); // Level inventory, empty for now
 
         // Default platform positions
         this.defaultPlatforms = [
@@ -124,7 +154,8 @@ class Level {
         for (let i = 0; i < numberOfStars; i++) {
             let x = Phaser.Math.Between(50, 750);
             let y = Phaser.Math.Between(50, 500);
-            let star = this.scene.add.rectangle(x, y, 14, 14, 0xffff00); // Yellow star
+            // Create stars as circles
+            let star = this.scene.add.circle(x, y, 7, 0xffff00); // Yellow circle as star
             this.scene.physics.add.existing(star);
             star.body.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
             this.stars.add(star);
@@ -164,6 +195,8 @@ class Player {
         this.maxHearts = options.maxHearts || 4;
         this.hearts = this.maxHearts; // Player starts with full health
 
+        this.inventory = new Inventory(); // Player inventory
+
         // Create the player as a rectangle
         this.sprite = scene.add.rectangle(this.x, this.y, 32, 48, 0xff0000);
         scene.physics.add.existing(this.sprite);
@@ -189,6 +222,10 @@ class Player {
         // Display hearts
         this.heartsGroup = scene.add.group();
         this.createHeartsDisplay();
+
+        // Display star count
+        this.starText = scene.add.text(20, 50, 'Stars: 0', { fontSize: '16px', fill: '#000' });
+        this.starText.setScrollFactor(0);
     }
 
     createHeartsDisplay() {
@@ -281,16 +318,22 @@ class Player {
     }
 
     collectStar(playerSprite, star) {
-        // Disable and hide the star
-        star.disableBody(true, true);
+        // Destroy the star
+        star.destroy();
 
-        // Optionally, you can add score or other effects here
+        // Increment star count in inventory
+        this.inventory.addItem('stars', 1);
+
+        // Update star text
+        let starCount = this.inventory.getItemCount('stars');
+        this.starText.setText('Stars: ' + starCount);
     }
 
     destroy() {
         this.sprite.destroy();
         this.projectiles.clear(true, true);
         this.heartsGroup.clear(true, true);
+        this.starText.destroy();
     }
 }
 
