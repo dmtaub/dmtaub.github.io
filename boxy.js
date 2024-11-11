@@ -203,9 +203,18 @@ class Player {
         this.sprite.body.setBounce(this.kinematics.bounceFactor);
         this.sprite.body.setCollideWorldBounds(true);
 
+        // Initialize gravity
+        this.sprite.body.setGravityY(300);
+
         // Player properties
         this.facing = 'right';
         this.lastFired = 0;
+
+        // Jump properties
+        this.isJumping = false;
+        this.jumpTime = 0;
+        this.maxJumpTime = 300; // Max jump duration in milliseconds
+        this.jumpSpeed = -330; // Jump velocity
 
         // Enable collision between the player and the platforms
         scene.physics.add.collider(this.sprite, level.getPlatforms());
@@ -274,9 +283,34 @@ class Player {
             this.facing = 'right';
         }
 
-        // Jumping
-        if (cursors.up.isDown && this.sprite.body.touching.down) {
-            this.sprite.body.setVelocityY(-330);
+        // Check if player is on the ground
+        const isOnGround = this.sprite.body.blocked.down || this.sprite.body.touching.down;
+
+        // Variable Jumping
+        if (cursors.up.isDown) {
+            if (isOnGround) {
+                // Start jump
+                this.isJumping = true;
+                this.jumpTime = 0;
+                this.sprite.body.setVelocityY(this.jumpSpeed);
+            } else if (this.isJumping && this.jumpTime < this.maxJumpTime) {
+                // Continue jumping
+                this.sprite.body.setVelocityY(this.jumpSpeed);
+                this.jumpTime += this.scene.game.loop.delta;
+            } else {
+                // Max jump time reached
+                this.isJumping = false;
+            }
+        } else {
+            // Stop jumping if up key is released
+            this.isJumping = false;
+        }
+
+        // Accelerated fall
+        if (cursors.down.isDown && !isOnGround) {
+            this.sprite.body.setGravityY(600); // Increase gravity
+        } else {
+            this.sprite.body.setGravityY(300); // Normal gravity
         }
 
         // Firing projectiles when Shift key is pressed
