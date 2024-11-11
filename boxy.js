@@ -21,127 +21,176 @@ const config = {
 const game = new Phaser.Game(config);
 
 let player;
-let platforms;
+let level;
 let cursors;
-let projectiles;
 let shiftKey;
 
-function preload () {
-    // Load images or sprites here (if any)
-
-    // this.load.image('sky', 'assets/sky.png');
-    // this.load.image('ground', 'assets/platform.png');
-    // this.load.image('star', 'assets/star.png');
-    // this.load.image('bomb', 'assets/bomb.png');
-    // this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
+function preload() {
+    // Load assets if any
 }
 
-function create () {
-    // Add a simple background color
+function create() {
+    // Add a simple background color (this was lost in prompt3)
     this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue color
-
-    // Create a group for platforms
-    platforms = this.physics.add.staticGroup();
-
-    // For shapes instead of sprites, we can draw rectangles
-    // Ground
-    let ground = this.add.rectangle(400, 568, 800, 64, 0x228B22); // Green rectangle
-    this.physics.add.existing(ground, true);
-    platforms.add(ground);
-
-    // Platforms
-    let platform1 = this.add.rectangle(600, 400, 150, 32, 0x8B4513); // Brown rectangle
-    this.physics.add.existing(platform1, true);
-    platforms.add(platform1);
-
-    let platform2 = this.add.rectangle(50, 250, 150, 32, 0x8B4513);
-    this.physics.add.existing(platform2, true);
-    platforms.add(platform2);
-
-    let platform3 = this.add.rectangle(750, 220, 150, 32, 0x8B4513);
-    this.physics.add.existing(platform3, true);
-    platforms.add(platform3);
-
-    // Create the player using a simple shape
-    player = this.add.rectangle(100, 450, 32, 48, 0xff0000); // Red rectangle
-    this.physics.add.existing(player);
-    player.body.setBounce(0.2);
-    player.body.setCollideWorldBounds(true);
-
-    // Initialize player's facing direction and last fired time
-    player.facing = 'right'; // Default facing direction
-    player.lastFired = 0;    // Timestamp of the last projectile fired
-
-    // Enable collision between the player and the platforms
-    this.physics.add.collider(player, platforms);
 
     // Input Events
     cursors = this.input.keyboard.createCursorKeys();
     shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
-    // Create a group for projectiles
-    projectiles = this.physics.add.group();
+    // Create Level
+    level = new Level(this);
+
+    // Create Player
+    player = new Player(this, 100, 450);
 
     // Create the triangle projectile texture
-    let graphics = this.add.graphics({ fillStyle: { color: 0xffff00 } }); // Yellow color
-    graphics.fillTriangle(0, 10, 5, 0, 10, 10); // Draw an upward-pointing triangle
-    graphics.generateTexture('triangleProjectile', 10, 10);
-    graphics.destroy();
+    Projectile.createProjectileTexture(this);
 }
 
-function update () {
-    // Reset player's horizontal velocity
-    player.body.setVelocityX(0);
+function update(time, delta) {
+    // Update Player
+    player.update(cursors, shiftKey, time);
+}
 
-    // Movement controls
-    if (cursors.left.isDown) {
-        player.body.setVelocityX(-160);
-        player.facing = 'left';
-    }
-    else if (cursors.right.isDown) {
-        player.body.setVelocityX(160);
-        player.facing = 'right';
+class Level {
+    constructor(scene, platformData = []) {
+        this.scene = scene;
+
+        this.platforms = scene.physics.add.staticGroup();
+
+        // Default platform positions
+        this.defaultPlatforms = [
+            { x: 400, y: 568, width: 800, height: 64, color: 0x228B22 }, // Ground
+            { x: 600, y: 400, width: 150, height: 32, color: 0x8B4513 }, // Platform 1
+            { x: 50, y: 250, width: 150, height: 32, color: 0x8B4513 },  // Platform 2
+            { x: 750, y: 220, width: 150, height: 32, color: 0x8B4513 }   // Platform 3
+        ];
+
+        // Use provided platform data or default
+        this.platformData = platformData.length > 0 ? platformData : this.defaultPlatforms;
+
+        // Create platforms
+        this.createPlatforms();
     }
 
-    // Jumping
-    if (cursors.up.isDown && player.body.touching.down) {
-        player.body.setVelocityY(-330);
+    createPlatforms() {
+        this.platformData.forEach(data => {
+            let platform = this.scene.add.rectangle(data.x, data.y, data.width, data.height, data.color);
+            this.scene.physics.add.existing(platform, true);
+            this.platforms.add(platform);
+        });
     }
 
-    // Firing projectiles when Shift key is pressed
-    if (Phaser.Input.Keyboard.JustDown(shiftKey)) {
-        // Implement a cooldown of 500ms
-        if (this.time.now - player.lastFired > 500) {
-            fireProjectile.call(this);
-            player.lastFired = this.time.now;
+    getPlatforms() {
+        return this.platforms;
+    }
+
+    destroy() {
+        this.platforms.clear(true, true);
+    }
+}
+
+class Player {
+    constructor(scene, x = 100, y = 450) {
+        this.scene = scene;
+        this.x = x;
+        this.y = y;
+
+        // Create the player as a rectangle
+        this.sprite = scene.add.rectangle(this.x, this.y, 32, 48, 0xff0000);
+        scene.physics.add.existing(this.sprite);
+        this.sprite.body.setBounce(0.2);
+        this.sprite.body.setCollideWorldBounds(true);
+
+        // Player properties
+        this.facing = 'right';
+        this.lastFired = 0;
+
+        // Enable collision between the player and the platforms
+        scene.physics.add.collider(this.sprite, level.getPlatforms());
+
+        // Group for projectiles
+        this.projectiles = scene.physics.add.group();
+    }
+
+    update(cursors, shiftKey, time) {
+        // Reset player's horizontal velocity
+        this.sprite.body.setVelocityX(0);
+
+        // Movement controls
+        if (cursors.left.isDown) {
+            this.sprite.body.setVelocityX(-160);
+            this.facing = 'left';
+        } else if (cursors.right.isDown) {
+            this.sprite.body.setVelocityX(160);
+            this.facing = 'right';
+        }
+
+        // Jumping
+        if (cursors.up.isDown && this.sprite.body.touching.down) {
+            this.sprite.body.setVelocityY(-330);
+        }
+
+        // Firing projectiles when Shift key is pressed
+        if (Phaser.Input.Keyboard.JustDown(shiftKey)) {
+            // Implement a cooldown of 500ms
+            if (time - this.lastFired > 500) {
+                this.fireProjectile();
+                this.lastFired = time;
+            }
         }
     }
-}
 
-function fireProjectile() {
-    // Create the projectile at the player's position
-    let x = player.x;
-    let y = player.y;
+    fireProjectile() {
+        // Create the projectile at the player's position
+        let x = this.sprite.x;
+        let y = this.sprite.y;
 
-    // Create an image from the pre-generated triangle texture
-    let projectile = this.physics.add.image(x, y, 'triangleProjectile');
-    projectile.setScale(1); // Adjust size if needed
-    projectile.body.allowGravity = false; // Projectiles are not affected by gravity
-    projectile.setCollideWorldBounds(false);
-
-    // Set velocity based on the player's facing direction
-    let speed = 500; // Adjust speed as desired
-    if (player.facing === 'left') {
-        projectile.setVelocityX(-speed);
-    } else {
-        projectile.setVelocityX(speed);
+        // Create an image from the pre-generated triangle texture
+        let projectile = new Projectile(this.scene, x, y, this.facing);
+        this.projectiles.add(projectile.sprite);
     }
 
-    // Add the projectile to the projectiles group
-    projectiles.add(projectile);
+    destroy() {
+        this.sprite.destroy();
+        this.projectiles.clear(true, true);
+    }
+}
 
-    // Destroy the projectile after 1 second
-    this.time.delayedCall(1000, () => {
-        projectile.destroy();
-    });
+class Projectile {
+    constructor(scene, x, y, direction) {
+        this.scene = scene;
+        this.x = x;
+        this.y = y;
+        this.direction = direction;
+
+        // Create the projectile
+        this.sprite = scene.physics.add.image(this.x, this.y, 'triangleProjectile');
+        this.sprite.setScale(1);
+        this.sprite.body.allowGravity = false;
+        this.sprite.setCollideWorldBounds(false);
+
+        // Set velocity based on direction
+        let speed = 500;
+        if (this.direction === 'left') {
+            this.sprite.setVelocityX(-speed);
+        } else {
+            this.sprite.setVelocityX(speed);
+        }
+
+        // Destroy after 1 second
+        scene.time.delayedCall(1000, () => {
+            this.sprite.destroy();
+        });
+    }
+
+    static createProjectileTexture(scene) {
+        // Create the triangle projectile texture if it doesn't exist
+        if (!scene.textures.exists('triangleProjectile')) {
+            let graphics = scene.add.graphics({ fillStyle: { color: 0xffff00 } }); // Yellow color
+            graphics.fillTriangle(0, 10, 5, 0, 10, 10); // Draw an upward-pointing triangle
+            graphics.generateTexture('triangleProjectile', 10, 10);
+            graphics.destroy();
+        }
+    }
 }
