@@ -78,6 +78,11 @@ class Kinematics {
         this.bounceFactor = options.bounceFactor || Kinematics.defaultBounceFactor;
         this.starFactor = options.starFactor !== undefined ? options.starFactor : Kinematics.defaultStarFactor + (level - 1) * 2;
 
+        // Player speed properties - impacts movement and jump
+        this.weightSlowFactor = options.weightSlowFactor || 0.05; // Default weight slow factor
+        this.minPlayerSpeed = options.minPlayerSpeed || 0.5; // Minimum player speed
+        this.maxPlayerSpeed = options.maxPlayerSpeed || 1.2; // Maximum player speed
+
         // Jump properties
         this.maxJumpTime = options.maxJumpTime || 300; // Max jump duration in milliseconds
         this.jumpSpeed = options.jumpSpeed || -330; // Jump velocity
@@ -247,6 +252,7 @@ class Level {
             this.scene.physics.add.existing(star);
 
             // Set bounce and ensure no friction or damping
+//            star.body.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
             star.body.setBounce(this.kinematics.defaultItemBounce.x, this.kinematics.defaultItemBounce.y);
             star.body.setCollideWorldBounds(true);
 
@@ -260,6 +266,7 @@ class Level {
         this.totalStars = numberOfStars;
 
         // Collide stars with walls and platforms so they land on them
+//        this.scene.physics.add.collider(this.stars, this.walls);
         this.scene.physics.add.collider(this.stars, this.walls, this.starWallCollision, null, this);
         this.scene.physics.add.collider(this.stars, this.platforms);
 
@@ -402,8 +409,8 @@ class Player {
     update(cursors, shiftKey, time) {
         // Calculate current speed and jump speed based on inventory weight
         let totalWeight = this.inventory.getTotalWeight();
-        let speedFactor = 1 - totalWeight * 0.05; // Adjust as needed
-        speedFactor = Phaser.Math.Clamp(speedFactor, 0.5, 1); // Minimum 50% speed
+        let speedFactor = 1 - totalWeight * this.kinematics.weightSlowFactor; // Adjust as needed
+        speedFactor = Phaser.Math.Clamp(speedFactor, this.kinematics.minPlayerSpeed, this.kinematics.maxPlayerSpeed); // Minimum 50% speed
         let currentSpeed = this.baseSpeed * speedFactor;
         let currentJumpSpeed = this.kinematics.jumpSpeed * speedFactor;
 
