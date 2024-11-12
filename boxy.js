@@ -31,7 +31,8 @@ class MainScene extends Phaser.Scene {
             shape: 'triangle',
             speed: 500,
             color: 0xffff00,
-            cooldown: 200 // default cooldown set to 200 milliseconds
+            cooldown: 200, // default cooldown set to 200 milliseconds
+            recoilForce: 100 // how much to recoil
         });
 
         // Create Level
@@ -102,6 +103,7 @@ class ProjectileType {
         this.speed = options.speed || 500;
         this.color = options.color || 0xffff00;
         this.cooldown = options.cooldown || 200; // default cooldown set to 200 milliseconds
+        this.recoilForce = options.recoilForce || 100; // how much to recoil
 
         // Generate a unique texture key based on properties
         this.textureKey = 'projectile_' + this.shape + '_' + this.color.toString(16);
@@ -475,7 +477,11 @@ class Player {
         this.projectiles.add(projectile.sprite);
 
         // Apply recoil to player
-        let recoilForce = 100; // Adjust as needed
+        let recoilForce = projectile.type.recoilForce; // Around 100 for default projectile
+        // adjust recoil force based on inventory weight, clamp to 0
+        recoilForce -= this.inventory.getTotalWeight();
+        recoilForce = Math.max(recoilForce, 0);
+
         if (this.facing === 'left') {
             this.sprite.body.velocity.x += recoilForce;
         } else {
