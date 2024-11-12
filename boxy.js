@@ -1,7 +1,13 @@
 // game.js
+
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' });
+    }
+
+    init(data) {
+        // Receive level data or set default level to 1
+        this.currentLevel = data.level || 1;
     }
 
     preload() {
@@ -16,8 +22,8 @@ class MainScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
-        // Initialize Kinematics for level 1 with starFactor 1
-        this.kinematics = new Kinematics(1, { starFactor: 1 });
+        // Initialize Kinematics with current level
+        this.kinematics = new Kinematics(this.currentLevel);
 
         // Create Level
         this.level = new Level(this, this.kinematics);
@@ -32,6 +38,14 @@ class MainScene extends Phaser.Scene {
     update(time, delta) {
         // Update Player
         this.player.update(this.cursors, this.shiftKey, time);
+    }
+
+    levelComplete() {
+        // Increase level number
+        this.currentLevel += 1;
+
+        // Restart MainScene with new level data
+        this.scene.restart({ level: this.currentLevel });
     }
 }
 
@@ -139,6 +153,9 @@ class Level {
             star.body.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
             this.stars.add(star);
         }
+
+        // Store the initial number of stars
+        this.totalStars = numberOfStars;
 
         // Collide stars with platforms so they land on them
         this.scene.physics.add.collider(this.stars, this.platforms);
@@ -340,6 +357,12 @@ class Player {
         // Update star text
         let starCount = this.inventory.getItemCount('stars');
         this.starText.setText('Stars: ' + starCount);
+
+        // Check if all stars have been collected
+        if (starCount >= this.scene.level.totalStars) {
+            // Level complete
+            this.scene.levelComplete();
+        }
     }
 
     destroy() {
@@ -412,13 +435,13 @@ class GameOverScene extends Phaser.Scene {
             .setInteractive();
 
         tryAgainButton.on('pointerdown', () => {
-            // Restart the MainScene
-            this.scene.start('MainScene');
+            // Restart the MainScene with level 1
+            this.scene.start('MainScene', { level: 1 });
         });
     }
 }
 
-
+// Configuration and game initialization moved to the bottom as per user request
 const config = {
     type: Phaser.AUTO,
     width: 800,
