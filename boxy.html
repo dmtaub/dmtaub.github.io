@@ -40,6 +40,27 @@ remove extra lines re: projectileCooldown from Kinematics, and change default pr
 Let's distinguish between "platforms" and "walls". "walls" should have the same behavior platforms currently do, but the new "platform" should allow jumping up through it-collision only happens on the way down.
 ...
 That's great! let's make the platform purple, and round the edges. Also, lets use add the concept of "weight" to things in the inventory. As we get more, it should make it a little harder to move and jump. Finally, let's add recoil to the projectiles, so they push the player back a little when they are fired. Let's also add recoil to the player when they hit spikes.
+...
+OK, the stars need to also be able to land on the platform. Also, they can hit each other and bounce around a little.
+---
+Hmm, it seems like the stars are bouncing forever. That's OK on the platform, but on the wall, can we make them lose a little bit of speed each time they bounce? Also, on the ground they should lose the most speed. Finally, the bounceX and bounceY should be configured as defaultItemBounce [x,y] in Kinematics.
+
+Also, I noticed that the visible platform doesn't match the collision platform. Can we make sure they're the same size?
+---
+the balls aren't bouncing at all anymore. Can we make it easy to turn on and off this new functionality?
+---
+FAILED
+At this point, I decided to make some manual changes and start fresh. I need to manually:
+- add the ability to change bounce strength per item type
+- add the ability to turn off bouncing per item type
+- have special platform types:
+-- extra bouncy for player
+-- extra bouncy for items
+-- healing
+- fix projectile motion
+
+
+...
 -->
 <!DOCTYPE html>
 <html lang="en">

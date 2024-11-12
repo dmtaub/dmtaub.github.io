@@ -82,6 +82,9 @@ class Kinematics {
         this.maxJumpTime = options.maxJumpTime || 300; // Max jump duration in milliseconds
         this.jumpSpeed = options.jumpSpeed || -330; // Jump velocity
         this.gravityY = options.gravityY || 300;
+
+        // Default item bounce values [x, y]
+        this.defaultItemBounce = options.defaultItemBounce || { x: 0.8, y: 0.8 };
     }
 }
 
@@ -117,27 +120,36 @@ class ProjectileType {
 class Inventory {
     constructor() {
         this.items = {};
+        this.totalWeight = 0; // Add totalWeight property
     }
 
-    addItem(item, quantity = 1) {
+    addItem(item, quantity = 1, weight = 0) {
         if (this.items[item]) {
-            this.items[item] += quantity;
+            this.items[item].quantity += quantity;
         } else {
-            this.items[item] = quantity;
+            this.items[item] = { quantity: quantity, weight: weight };
         }
+        // Update total weight
+        this.totalWeight += weight * quantity;
     }
 
     getItemCount(item) {
-        return this.items[item] || 0;
+        return this.items[item] ? this.items[item].quantity : 0;
     }
 
     removeItem(item, quantity = 1) {
         if (this.items[item]) {
-            this.items[item] -= quantity;
-            if (this.items[item] <= 0) {
+            this.items[item].quantity -= quantity;
+            // Update total weight
+            this.totalWeight -= this.items[item].weight * quantity;
+            if (this.items[item].quantity <= 0) {
                 delete this.items[item];
             }
         }
+    }
+
+    getTotalWeight() {
+        return this.totalWeight;
     }
 }
 
@@ -163,7 +175,7 @@ class Level {
 
         // Default platform positions
         this.defaultPlatforms = [
-            { x: 400, y: 350, width: 200, height: 16, color: 0xCCCCCC } // Platform
+            { x: 400, y: 350, width: 200, height: 16, color: 0x800080 } // Purple platform
         ];
 
         // Default spike positions
@@ -195,9 +207,23 @@ class Level {
 
     createPlatforms() {
         this.platformData.forEach(data => {
-            let platform = this.scene.add.rectangle(data.x, data.y, data.width, data.height, data.color);
+            // Create platform with rounded edges using Graphics
+            let graphics = this.scene.add.graphics();
+            graphics.fillStyle(data.color, 1);
+            graphics.fillRoundedRect(0, 0, data.width, data.height, 10); // radius 10
+
+            // Generate texture from graphics
+            let textureKey = 'platform_' + data.x + '_' + data.y;
+            graphics.generateTexture(textureKey, data.width, data.height);
+            graphics.destroy();
+
+            // Create sprite from texture
+            let platform = this.scene.add.image(data.x, data.y, textureKey).setOrigin(0.5, 0.5);
             this.scene.physics.add.existing(platform, true);
             this.platforms.add(platform);
+
+            // Ensure physics body matches the visual size
+            platform.body.setSize(data.width, data.height);
         });
     }
 
@@ -214,19 +240,43 @@ class Level {
         let numberOfStars = this.kinematics.starFactor;
         for (let i = 0; i < numberOfStars; i++) {
             let x = Phaser.Math.Between(50, 750);
-            let y = Phaser.Math.Between(50, 500);
+            let y = Phaser.Math.Between(50, 300);
+
             // Create stars as circles
             let star = this.scene.add.circle(x, y, 7, 0xffff00); // Yellow circle as star
             this.scene.physics.add.existing(star);
-            star.body.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+
+            // Set bounce and ensure no friction or damping
+            star.body.setBounce(this.kinematics.defaultItemBounce.x, this.kinematics.defaultItemBounce.y);
+            star.body.setCollideWorldBounds(true);
+
+            // Random initial velocity for more dynamic interaction
+            star.body.setVelocity(Phaser.Math.Between(-100, 100), Phaser.Math.Between(-100, 100)); // Random initial velocity
+
             this.stars.add(star);
         }
 
         // Store the initial number of stars
         this.totalStars = numberOfStars;
 
-        // Collide stars with walls so they land on them
-        this.scene.physics.add.collider(this.stars, this.walls);
+        // Collide stars with walls and platforms so they land on them
+        this.scene.physics.add.collider(this.stars, this.walls, this.starWallCollision, null, this);
+        this.scene.physics.add.collider(this.stars, this.platforms);
+
+        // Enable stars to collide with each other
+        this.scene.physics.add.collider(this.stars, this.stars);
+    }
+
+    starWallCollision(star, wall) {
+        // Reduce star's velocity when colliding with walls or ground
+        star.body.velocity.x *= 0.9; // Lose 10% speed on X-axis
+        star.body.velocity.y *= 0.9; // Lose 10% speed on Y-axis
+
+        // If the wall is the ground, reduce more speed
+        if (wall.y >= 568) { // Assuming ground is at y=568
+            star.body.velocity.x *= 0.8; // Lose additional speed on ground
+            star.body.velocity.y *= 0.8;
+        }
     }
 
     getWalls() {
@@ -283,6 +333,9 @@ class Player {
         // Jump properties
         this.isJumping = false;
         this.jumpTime = 0;
+
+        // Movement speed
+        this.baseSpeed = 160;
 
         // Enable collision between the player and the walls
         scene.physics.add.collider(this.sprite, scene.level.getWalls());
@@ -347,15 +400,22 @@ class Player {
     }
 
     update(cursors, shiftKey, time) {
+        // Calculate current speed and jump speed based on inventory weight
+        let totalWeight = this.inventory.getTotalWeight();
+        let speedFactor = 1 - totalWeight * 0.05; // Adjust as needed
+        speedFactor = Phaser.Math.Clamp(speedFactor, 0.5, 1); // Minimum 50% speed
+        let currentSpeed = this.baseSpeed * speedFactor;
+        let currentJumpSpeed = this.kinematics.jumpSpeed * speedFactor;
+
         // Reset player's horizontal velocity
         this.sprite.body.setVelocityX(0);
 
         // Movement controls
         if (cursors.left.isDown) {
-            this.sprite.body.setVelocityX(-160);
+            this.sprite.body.setVelocityX(-currentSpeed);
             this.facing = 'left';
         } else if (cursors.right.isDown) {
-            this.sprite.body.setVelocityX(160);
+            this.sprite.body.setVelocityX(currentSpeed);
             this.facing = 'right';
         }
 
@@ -368,10 +428,10 @@ class Player {
                 // Start jump
                 this.isJumping = true;
                 this.jumpTime = 0;
-                this.sprite.body.setVelocityY(this.kinematics.jumpSpeed);
+                this.sprite.body.setVelocityY(currentJumpSpeed);
             } else if (this.isJumping && this.jumpTime < this.kinematics.maxJumpTime) {
                 // Continue jumping
-                this.sprite.body.setVelocityY(this.kinematics.jumpSpeed);
+                this.sprite.body.setVelocityY(currentJumpSpeed);
                 this.jumpTime += this.scene.game.loop.delta;
             } else {
                 // Max jump time reached
@@ -447,8 +507,11 @@ class Player {
         // Destroy the star
         star.destroy();
 
+        // Assume each star has a weight of 1
+        let itemWeight = 1;
+
         // Increment star count in inventory
-        this.inventory.addItem('stars', 1);
+        this.inventory.addItem('stars', 1, itemWeight);
 
         // Update star text
         let starCount = this.inventory.getItemCount('stars');
