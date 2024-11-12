@@ -31,7 +31,7 @@ class MainScene extends Phaser.Scene {
             shape: 'triangle',
             speed: 500,
             color: 0xffff00,
-            cooldown: 200
+            cooldown: 200 // default cooldown set to 200 milliseconds
         });
 
         // Create Level
@@ -93,7 +93,7 @@ class ProjectileType {
         this.shape = options.shape || 'triangle'; // can be 'triangle', 'circle', etc.
         this.speed = options.speed || 500;
         this.color = options.color || 0xffff00;
-        this.cooldown = options.cooldown || 500; // in milliseconds
+        this.cooldown = options.cooldown || 200; // default cooldown set to 200 milliseconds
 
         // Generate a unique texture key based on properties
         this.textureKey = 'projectile_' + this.shape + '_' + this.color.toString(16);
