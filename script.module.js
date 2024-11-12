@@ -12,7 +12,8 @@ export function showSection(sectionId) {
     }
 }
 export function init(){
-    const initialSectionId = location.hash.substring(1) || 'interests';
+    // get default from data tag on body
+    const initialSectionId = location.hash.substring(1) || document.body.dataset.defaultSection;
     showSection(initialSectionId);
 
     window.addEventListener('hashchange', () => {

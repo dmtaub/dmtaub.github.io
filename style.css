@@ -51,7 +51,31 @@ header img.main-robot {
     align-items: center;
     justify-content: center;
 }
-
+.header-title .subtle {
+    color: #8A7B9F;
+    user-select: none;
+}
+.header-title .subtle:hover {
+    color: #8E81A4;
+    text-decoration: none;
+}
+.header-title .right {
+    position: absolute;
+    right: 22px;
+}
+.header-title .showy {
+    top: 22px;
+    font-size: 22pt;
+    color: #333;
+}
+.header-title .showy:hover {
+    font-size: 22pt;
+    color: #aaa;
+}
+.header-title .left {
+    position: absolute;
+    left: 22px;
+}
 .container {
     width: 80%;
     margin: 20px auto;
@@ -123,7 +147,7 @@ nav a:hover {
     position: relative;
     display: inline-block;
     width: 125px;
-    height: 1.25em;
+    height: 1.3em;
     line-height: 1.25em;
     vertical-align: middle;
 }
