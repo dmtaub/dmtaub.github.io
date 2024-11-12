@@ -95,10 +95,10 @@
         }
         const files = e.dataTransfer.files;
         for (let file of files) {
-            if (file.type === 'application/javascript') {
+            if (file.type === 'application/javascript' || file.type === 'text/javascript') {
                 addFileToList(file);
             } else {
-                alert('Only JavaScript files are allowed.');
+                alert('Only JavaScript files are allowed--this is a'+file.type);
             }
         }
     });
