@@ -33,6 +33,19 @@ class MainScene extends Phaser.Scene {
 
         // Create the triangle projectile texture
         Projectile.createProjectileTexture(this);
+
+        // Display level message
+        this.levelText = this.add.text(
+            this.cameras.main.width / 2,
+            this.cameras.main.height / 2,
+            'Level ' + this.currentLevel,
+            { fontSize: '64px', fill: '#fff' }
+        ).setOrigin(0.5);
+
+        // Remove the message after 1.5 seconds
+        this.time.delayedCall(1500, () => {
+            this.levelText.destroy();
+        }, [], this);
     }
 
     update(time, delta) {
@@ -341,8 +354,7 @@ class Player {
 
         // Check if player is dead
         if (this.hearts <= 0) {
-            // Handle player death (e.g., restart game, show game over screen)
-            // Start GameOver scene
+            // Handle player death
             this.scene.scene.start('GameOverScene');
         }
     }
