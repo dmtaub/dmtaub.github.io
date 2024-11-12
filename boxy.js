@@ -25,14 +25,20 @@ class MainScene extends Phaser.Scene {
         // Initialize Kinematics with current level
         this.kinematics = new Kinematics(this.currentLevel);
 
+        // Create default ProjectileType
+        this.projectileType = new ProjectileType(this, {
+            size: { width: 10, height: 10 },
+            shape: 'triangle',
+            speed: 500,
+            color: 0xffff00,
+            cooldown: 200
+        });
+
         // Create Level
         this.level = new Level(this, this.kinematics);
 
         // Create Player
-        this.player = new Player(this, 100, 450, { maxHearts: 4 }, this.kinematics);
-
-        // Create the triangle projectile texture
-        Projectile.createProjectileTexture(this);
+        this.player = new Player(this, 100, 450, { maxHearts: 4 }, this.kinematics, this.projectileType);
 
         // Display level message
         this.levelText = this.add.text(
@@ -71,6 +77,39 @@ class Kinematics {
         this.level = level;
         this.bounceFactor = options.bounceFactor || Kinematics.defaultBounceFactor;
         this.starFactor = options.starFactor !== undefined ? options.starFactor : Kinematics.defaultStarFactor + (level - 1) * 2;
+
+        // Jump properties
+        this.maxJumpTime = options.maxJumpTime || 300; // Max jump duration in milliseconds
+        this.jumpSpeed = options.jumpSpeed || -330; // Jump velocity
+        this.gravityY = options.gravityY || 300;
+    }
+}
+
+// ProjectileType Class
+class ProjectileType {
+    constructor(scene, options = {}) {
+        this.scene = scene;
+        this.size = options.size || { width: 10, height: 10 };
+        this.shape = options.shape || 'triangle'; // can be 'triangle', 'circle', etc.
+        this.speed = options.speed || 500;
+        this.color = options.color || 0xffff00;
+        this.cooldown = options.cooldown || 500; // in milliseconds
+
+        // Generate a unique texture key based on properties
+        this.textureKey = 'projectile_' + this.shape + '_' + this.color.toString(16);
+
+        // Generate texture if it doesn't exist
+        if (!this.scene.textures.exists(this.textureKey)) {
+            let graphics = this.scene.add.graphics({ fillStyle: { color: this.color } });
+            if (this.shape === 'triangle') {
+                graphics.fillTriangle(0, this.size.height, this.size.width / 2, 0, this.size.width, this.size.height);
+            } else if (this.shape === 'circle') {
+                graphics.fillCircle(this.size.width / 2, this.size.height / 2, this.size.width / 2);
+            }
+            // ... other shapes can be added here
+            graphics.generateTexture(this.textureKey, this.size.width, this.size.height);
+            graphics.destroy();
+        }
     }
 }
 
@@ -195,11 +234,12 @@ class Level {
 
 // Player Class
 class Player {
-    constructor(scene, x = 100, y = 450, options = {}, kinematics) {
+    constructor(scene, x = 100, y = 450, options = {}, kinematics, projectileType) {
         this.scene = scene;
         this.x = x;
         this.y = y;
         this.kinematics = kinematics;
+        this.projectileType = projectileType;
 
         this.maxHearts = options.maxHearts || 4;
         this.hearts = this.maxHearts; // Player starts with full health
@@ -213,7 +253,7 @@ class Player {
         this.sprite.body.setCollideWorldBounds(true);
 
         // Initialize gravity
-        this.sprite.body.setGravityY(300);
+        this.sprite.body.setGravityY(this.kinematics.gravityY);
 
         // Player properties
         this.facing = 'right';
@@ -222,8 +262,6 @@ class Player {
         // Jump properties
         this.isJumping = false;
         this.jumpTime = 0;
-        this.maxJumpTime = 300; // Max jump duration in milliseconds
-        this.jumpSpeed = -330; // Jump velocity
 
         // Enable collision between the player and the platforms
         scene.physics.add.collider(this.sprite, scene.level.getPlatforms());
@@ -301,10 +339,10 @@ class Player {
                 // Start jump
                 this.isJumping = true;
                 this.jumpTime = 0;
-                this.sprite.body.setVelocityY(this.jumpSpeed);
-            } else if (this.isJumping && this.jumpTime < this.maxJumpTime) {
+                this.sprite.body.setVelocityY(this.kinematics.jumpSpeed);
+            } else if (this.isJumping && this.jumpTime < this.kinematics.maxJumpTime) {
                 // Continue jumping
-                this.sprite.body.setVelocityY(this.jumpSpeed);
+                this.sprite.body.setVelocityY(this.kinematics.jumpSpeed);
                 this.jumpTime += this.scene.game.loop.delta;
             } else {
                 // Max jump time reached
@@ -317,15 +355,14 @@ class Player {
 
         // Accelerated fall
         if (cursors.down.isDown && !isOnGround) {
-            this.sprite.body.setGravityY(600); // Increase gravity
+            this.sprite.body.setGravityY(this.kinematics.gravityY * 2); // Increase gravity
         } else {
-            this.sprite.body.setGravityY(300); // Normal gravity
+            this.sprite.body.setGravityY(this.kinematics.gravityY); // Normal gravity
         }
 
         // Firing projectiles when Shift key is pressed
         if (Phaser.Input.Keyboard.JustDown(shiftKey)) {
-            // Implement a cooldown of 500ms
-            if (time - this.lastFired > 500) {
+            if (time - this.lastFired > this.projectileType.cooldown) {
                 this.fireProjectile();
                 this.lastFired = time;
             }
@@ -337,8 +374,8 @@ class Player {
         let x = this.sprite.x;
         let y = this.sprite.y;
 
-        // Create an image from the pre-generated triangle texture
-        let projectile = new Projectile(this.scene, x, y, this.facing);
+        // Create a new projectile using the projectileType
+        let projectile = new Projectile(this.scene, x, y, this.facing, this.projectileType);
         this.projectiles.add(projectile.sprite);
     }
 
@@ -387,20 +424,21 @@ class Player {
 
 // Projectile Class
 class Projectile {
-    constructor(scene, x, y, direction) {
+    constructor(scene, x, y, direction, projectileType) {
         this.scene = scene;
         this.x = x;
         this.y = y;
         this.direction = direction;
+        this.type = projectileType;
 
         // Create the projectile
-        this.sprite = scene.physics.add.image(this.x, this.y, 'triangleProjectile');
+        this.sprite = scene.physics.add.image(this.x, this.y, this.type.textureKey);
         this.sprite.setScale(1);
         this.sprite.body.allowGravity = false;
         this.sprite.body.setCollideWorldBounds(false);
 
-        // Set velocity based on direction
-        let speed = 500;
+        // Set velocity based on direction and speed from projectileType
+        let speed = this.type.speed;
         if (this.direction === 'left') {
             this.sprite.setVelocityX(-speed);
         } else {
@@ -411,16 +449,6 @@ class Projectile {
         scene.time.delayedCall(1000, () => {
             this.sprite.destroy();
         });
-    }
-
-    static createProjectileTexture(scene) {
-        // Create the triangle projectile texture if it doesn't exist
-        if (!scene.textures.exists('triangleProjectile')) {
-            let graphics = scene.add.graphics({ fillStyle: { color: 0xffff00 } }); // Yellow color
-            graphics.fillTriangle(0, 10, 5, 0, 10, 10); // Draw an upward-pointing triangle
-            graphics.generateTexture('triangleProjectile', 10, 10);
-            graphics.destroy();
-        }
     }
 }
 
