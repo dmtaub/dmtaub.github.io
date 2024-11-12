@@ -205,6 +205,20 @@ class Level {
 
         // Create stars (collectibles)
         this.createStars();
+
+
+        // Colliders with friction control
+        scene.physics.add.collider(this.getStars(), this.getWalls(), (star, wall) => {
+            star.body.setFriction(wall.friction || 0, wall.friction || 0); // Use wall friction if defined
+        });
+
+        scene.physics.add.collider(this.getStars(), this.getPlatforms(), (star, platform) => {
+            star.body.setFriction(platform.friction || 0, platform.friction || 0); // Use platform friction if defined
+        });
+
+        scene.physics.add.collider(this.getStars(), this.getSpikes(), (star, spike) => {
+            star.body.setFriction(spike.friction || 0, spike.friction || 0); // Use spike friction if defined
+        });
     }
 
     createWalls() {
