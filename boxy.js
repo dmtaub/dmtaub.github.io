@@ -1,59 +1,38 @@
 // game.js
-
-const config = {
-    type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 300 },
-            debug: false
-        }
-    },
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
+class MainScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MainScene' });
     }
-};
 
-const game = new Phaser.Game(config);
+    preload() {
+        // Load assets if any
+    }
 
-let player;
-let level;
-let cursors;
-let shiftKey;
-let kinematics;
+    create() {
+        // Add a simple background color
+        this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue color
 
-function preload() {
-    // Load assets if any
-}
+        // Input Events
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
-function create() {
-    // Add a simple background color
-    this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue color
+        // Initialize Kinematics for level 1 with starFactor 1
+        this.kinematics = new Kinematics(1, { starFactor: 1 });
 
-    // Input Events
-    cursors = this.input.keyboard.createCursorKeys();
-    shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+        // Create Level
+        this.level = new Level(this, this.kinematics);
 
-    // Initialize Kinematics for level 1 with starFactor 1
-    kinematics = new Kinematics(1, { starFactor: 1 });
+        // Create Player
+        this.player = new Player(this, 100, 450, { maxHearts: 4 }, this.kinematics);
 
-    // Create Level
-    level = new Level(this, kinematics);
+        // Create the triangle projectile texture
+        Projectile.createProjectileTexture(this);
+    }
 
-    // Create Player
-    player = new Player(this, 100, 450, { maxHearts: 4 }, kinematics);
-
-    // Create the triangle projectile texture
-    Projectile.createProjectileTexture(this);
-}
-
-function update(time, delta) {
-    // Update Player
-    player.update(cursors, shiftKey, time);
+    update(time, delta) {
+        // Update Player
+        this.player.update(this.cursors, this.shiftKey, time);
+    }
 }
 
 // Kinematics Class
@@ -217,13 +196,13 @@ class Player {
         this.jumpSpeed = -330; // Jump velocity
 
         // Enable collision between the player and the platforms
-        scene.physics.add.collider(this.sprite, level.getPlatforms());
+        scene.physics.add.collider(this.sprite, scene.level.getPlatforms());
 
         // Collision with spikes
-        scene.physics.add.overlap(this.sprite, level.getSpikes(), this.hitSpike, null, this);
+        scene.physics.add.overlap(this.sprite, scene.level.getSpikes(), this.hitSpike, null, this);
 
         // Collision with stars
-        scene.physics.add.overlap(this.sprite, level.getStars(), this.collectStar, null, this);
+        scene.physics.add.overlap(this.sprite, scene.level.getStars(), this.collectStar, null, this);
 
         // Group for projectiles
         this.projectiles = scene.physics.add.group();
@@ -346,8 +325,8 @@ class Player {
         // Check if player is dead
         if (this.hearts <= 0) {
             // Handle player death (e.g., restart game, show game over screen)
-            // For now, we can just restart the scene
-            this.scene.scene.restart();
+            // Start GameOver scene
+            this.scene.scene.start('GameOverScene');
         }
     }
 
@@ -383,7 +362,7 @@ class Projectile {
         this.sprite = scene.physics.add.image(this.x, this.y, 'triangleProjectile');
         this.sprite.setScale(1);
         this.sprite.body.allowGravity = false;
-        this.sprite.setCollideWorldBounds(false);
+        this.sprite.body.setCollideWorldBounds(false);
 
         // Set velocity based on direction
         let speed = 500;
@@ -409,3 +388,49 @@ class Projectile {
         }
     }
 }
+
+// GameOverScene Class
+class GameOverScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'GameOverScene' });
+    }
+
+    preload() {
+        // Load assets if any
+    }
+
+    create() {
+        // Add a simple background color
+        this.cameras.main.setBackgroundColor('#000000'); // Black background
+
+        // Display "Game Over" text
+        this.add.text(400, 200, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+
+        // Create "Try Again" button
+        let tryAgainButton = this.add.text(400, 300, 'Try Again', { fontSize: '32px', fill: '#fff', backgroundColor: '#ff0000' })
+            .setOrigin(0.5)
+            .setInteractive();
+
+        tryAgainButton.on('pointerdown', () => {
+            // Restart the MainScene
+            this.scene.start('MainScene');
+        });
+    }
+}
+
+
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: false
+        }
+    },
+    scene: [MainScene, GameOverScene]
+};
+
+const game = new Phaser.Game(config);
