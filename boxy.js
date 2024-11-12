@@ -53,6 +53,9 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(1500, () => {
             this.levelText.destroy();
         }, [], this);
+
+        // Set up collision for stars colliding with projectiles
+        this.physics.add.collider(this.level.getStars(), this.player.projectiles);
     }
 
     update(time, delta) {
@@ -174,7 +177,7 @@ class Level {
 
         // Default wall positions
         this.defaultWalls = [
-            { x: 400, y: 568, width: 800, height: 64, color: 0x228B22 }, // Ground (wall)
+            { x: 400, y: 568, width: 800, height: 64, color: 0x228B22, name: "ground" }, // Ground (wall)
             { x: 600, y: 400, width: 150, height: 32, color: 0x8B4513 }, // Wall 1
             { x: 50, y: 250, width: 150, height: 32, color: 0x8B4513 },  // Wall 2
             { x: 750, y: 220, width: 150, height: 32, color: 0x8B4513 }   // Wall 3
@@ -207,6 +210,7 @@ class Level {
     createWalls() {
         this.wallData.forEach(data => {
             let wall = this.scene.add.rectangle(data.x, data.y, data.width, data.height, data.color);
+            wall.name = data.name || "";
             this.scene.physics.add.existing(wall, true);
             this.walls.add(wall);
         });
@@ -252,23 +256,20 @@ class Level {
             // Create stars as circles
             let star = this.scene.add.circle(x, y, 7, 0xffff00); // Yellow circle as star
             this.scene.physics.add.existing(star);
+            this.stars.add(star);
 
             // Set bounce and ensure no friction or damping
-//            star.body.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
             star.body.setBounce(this.kinematics.defaultItemBounce.x, this.kinematics.defaultItemBounce.y);
             star.body.setCollideWorldBounds(true);
 
             // Random initial velocity for more dynamic interaction
             star.body.setVelocity(Phaser.Math.Between(-100, 100), Phaser.Math.Between(-100, 100)); // Random initial velocity
-
-            this.stars.add(star);
         }
 
         // Store the initial number of stars
         this.totalStars = numberOfStars;
 
         // Collide stars with walls and platforms so they land on them
-//        this.scene.physics.add.collider(this.stars, this.walls);
         this.scene.physics.add.collider(this.stars, this.walls, this.starWallCollision, null, this);
         this.scene.physics.add.collider(this.stars, this.platforms);
 
@@ -282,9 +283,9 @@ class Level {
         star.body.velocity.y *= 0.9; // Lose 10% speed on Y-axis
 
         // If the wall is the ground, reduce more speed
-        if (wall.y >= 568) { // Assuming ground is at y=568
-            star.body.velocity.x *= 0.8; // Lose additional speed on ground
-            star.body.velocity.y *= 0.8;
+        if (wall.name == "ground") {
+            star.body.velocity.x *= 0.5; // Lose additional speed on ground
+            star.body.velocity.y *= 0.5;
         }
     }
 
