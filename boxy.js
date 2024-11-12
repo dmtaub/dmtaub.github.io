@@ -143,21 +143,27 @@ class Inventory {
 
 // Level Class
 class Level {
-    constructor(scene, kinematics, platformData = [], spikeData = []) {
+    constructor(scene, kinematics, wallData = [], platformData = [], spikeData = []) {
         this.scene = scene;
         this.kinematics = kinematics;
+        this.walls = scene.physics.add.staticGroup();
         this.platforms = scene.physics.add.staticGroup();
         this.spikes = scene.physics.add.staticGroup();
         this.stars = scene.physics.add.group();
 
         this.inventory = new Inventory(); // Level inventory, empty for now
 
+        // Default wall positions
+        this.defaultWalls = [
+            { x: 400, y: 568, width: 800, height: 64, color: 0x228B22 }, // Ground (wall)
+            { x: 600, y: 400, width: 150, height: 32, color: 0x8B4513 }, // Wall 1
+            { x: 50, y: 250, width: 150, height: 32, color: 0x8B4513 },  // Wall 2
+            { x: 750, y: 220, width: 150, height: 32, color: 0x8B4513 }   // Wall 3
+        ];
+
         // Default platform positions
         this.defaultPlatforms = [
-            { x: 400, y: 568, width: 800, height: 64, color: 0x228B22 }, // Ground
-            { x: 600, y: 400, width: 150, height: 32, color: 0x8B4513 }, // Platform 1
-            { x: 50, y: 250, width: 150, height: 32, color: 0x8B4513 },  // Platform 2
-            { x: 750, y: 220, width: 150, height: 32, color: 0x8B4513 }   // Platform 3
+            { x: 400, y: 350, width: 200, height: 16, color: 0xCCCCCC } // Platform
         ];
 
         // Default spike positions
@@ -165,16 +171,26 @@ class Level {
             { x: 775, y: 540, width: 50, height: 28, color: 0x808080 } // Grey box on far right of ground
         ];
 
-        // Use provided platform data or default
+        // Use provided data or default
+        this.wallData = wallData.length > 0 ? wallData : this.defaultWalls;
         this.platformData = platformData.length > 0 ? platformData : this.defaultPlatforms;
         this.spikeData = spikeData.length > 0 ? spikeData : this.defaultSpikes;
 
-        // Create platforms and spikes
+        // Create walls, platforms, and spikes
+        this.createWalls();
         this.createPlatforms();
         this.createSpikes();
 
         // Create stars (collectibles)
         this.createStars();
+    }
+
+    createWalls() {
+        this.wallData.forEach(data => {
+            let wall = this.scene.add.rectangle(data.x, data.y, data.width, data.height, data.color);
+            this.scene.physics.add.existing(wall, true);
+            this.walls.add(wall);
+        });
     }
 
     createPlatforms() {
@@ -209,8 +225,12 @@ class Level {
         // Store the initial number of stars
         this.totalStars = numberOfStars;
 
-        // Collide stars with platforms so they land on them
-        this.scene.physics.add.collider(this.stars, this.platforms);
+        // Collide stars with walls so they land on them
+        this.scene.physics.add.collider(this.stars, this.walls);
+    }
+
+    getWalls() {
+        return this.walls;
     }
 
     getPlatforms() {
@@ -226,6 +246,7 @@ class Level {
     }
 
     destroy() {
+        this.walls.clear(true, true);
         this.platforms.clear(true, true);
         this.spikes.clear(true, true);
         this.stars.clear(true, true);
@@ -263,8 +284,11 @@ class Player {
         this.isJumping = false;
         this.jumpTime = 0;
 
-        // Enable collision between the player and the platforms
-        scene.physics.add.collider(this.sprite, scene.level.getPlatforms());
+        // Enable collision between the player and the walls
+        scene.physics.add.collider(this.sprite, scene.level.getWalls());
+
+        // Collision with platforms (one-way)
+        scene.physics.add.collider(this.sprite, scene.level.getPlatforms(), null, this.platformCollisionCallback, this);
 
         // Collision with spikes
         scene.physics.add.overlap(this.sprite, scene.level.getSpikes(), this.hitSpike, null, this);
@@ -315,6 +339,11 @@ class Player {
         this.heartsGroup.children.each(heart => {
             heart.setScrollFactor(0);
         });
+    }
+
+    platformCollisionCallback(playerSprite, platform) {
+        // Only collide when the player is falling (moving downwards)
+        return playerSprite.body.velocity.y >= 0;
     }
 
     update(cursors, shiftKey, time) {
@@ -481,7 +510,7 @@ class GameOverScene extends Phaser.Scene {
     }
 }
 
-// Configuration and game initialization moved to the bottom as per user request
+// Configuration and game initialization
 const config = {
     type: Phaser.AUTO,
     width: 800,
