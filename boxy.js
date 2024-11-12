@@ -406,6 +406,14 @@ class Player {
         // Create a new projectile using the projectileType
         let projectile = new Projectile(this.scene, x, y, this.facing, this.projectileType);
         this.projectiles.add(projectile.sprite);
+
+        // Apply recoil to player
+        let recoilForce = 100; // Adjust as needed
+        if (this.facing === 'left') {
+            this.sprite.body.velocity.x += recoilForce;
+        } else {
+            this.sprite.body.velocity.x -= recoilForce;
+        }
     }
 
     hitSpike(playerSprite, spike) {
@@ -417,6 +425,16 @@ class Player {
 
         // Update hearts display
         this.createHeartsDisplay();
+
+        // Apply recoil to player
+        let recoilForceY = 200; // Adjust as needed
+        let recoilForceX = 300; // Adjust as needed
+        if (this.sprite.body.touching.left) {
+            this.sprite.body.velocity.x = recoilForceX;
+        } else if (this.sprite.body.touching.right) {
+            this.sprite.body.velocity.x = -recoilForceX;
+        }
+        this.sprite.body.velocity.y = -recoilForceY; // Knock back upwards
 
         // Check if player is dead
         if (this.hearts <= 0) {
