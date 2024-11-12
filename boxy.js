@@ -475,6 +475,7 @@ class Player {
         // Create a new projectile using the projectileType
         let projectile = new Projectile(this.scene, x, y, this.facing, this.projectileType);
         this.projectiles.add(projectile.sprite);
+        projectile.init();
 
         // Apply recoil to player
         let recoilForce = projectile.type.recoilForce; // Around 100 for default projectile
@@ -559,7 +560,9 @@ class Projectile {
         this.sprite.setScale(1);
         this.sprite.body.allowGravity = false;
         this.sprite.body.setCollideWorldBounds(false);
+    }
 
+    init() {
         // Set velocity based on direction and speed from projectileType
         let speed = this.type.speed;
         if (this.direction === 'left') {
@@ -569,7 +572,7 @@ class Projectile {
         }
 
         // Destroy after 1 second
-        scene.time.delayedCall(1000, () => {
+        this.scene.time.delayedCall(1000, () => {
             this.sprite.destroy();
         });
     }
