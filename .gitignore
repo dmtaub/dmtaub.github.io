@@ -1,0 +1,5 @@
+.DS_Store
+media_proofs/*
+notes/*
+lib/phaser.js
+test/*
