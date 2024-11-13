@@ -341,13 +341,15 @@ class Player {
 
         this.maxHearts = options.maxHearts || 4;
         this.hearts = this.maxHearts; // Player starts with full health
+        this.recoilTimer = 400; // Time in ms for invulnerability after damage
+        this.invulnerable = false; // Invulnerability flag
 
         this.inventory = new Inventory(); // Player inventory
 
         // Create the player as a rectangle
         this.sprite = scene.add.rectangle(this.x, this.y, 32, 48, 0xff0000);
         scene.physics.add.existing(this.sprite);
-        this.sprite.body.setBounce(this.kinematics.bounceFactor);
+        // this.sprite.body.setBounce(this.kinematics.bounceFactor);
         this.sprite.body.setCollideWorldBounds(true);
 
         // Initialize gravity
@@ -509,7 +511,11 @@ class Player {
     }
 
     hitSpike(playerSprite, spike) {
+        if (this.invulnerable) {
+            return; // Skip if invulnerable
+        }
         // Reduce health by 0.5
+        this.invulnerable = true;
         this.hearts -= 0.5;
 
         // Ensure health does not go below zero
@@ -519,20 +525,63 @@ class Player {
         this.createHeartsDisplay();
 
         // Apply recoil to player
-        let recoilForceY = 200; // Adjust as needed
-        let recoilForceX = 300; // Adjust as needed
-        if (this.sprite.body.touching.left) {
-            this.sprite.body.velocity.x = recoilForceX;
-        } else if (this.sprite.body.touching.right) {
-            this.sprite.body.velocity.x = -recoilForceX;
-        }
-        this.sprite.body.velocity.y = -recoilForceY; // Knock back upwards
+        this._damageRecoil(playerSprite, spike);
+
+        this.scene.time.delayedCall(this.recoilTimer, () => {
+            this.invulnerable = false;
+        });
+
+        // Flash effect on player
+        this.scene.tweens.add({
+            targets: playerSprite,
+            duration: 100,
+            alpha: 0.25,
+            ease: 'Linear',
+            yoyo: true,
+            repeat: 4,
+            onComplete: () => {
+                playerSprite.alpha = 1;
+            }
+        });
 
         // Check if player is dead
         if (this.hearts <= 0) {
             // Handle player death
             this.scene.scene.start('GameOverScene');
         }
+    }
+
+    // work in progress...
+    _damageRecoil(player, dmgSource) {
+        // compute vector from player to damage source - kinda off...
+        const vector = new Phaser.Math.Vector2(
+            player.x - dmgSource.x,
+            -Math.abs(player.y - dmgSource.y) // always upward
+        ).normalize();
+
+        // Recoil force option
+        const recoilForceY = 300; // Adjust as needed
+        const recoilForceX = 500; // Adjust as needed
+        // Apply recoil force
+        if (!player.useVelocity) { // never true
+            player.body.velocity.x = vector.x * recoilForceX;
+            player.body.velocity.y = vector.y * recoilForceY;
+        } else {
+            if (player.body.touching.left) {
+                player.body.velocity.x = recoilForceX;
+            } else if (player.body.touching.right) {
+                player.body.velocity.x = -recoilForceX;
+            }
+            player.body.velocity.y = -recoilForceY; // Always knock back upwards
+        }
+        /*
+        // use scaled distance
+        const amount = player.width * player.scaleX * 2; // full player width
+        // set position based on recoil
+        const setX = player.x + vector.x * amount;
+        const setY = player.y + vector.y * amount;
+        player.setPosition(setX, setY);
+        */
     }
 
     collectStar(playerSprite, star) {
