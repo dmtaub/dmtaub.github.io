@@ -193,7 +193,7 @@ class Level {
 
         // Default spike positions
         this.defaultSpikes = [
-            { x: 775, y: 540, width: 50, height: 28, color: 0x808080 } // Grey box on far right of ground
+            { x: 755, y: 522, width: 50, height: 28, tines: 15, color: 0x808080 } // Grey box on far right of ground
         ];
 
         // Use provided data or default
@@ -257,9 +257,20 @@ class Level {
 
     createSpikes() {
         this.spikeData.forEach(data => {
-            let spike = this.scene.add.rectangle(data.x, data.y, data.width, data.height, data.color);
-            this.scene.physics.add.existing(spike, true);
-            this.spikes.add(spike);
+            // Create spike with tines pointing up
+            const width = data.width / data.tines;
+            for (let i = 0; i < data.tines; i++) {
+                let x = data.x + i * width;
+                let y = data.y;
+                let spike = this.scene.add.triangle(
+                    x, y,
+                    width/2, 0,
+                    width, data.height,
+                    0, data.height,
+                data.color);
+                this.scene.physics.add.existing(spike, true);
+                this.spikes.add(spike);
+            }
         });
     }
 
