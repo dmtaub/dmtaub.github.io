@@ -435,8 +435,9 @@ class Player {
     }
 
     platformCollisionCallback(playerSprite, platform) {
-        // Only collide when the player is falling (moving downwards)
-        return playerSprite.body.velocity.y >= 0;
+        // Only collide when the player is falling (moving downwards
+        // and when "down" isn't held
+        return playerSprite.body.velocity.y > 0 && !this.scene.inputManager.isDownPressed();
     }
 
     update(inputManager, shiftKey, time) {
