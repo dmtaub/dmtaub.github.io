@@ -193,7 +193,8 @@ class Level {
 
         // Default spike positions
         this.defaultSpikes = [
-            { x: 755, y: 522, width: 50, height: 28, tines: 15, color: 0x808080 } // Grey box on far right of ground
+            { x: 755, y: 522, width: 50, height: 28, tines: 15, color: 0x808080 }, // Grey spikes on far right of ground
+            { x: 0, y: 522, width: 50, height: 28, tines: 15, color: 0x808080 } // Grey spikes on far left of ground
         ];
 
         // Use provided data or default
@@ -407,24 +408,28 @@ class Player {
 
         // Create heart shapes
         for (let i = 0; i < this.maxHearts; i++) {
+            const spacing = 20;
+            const width = 16;
             let heartColor = 0xff0000; // Red
-            let x = 20 + i * 20; // Spacing between hearts
+            let x = spacing + i * spacing; // Spacing between hearts
             let y = 20;
 
             // Use half-heart if necessary
             if (i < Math.floor(this.hearts)) {
                 // Full heart
-                let heart = this.scene.add.rectangle(x, y, 16, 16, heartColor);
-                this.heartsGroup.add(heart);
-            } else if (i < this.hearts) {
-                // Half heart
-                let heart = this.scene.add.rectangle(x, y, 8, 16, heartColor);
+                let heart = this.scene.add.rectangle(x, y, width, width, heartColor);
                 this.heartsGroup.add(heart);
             } else {
                 // Empty heart (gray)
                 let emptyHeartColor = 0x808080; // Gray
-                let heart = this.scene.add.rectangle(x, y, 16, 16, emptyHeartColor);
+                let heart = this.scene.add.rectangle(x, y, width, width, emptyHeartColor);
                 this.heartsGroup.add(heart);
+                // Check for half heart
+                if (i < this.hearts) {
+                    // Half heart
+                    let heart = this.scene.add.rectangle(x - width/4, y, width/2, width, heartColor);
+                    this.heartsGroup.add(heart);
+                }
             }
         }
 
@@ -543,18 +548,23 @@ class Player {
             this.invulnerable = false;
         });
 
-        // Flash effect on player
-        this.scene.tweens.add({
-            targets: playerSprite,
-            duration: 100,
-            alpha: 0.25,
-            ease: 'Linear',
-            yoyo: true,
-            repeat: 4,
-            onComplete: () => {
-                playerSprite.alpha = 1;
-            }
-        });
+        // check for existing flash effect
+        if (!this.flashTween) {
+            const numFlashes = 4; // Number of flashes
+            // Flash effect on player
+            this.flashTween = this.scene.tweens.add({
+                targets: playerSprite,
+                duration: this.recoilTimer / numFlashes / 2 - 10,
+                alpha: 0.25,
+                ease: 'Linear',
+                yoyo: true,
+                repeat: numFlashes - 1,
+                onComplete: () => {
+                    playerSprite.alpha = 1;
+                    this.flashTween = null;
+                },
+            });
+        }
 
         // Check if player is dead
         if (this.hearts <= 0) {
