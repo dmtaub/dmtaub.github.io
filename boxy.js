@@ -450,7 +450,7 @@ class Player {
         const isOnGround = this.sprite.body.blocked.down || this.sprite.body.touching.down;
 
         // Variable Jumping
-        if (inputManager.isUpPressed()) {
+        if (inputManager.isUpPressed() || inputManager.isSpacePressed()) {
             if (isOnGround) {
                 // Start jump
                 this.isJumping = true;
@@ -628,6 +628,9 @@ class GameOverScene extends Phaser.Scene {
 // Configuration and game initialization
 const config = {
     type: Phaser.AUTO,
+    scale: {
+        mode: Phaser.Scale.FIT,
+    },
     width: 800,
     height: 600,
     physics: {
@@ -641,6 +644,11 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+// set scale on load
+setTimeout(() => {
+    game.scale.setParentSize(window.innerWidth, window.innerHeight);
+}, 100);
 
 // export as module
 export default game;
