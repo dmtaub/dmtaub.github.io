@@ -1,5 +1,8 @@
 // game.js
 
+import InputManager from './lib/inputManager.js';
+
+// import fallbackKeyboard
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' });
@@ -18,10 +21,6 @@ class MainScene extends Phaser.Scene {
         // Add a simple background color
         this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue color
 
-        // Input Events
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-
         // Initialize Kinematics with current level
         this.kinematics = new Kinematics(this.currentLevel);
 
@@ -37,6 +36,10 @@ class MainScene extends Phaser.Scene {
 
         // Create Level
         this.level = new Level(this, this.kinematics);
+
+        // Input Events
+        this.inputManager = new InputManager(this, this.virtualKeyboard);
+
 
         // Create Player
         this.player = new Player(this, 100, 450, { maxHearts: 4 }, this.kinematics, this.projectileType);
@@ -60,7 +63,7 @@ class MainScene extends Phaser.Scene {
 
     update(time, delta) {
         // Update Player
-        this.player.update(this.cursors, this.shiftKey, time);
+        this.player.update(this.inputManager, this.shiftKey, time);
     }
 
     levelComplete() {
@@ -423,7 +426,7 @@ class Player {
         return playerSprite.body.velocity.y >= 0;
     }
 
-    update(cursors, shiftKey, time) {
+    update(inputManager, shiftKey, time) {
         // Calculate current speed and jump speed based on inventory weight
         let totalWeight = this.inventory.getTotalWeight();
         let speedFactor = 1 - totalWeight * this.kinematics.weightSlowFactor; // Adjust as needed
@@ -435,10 +438,10 @@ class Player {
         this.sprite.body.setVelocityX(0);
 
         // Movement controls
-        if (cursors.left.isDown) {
+        if (inputManager.isLeftPressed()) {
             this.sprite.body.setVelocityX(-currentSpeed);
             this.facing = 'left';
-        } else if (cursors.right.isDown) {
+        } else if (inputManager.isRightPressed()) {
             this.sprite.body.setVelocityX(currentSpeed);
             this.facing = 'right';
         }
@@ -447,7 +450,7 @@ class Player {
         const isOnGround = this.sprite.body.blocked.down || this.sprite.body.touching.down;
 
         // Variable Jumping
-        if (cursors.up.isDown) {
+        if (inputManager.isUpPressed()) {
             if (isOnGround) {
                 // Start jump
                 this.isJumping = true;
@@ -467,14 +470,14 @@ class Player {
         }
 
         // Accelerated fall
-        if (cursors.down.isDown && !isOnGround) {
+        if (inputManager.isDownPressed() && !isOnGround) {
             this.sprite.body.setGravityY(this.kinematics.gravityY * 2); // Increase gravity
         } else {
             this.sprite.body.setGravityY(this.kinematics.gravityY); // Normal gravity
         }
 
         // Firing projectiles when Shift key is pressed
-        if (Phaser.Input.Keyboard.JustDown(shiftKey)) {
+        if (inputManager.isShiftPressed()) {
             if (time - this.lastFired > this.projectileType.cooldown) {
                 this.fireProjectile();
                 this.lastFired = time;
@@ -638,3 +641,6 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+// export as module
+export default game;

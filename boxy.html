@@ -6,6 +6,12 @@
     <style>
         body { margin: 0; }
         canvas { display: block; margin: 0 auto; }
+
+        html, body {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -13,7 +19,8 @@
     <!-- Include the Phaser library -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
     <!-- Include your game script -->
-    <script src="boxy.js"></script>
+    <script src="lib/fallbackKeyboard.js" type="module"></script>
+    <script src="boxy.js" type="module"></script>
 
 </body>
 </html>
