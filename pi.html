@@ -60,12 +60,10 @@
         }
 
         #overlay {
-            display: none;
             position: fixed;
-            top: 0;
-            left: 0;
+            visibility: hidden;
             width: 100%;
-            height: 100%;
+            bottom: 0;
             background-color: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
@@ -74,18 +72,15 @@
 
         #editorPanel {
             background-color: white;
-            padding: 20px;
             border-radius: 5px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 90%;
-            height: 90%;
         }
 
         #editor {
-            width: 100%;
             height: 80%;
+            width: 100%;
         }
 
         #editorButtons {
@@ -104,6 +99,7 @@
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
 </head>
 
 <body>
@@ -113,7 +109,7 @@
 
     <div id="overlay">
         <div id="editorPanel">
-            <textarea id="editor"></textarea>
+            <div id="editor"></div>
             <div id="editorButtons">
                 <button id="saveButton">Save</button>
                 <button id="hideButton">Hide</button>
@@ -215,7 +211,9 @@
             `
         });
         document.body.appendChild(pastePanel);
-
+        const hideOverlay = () => {
+            document.getElementById('overlay').style.visibility = 'hidden';
+        };
         const events = () => {
             console.log(pastePanel)
             pastePanel.querySelector('#clear').addEventListener('click', () => {
@@ -241,13 +239,11 @@
 
             // Event listener for "Create" button
             pastePanel.querySelector('#create').addEventListener('click', () => {
-                document.getElementById('overlay').style.display = 'flex';
+                document.getElementById('overlay').style.visibility = 'visible';
             });
 
             // Event listeners for overlay buttons
-            document.getElementById('hideButton').addEventListener('click', () => {
-                document.getElementById('overlay').style.display = 'none';
-            });
+            document.getElementById('hideButton').addEventListener('click', hideOverlay);
 
             document.getElementById('clearButton').addEventListener('click', () => {
                 editor.setValue('');
@@ -264,20 +260,27 @@
                 dataTransfer.items.add(mockFile);
 
                 dropZone.dispatchEvent(new DragEvent('drop', { dataTransfer }));
-                document.getElementById('overlay').style.display = 'none';
+                hideOverlay();
             });
+            // Initialize the CodeMirror editor
+            var editor = CodeMirror(document.getElementById('editor'), {
+                mode: 'javascript',           // Set syntax highlighting for JavaScript
+                theme: 'dracula',             // Choose a theme
+                lineNumbers: true,            // Show line numbers
+                autoCloseBrackets: true,      // Automatically close brackets
+                indentWithTabs: true,         // Indent with tabs
+                smartIndent: true,            // Smart indentation
+                lineWrapping: true,           // Wrap lines
+                tabSize: 2,                   // Set tab size
+                value: "// Start writing your code here\nconsole.log('Hello, world!');"
+            });
+
         }
 
         setTimeout(() => events(), 50);
 
-        const editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
-            mode: 'javascript',
-            lineNumbers: true
-        });
     </script>
 
 </body>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.1/build/three.js"></script>
 
 </html>
