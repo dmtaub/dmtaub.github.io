@@ -45,14 +45,24 @@
             margin-bottom: 5px;
         }
 
-        .run-button {
-            margin-left: 10px;
-            cursor: pointer;
-            background-color: #4CAF50;
+        .wide-btn{
+            padding: 5px 10px !important;
+            margin: 0px 5px !important;
+        }
+        .btn {
             color: white;
             border: none;
+            padding: 10px;
+            cursor: pointer;
             border-radius: 3px;
-            padding: 5px 10px;
+            background: grey;
+        }
+
+        .new-btn {
+            background: #4CAF50;
+        }
+        .del-btn {
+            background: #C50;
         }
 
         .run-button:hover {
@@ -84,18 +94,7 @@
         }
 
         #editorButtons {
-            margin-top: 10px;
-        }
-
-        #saveButton,
-        #hideButton,
-        #clearButton {
-            background-color: grey;
-            color: white;
-            border: none;
-            padding: 10px;
             margin: 5px;
-            cursor: pointer;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
@@ -111,9 +110,9 @@
         <div id="editorPanel">
             <div id="editor"></div>
             <div id="editorButtons">
-                <button id="saveButton">Save</button>
-                <button id="hideButton">Hide</button>
-                <button id="clearButton">Clear</button>
+                <button id="saveButton" class="new-btn btn">Save</button>
+                <button id="hideButton" class="btn">Cancel</button>
+                <button id="clearButton" class="del-btn btn">Delete</button>
             </div>
         </div>
     </div>
@@ -178,11 +177,22 @@
                 fileItemDiv.textContent = file.name;
 
                 const runButton = document.createElement('button');
-                runButton.classList.add('run-button');
+                runButton.className = 'new-btn btn wide-btn';
                 runButton.textContent = 'Run';
                 runButton.addEventListener('click', () => runFile(index));
 
+                // add "edit" button
+                const editButton = document.createElement('button');
+                editButton.className = 'del-btn btn wide-btn';
+                editButton.textContent = 'Edit';
+                editButton.addEventListener('click', () => {
+                    document.getElementById('overlay').style.visibility = 'visible';
+                    codeEditor.setValue(droppedFiles[index].content);
+                    currentIndex = index;
+                });
+
                 fileItemDiv.appendChild(runButton);
+                fileItemDiv.appendChild(editButton);
                 fileListDiv.appendChild(fileItemDiv);
             });
 
@@ -205,12 +215,14 @@
         const pastePanel = Object.assign(document.createElement('div'), {
             style: 'position: absolute; top: 0; left: 0; z-index: 23; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px;',
             innerHTML: `
-                <button id="paste" style="color: white; background: #4CAF50; border: none; padding: 10px; cursor: pointer; border-radius: 3px;">Paste</button>
-                <button id="create" style="color: white; background: grey; border: none; padding: 10px; cursor: pointer; border-radius: 3px; margin-left: 10px;">Create</button>
-                <button id="clear" style="color: white; background: #f44336; border: none; padding: 10px; cursor: pointer; border-radius: 3px; margin-left: 10px;">Clear</button>
+            <button id="create" class="btn new-btn" style="margin-right: 10px;">New</button>
+                <button id="paste" class="btn">Paste</button>
+                <button id="clear" class="btn del-btn" style="margin-left: 10px;">Clear All</button>
             `
         });
         document.body.appendChild(pastePanel);
+        let currentIndex = null;
+        const defaultText = "// Start writing your code here\nconsole.log('Hello, world!');";
         const hideOverlay = () => {
             document.getElementById('overlay').style.visibility = 'hidden';
         };
@@ -219,6 +231,10 @@
             pastePanel.querySelector('#clear').addEventListener('click', () => {
                 // clear running scripts and remove any html added by them
                 //TODO: document.querySelectorAll('script[src^="blob:"]').forEach(s => s.remove());
+                droppedFiles.length = 0;
+                updateFileList();
+                hideOverlay();
+                currentIndex = null;
             });
 
             // Event listener for "Paste" button
@@ -239,6 +255,8 @@
 
             // Event listener for "Create" button
             pastePanel.querySelector('#create').addEventListener('click', () => {
+                codeEditor.setValue(defaultText);
+                currentIndex = null;
                 document.getElementById('overlay').style.visibility = 'visible';
             });
 
@@ -246,13 +264,19 @@
             document.getElementById('hideButton').addEventListener('click', hideOverlay);
 
             document.getElementById('clearButton').addEventListener('click', () => {
-                editor.setValue('');
+                codeEditor.setValue('');
             });
 
             document.getElementById('saveButton').addEventListener('click', () => {
-                const code = editor.getValue();
+                const code = codeEditor.getValue();
                 const firstline = code.split('\n')[0];
-
+                if (currentIndex !== null) {
+                    droppedFiles[currentIndex].content = code;
+                    droppedFiles[currentIndex].name = firstline;
+                    updateFileList();
+                    hideOverlay();
+                    return;
+                }
                 const mockFileBlob = new Blob([code], { type: 'application/javascript' });
                 const mockFile = new File([mockFileBlob], firstline, { type: 'application/javascript' });
 
@@ -262,21 +286,19 @@
                 dropZone.dispatchEvent(new DragEvent('drop', { dataTransfer }));
                 hideOverlay();
             });
-            // Initialize the CodeMirror editor
-            var editor = CodeMirror(document.getElementById('editor'), {
-                mode: 'javascript',           // Set syntax highlighting for JavaScript
-                theme: 'dracula',             // Choose a theme
-                lineNumbers: true,            // Show line numbers
-                autoCloseBrackets: true,      // Automatically close brackets
-                indentWithTabs: true,         // Indent with tabs
-                smartIndent: true,            // Smart indentation
-                lineWrapping: true,           // Wrap lines
-                tabSize: 2,                   // Set tab size
-                value: "// Start writing your code here\nconsole.log('Hello, world!');"
-            });
-
+            // Initialize the CodeMirror codeEditor
         }
-
+        var codeEditor = CodeMirror(document.getElementById('editor'), {
+            mode: 'javascript',           // Set syntax highlighting for JavaScript
+            theme: 'dracula',             // Choose a theme
+            lineNumbers: true,            // Show line numbers
+            autoCloseBrackets: true,      // Automatically close brackets
+            indentWithTabs: true,         // Indent with tabs
+            smartIndent: true,            // Smart indentation
+            lineWrapping: true,           // Wrap lines
+            tabSize: 2,                   // Set tab size
+            value: defaultText,
+        });
         setTimeout(() => events(), 50);
 
     </script>
