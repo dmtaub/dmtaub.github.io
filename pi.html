@@ -79,6 +79,10 @@
             align-items: center;
             z-index: 24;
         }
+        .full-screen {
+            height: 100%;
+            top: 60px;
+        }
 
         #editorPanel {
             background-color: white;
@@ -123,6 +127,7 @@
         const dropZone = document.getElementById('dropZone');
         const fileListDiv = document.getElementById('fileList');
         const droppedFiles = [];
+        let codeEditor = null;
 
         // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -226,6 +231,11 @@
         const hideOverlay = () => {
             document.getElementById('overlay').style.visibility = 'hidden';
         };
+        const setEditorText = (text) => {
+            codeEditor.setValue(text);
+            currentIndex = null;
+            document.getElementById('overlay').style.visibility = 'visible';
+        };
         const events = () => {
             console.log(pastePanel)
             pastePanel.querySelector('#clear').addEventListener('click', () => {
@@ -254,10 +264,16 @@
             });
 
             // Event listener for "Create" button
-            pastePanel.querySelector('#create').addEventListener('click', () => {
-                codeEditor.setValue(defaultText);
-                currentIndex = null;
-                document.getElementById('overlay').style.visibility = 'visible';
+            pastePanel.querySelector('#create').addEventListener('click', (e) => {
+                // on shift-click, use a game template instead (from exampleLevel.js in the same path)
+                if (e.shiftKey) {
+                    document.getElementById('editorPanel').classList.add('full-screen');
+                    document.getElementById('overlay').style.height = '100%';
+                    codeEditor.setSize('100%', '100%');
+                    fetch('exampleLevel.js').then(r => r.text()).then(setEditorText);
+                    return;
+                }
+                setEditorText(defaultText);
             });
 
             // Event listeners for overlay buttons
@@ -270,6 +286,14 @@
             document.getElementById('saveButton').addEventListener('click', () => {
                 const code = codeEditor.getValue();
                 const firstline = code.split('\n')[0];
+                if (firstline === '') {
+                    alert('Please provide a name for the file');
+                    return;
+                } else if (firstline == '// amy.js') {
+                    eval(code);
+                    alert('Level Saved!');
+                    return;
+                }
                 if (currentIndex !== null) {
                     droppedFiles[currentIndex].content = code;
                     droppedFiles[currentIndex].name = firstline;
@@ -288,7 +312,7 @@
             });
             // Initialize the CodeMirror codeEditor
         }
-        var codeEditor = CodeMirror(document.getElementById('editor'), {
+        codeEditor = CodeMirror(document.getElementById('editor'), {
             mode: 'javascript',           // Set syntax highlighting for JavaScript
             theme: 'dracula',             // Choose a theme
             lineNumbers: true,            // Show line numbers
