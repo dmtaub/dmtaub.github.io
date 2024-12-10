@@ -58,7 +58,9 @@ document.getElementById('resumeLink').addEventListener('click', function (e) {
 });
 
 document.getElementById('popupClose').addEventListener('click', function () {
-    document.getElementById('popupOverlay').style.display = 'none';
+    const overlay = document.getElementById('popupOverlay');
+    overlay.style.display = 'none';
+    overlay.getElementsByTagName('iframe')[0].src = "/files/Resume2024.html"
 });
 
 // Close the popup when clicking outside the content
