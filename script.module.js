@@ -50,3 +50,20 @@ document.addEventListener('DOMContentLoaded', () => {
     start();
     fade();
 });
+
+// JavaScript to handle the popup
+document.getElementById('resumeLink').addEventListener('click', function (e) {
+    e.preventDefault();
+    document.getElementById('popupOverlay').style.display = 'flex';
+});
+
+document.getElementById('popupClose').addEventListener('click', function () {
+    document.getElementById('popupOverlay').style.display = 'none';
+});
+
+// Close the popup when clicking outside the content
+document.getElementById('popupOverlay').addEventListener('click', function (e) {
+    if (e.target === this) {
+        this.style.display = 'none';
+    }
+});
