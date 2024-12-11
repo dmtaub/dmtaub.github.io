@@ -17,35 +17,17 @@ let accumMaterial;
 let globalTime = 0;
 let dragging = false;
 
+// Added for debug click ripple
+let debugRipple = false;
+let debugRipplePos = new THREE.Vector2(0.5, 0.5);
+let debugRippleStartTime = 0.0;
+const debugRippleDuration = 1.0;
+let clickHue = 0.0;
+
 export function start() {
     init();
     animate();
 }
-/*
-function generateRandomTexture(width, height) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d');
-
-  const imageData = context.createImageData(width, height);
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-      data[i] = Math.random() * 255;     // Red
-      data[i + 1] = Math.random() * 255; // Green
-      data[i + 2] = Math.random() * 255; // Blue
-      data[i + 3] = 255;                 // Alpha
-  }
-
-  context.putImageData(imageData, 0, 0);
-  return canvas;
-}
-
-// Generate random background texture
-const backgroundTexture = generateRandomTexture(512, 512);
-scene.background = new THREE.CanvasTexture(backgroundTexture);
-*/
 
 function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -63,7 +45,7 @@ function init() {
 
     window.addEventListener('resize', onWindowResize, false);
 
-    // Create the ball with a metallic-like material
+    // Create the ball
     const geometry = new THREE.SphereGeometry(ballRadius, 32, 32);
     const ballMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color('hsl(200, 100%, 50%)'),
@@ -81,7 +63,7 @@ function init() {
     // Initial slow velocity
     ballVelocity = new THREE.Vector3(0.0, 0.01, 0);
 
-    // Add click event to nudge the ball
+    // Add interaction
     renderer.domElement.addEventListener('click', onClick, false);
     renderer.domElement.addEventListener('mousemove', onMove, false);
     renderer.domElement.addEventListener('mousedown', onDown, false);
@@ -119,14 +101,24 @@ function getRectUnproject(event) {
 }
 
 function onClick(event, amount) {
-  // Determine click position relative to the ball, and direct the ball velocity towards it but keeping it in the plane
+  // Determine click position relative to the ball
   const mousePos = getRectUnproject(event);
-
   const dir = mousePos.sub(camera.position).normalize();
   const distance = -camera.position.z / dir.z;
   const pos = camera.position.clone().add(dir.multiplyScalar(distance));
 
   ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
+
+  // Debug ripple behavior
+  // Map click position to normalized UV coordinates (0 to 1)
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / rect.width;
+  const y = (event.clientY - rect.top) / rect.height;
+
+  debugRipplePos.set(x, 1.0 - y);
+  debugRippleStartTime = globalTime;
+  debugRipple = true;
+  clickHue = Math.random();
 }
 
 function onMove(event) {
@@ -157,10 +149,14 @@ function createRippleScene() {
         u_ballVelocityDir: { value: new THREE.Vector2(1.0, 0.0) },
         u_resolution: { value: new THREE.Vector2(containerWidth, containerHeight) },
         u_frustumWidth: { value: frustumWidth },
-        u_frustumHeight: { value: frustumHeight }
+        u_frustumHeight: { value: frustumHeight },
+        // Added for debug ripple
+        u_debugRipple: { value: false },
+        u_debugRipplePos: { value: new THREE.Vector2(0.5, 0.5) },
+        u_debugRippleStartTime: { value: 0.0 },
+        u_clickHue: { value: 0.0 }
     };
 
-    // Ripple shader combining radial and directional waves
     rippleMaterial = new THREE.ShaderMaterial({
         uniforms: rippleUniforms,
         vertexShader: /* glsl */`
@@ -179,6 +175,12 @@ function createRippleScene() {
             uniform vec2 u_ballVelocityDir; 
             uniform float u_frustumWidth;
             uniform float u_frustumHeight;
+
+            // Debug ripple uniforms
+            uniform bool u_debugRipple;
+            uniform vec2 u_debugRipplePos;
+            uniform float u_debugRippleStartTime;
+            uniform float u_clickHue;
 
             vec3 hsl2rgb(vec3 hsl) {
                 float h = hsl.x, s = hsl.y, l = hsl.z;
@@ -209,43 +211,48 @@ function createRippleScene() {
                 float dPerp = dot(relPos, perp);
                 float dist = length(relPos);
 
-                // Radial wave (concentric circles)
+                // Radial wave
                 float radFreq = 10.0;
                 float radSpeed = 2.0;
                 float radialWave = sin(dist * radFreq - u_time * radSpeed);
 
-                // Directional wave (trail)
+                // Directional wave
                 float dirFreq = 10.0;
                 float dirSpeed = 2.0;
                 float dirWave = sin((-dLong * dirFreq) - u_time * dirSpeed);
 
-                // Fade factors
-                // For crescents, make radial patterns appear more behind the ball:
-                // Only show strong radial pattern behind (dLong < 0)
                 float behindFade = dLong < 0.0 ? 1.0 : 0.3; 
-                // Fade with distance for both patterns
                 float distanceFade = exp(-dist * 0.2);
-
-                // Perpendicular fade for directional pattern
                 float perpFade = exp(-abs(dPerp) * 0.5);
-
-                // Combine fades
                 float combinedFade = behindFade * distanceFade * perpFade;
 
-                // Combine waves to form crescents: multiply them
-                // This will create crescent shapes where the radial and directional waves overlap strongly
                 float combinedWave = ((radialWave + 1.0)*0.5) * ((dirWave + 1.0)*0.5) * combinedFade;
 
-                // Hue shift
                 float hue = mod(0.6 + 0.1 * u_time + 0.02 * dist, 1.0);
                 float saturation = 0.8;
                 float lightness = 0.5;
-
                 vec3 rippleColor = hsl2rgb(vec3(hue, saturation, lightness));
-
                 float intensity = combinedWave;
                 vec3 baseColor = vec3(0.0, 0.0, 0.05);
                 vec3 finalColor = baseColor + rippleColor * intensity;
+
+                // Debug click ripple pattern
+                if (u_debugRipple) {
+                    float dt = u_time - u_debugRippleStartTime;
+                    if (dt < 1.0) {
+                        // Use vUv directly for debug ripple
+                        vec2 diff = vUv - u_debugRipplePos;
+                        float d = length(diff);
+
+                        float rippleWave = cos(d * 20.0 - dt * 5.0);
+                        if (rippleWave > 0.0) {
+                            float rippleFadeDist = exp(-d * 5.0);
+                            float rippleTimeFade = exp(-dt * 3.0);
+                            vec3 rippleColor2 = hsl2rgb(vec3(u_clickHue, 1.0, 0.5));
+                            finalColor += rippleColor2 * rippleWave * rippleFadeDist * rippleTimeFade * 0.5;
+                        }
+                    }
+                }
 
                 gl_FragColor = vec4(finalColor, 1.0);
             }
@@ -260,7 +267,6 @@ function createAccumulationScene() {
     quadScene = new THREE.Scene();
     quadCamera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 
-    // Faster fading of old patterns to keep trails dynamic
     accumMaterial = new THREE.ShaderMaterial({
         uniforms: {
             u_oldAccum: { value: null },
@@ -303,9 +309,6 @@ function animate() {
     // Move the ball
     ball.position.add(ballVelocity);
 
-    // Optional friction to slow the ball down further over time
-    // ballVelocity.multiplyScalar(0.999);
-
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const radius = ballRadius;
@@ -328,16 +331,20 @@ function animate() {
     rippleUniforms.u_frustumWidth.value = frustumWidth;
     rippleUniforms.u_frustumHeight.value = frustumHeight;
 
-    // Compute ball velocity direction
     let velDir = ballVelocity.clone().normalize();
     rippleUniforms.u_ballVelocityDir.value.set(velDir.x, velDir.y);
 
-    // Update ball's metallic hue shift over time
-    // Let's rotate the hue slightly over time
+    // Update ball's metallic hue
     let hueShift = (0.2 * globalTime) % 1.0;
     let ballColor = new THREE.Color();
     ballColor.setHSL(hueShift, 1.0, 0.5);
     ball.material.color = ballColor;
+
+    // Update debug ripple uniforms
+    rippleUniforms.u_debugRipple.value = debugRipple;
+    rippleUniforms.u_debugRipplePos.value.copy(debugRipplePos);
+    rippleUniforms.u_debugRippleStartTime.value = debugRippleStartTime;
+    rippleUniforms.u_clickHue.value = clickHue;
 
     // 1. Render current ripple pattern
     renderer.setRenderTarget(rippleRenderTarget);
@@ -369,6 +376,11 @@ function animate() {
 
     renderer.render(scene, camera);
     scene.remove(backgroundMesh);
+
+    // Disable debug ripple after its duration
+    if (debugRipple && (globalTime - debugRippleStartTime > debugRippleDuration)) {
+        debugRipple = false;
+    }
 }
 
 function onWindowResize() {
