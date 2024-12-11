@@ -17,6 +17,10 @@ let accumMaterial;
 let globalTime = 0;
 let dragging = false;
 
+// Target management
+const targets = []; // { pos: THREE.Vector3, hue: number }
+const tolerance = 0.2; // Distance tolerance to consider the target "reached"
+
 // Added for debug click ripple
 let debugRipple = false;
 let debugRipplePos = new THREE.Vector2(0.5, 0.5);
@@ -119,11 +123,17 @@ function makeRipple(event, amount) {
     debugRipplePos.set(x, 1.0 - y);
     debugRippleStartTime = globalTime;
     debugRipple = true;
+    return pos;
 }
 
 function onClick(event, amount) {
   clickHue = Math.random();
-  makeRipple(event,amount);
+  const pos = makeRipple(event,amount);
+  // Add the target to the queue
+  targets.push({
+    pos: pos.clone(),
+    hue: Math.random() // Assign a random hue for the ripple
+  });
 }
 
 function onMove(event) {
@@ -310,7 +320,21 @@ function createAccumulationScene() {
 function animate() {
     requestAnimationFrame(animate);
     globalTime += 0.01;
+    // Handle targets
+    if (targets.length > 0) {
+      const currentTarget = targets[0];
+      const dist = ball.position.distanceTo(currentTarget.pos);
 
+      // If the ball reaches the target, remove it from the queue
+      if (dist <= tolerance) {
+          targets.shift();
+      } else {
+          // Move the ball towards the current target
+          ballVelocity = currentTarget.pos.clone().sub(ball.position).normalize().multiplyScalar(0.05);
+      }
+    } else {
+      // ballVelocity.set(0, 0, 0);
+    }
     // Move the ball
     ball.position.add(ballVelocity);
 
