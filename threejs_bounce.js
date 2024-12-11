@@ -15,6 +15,7 @@ let rippleMaterial;
 let accumMaterial;
 
 let globalTime = 0;
+let dragging = false;
 
 export function start() {
     init();
@@ -82,6 +83,10 @@ function init() {
 
     // Add click event to nudge the ball
     renderer.domElement.addEventListener('click', onClick, false);
+    renderer.domElement.addEventListener('mousemove', onMove, false);
+    renderer.domElement.addEventListener('mousedown', onDown, false);
+    renderer.domElement.addEventListener('mouseup', onUp, false);
+    renderer.domElement.addEventListener('mouseout', onOut, false);
 
     createRippleScene();
     createAccumulationScene();
@@ -104,27 +109,40 @@ function init() {
     renderer.setRenderTarget(null);
 }
 
-function onClick(event) {
-  // Determine click position relative to the viewport
+function getRectUnproject(event) {
   const rect = renderer.domElement.getBoundingClientRect();
-  const x = (event.clientX - rect.left) / rect.width;
-
-  // If clicked on left half, nudge velocity to the left
-  if (x < 0.5) {
-      ballVelocity.x -= 0.01;
-  } else {
-      // If clicked on right half, nudge velocity to the right
-      ballVelocity.x += 0.01;
-  }
-  // same for top/bottom
-  if (y < 0.5) {
-    ballVelocity.z -= 0.01;
-} else {
-    // If clicked on right half, nudge velocity to the right
-    ballVelocity.z += 0.01;
-}
+  const x = (event.clientX - rect.left) / containerWidth * 2 - 1;
+  const y = -(event.clientY - rect.top) / containerHeight * 2 + 1;
+  const mousePos = new THREE.Vector3(x, y, 0);
+  mousePos.unproject(camera);
+  return mousePos;
 }
 
+function onClick(event, amount) {
+  // Determine click position relative to the ball, and direct the ball velocity towards it but keeping it in the plane
+  const mousePos = getRectUnproject(event);
+
+  const dir = mousePos.sub(camera.position).normalize();
+  const distance = -camera.position.z / dir.z;
+  const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+
+  ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
+}
+
+function onMove(event) {
+  if (!dragging) return;
+  onClick(event, 0.01);
+}
+
+function onDown(event) {
+  dragging = true;
+}
+function onUp(event) {
+  dragging = false;
+}
+function onOut(event) {
+  dragging = false;
+}
 
 function createRippleScene() {
     rippleScene = new THREE.Scene();
@@ -247,8 +265,8 @@ function createAccumulationScene() {
         uniforms: {
             u_oldAccum: { value: null },
             u_newRipple: { value: null },
-            u_oldWeight: { value: 0.95 },
-            u_newWeight: { value: 0.05 }
+            u_oldWeight: { value: 0.90 },
+            u_newWeight: { value: 0.10 }
         },
         vertexShader: /* glsl */`
             varying vec2 vUv;
