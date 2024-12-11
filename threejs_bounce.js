@@ -16,7 +16,7 @@ let accumMaterial;
 
 let globalTime = 0;
 let dragging = false;
-
+let timer = null;
 // Target management
 const targets = []; // { pos: THREE.Vector3, hue: number }
 const tolerance = 0.2; // Distance tolerance to consider the target "reached"
@@ -65,7 +65,7 @@ function init() {
     scene.add(light);
 
     // Initial slow velocity
-    ballVelocity = new THREE.Vector3(0.0, 0.01, 0);
+    ballVelocity = new THREE.Vector3(0.0, 0.02, 0);
 
     // Add interaction
     renderer.domElement.addEventListener('click', onClick, false);
@@ -333,7 +333,15 @@ function animate() {
           ballVelocity = currentTarget.pos.clone().sub(ball.position).normalize().multiplyScalar(0.05);
       }
     } else {
-      // ballVelocity.set(0, 0, 0);
+      // start timer before ball stops
+      if (timer == null) {
+        timer = setTimeout(() => {
+          console.log('stop')
+          ballVelocity = new THREE.Vector3(0, 0, 0);
+          timer = null;
+        }, 500);
+      }
+      ballVelocity.multiplyScalar(0.99); // Slow down the ball
     }
     // Move the ball
     ball.position.add(ballVelocity);
