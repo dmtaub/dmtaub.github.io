@@ -100,30 +100,35 @@ function getRectUnproject(event) {
   return mousePos;
 }
 
+
+function makeRipple(event, amount) {
+    // Determine click position relative to the ball
+    const mousePos = getRectUnproject(event);
+    const dir = mousePos.sub(camera.position).normalize();
+    const distance = -camera.position.z / dir.z;
+    const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+
+    ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
+
+    // Debug ripple behavior
+    // Map click position to normalized UV coordinates (0 to 1)
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+
+    debugRipplePos.set(x, 1.0 - y);
+    debugRippleStartTime = globalTime;
+    debugRipple = true;
+}
+
 function onClick(event, amount) {
-  // Determine click position relative to the ball
-  const mousePos = getRectUnproject(event);
-  const dir = mousePos.sub(camera.position).normalize();
-  const distance = -camera.position.z / dir.z;
-  const pos = camera.position.clone().add(dir.multiplyScalar(distance));
-
-  ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
-
-  // Debug ripple behavior
-  // Map click position to normalized UV coordinates (0 to 1)
-  const rect = renderer.domElement.getBoundingClientRect();
-  const x = (event.clientX - rect.left) / rect.width;
-  const y = (event.clientY - rect.top) / rect.height;
-
-  debugRipplePos.set(x, 1.0 - y);
-  debugRippleStartTime = globalTime;
-  debugRipple = true;
   clickHue = Math.random();
+  makeRipple(event,amount);
 }
 
 function onMove(event) {
   if (!dragging) return;
-  onClick(event, 0.01);
+  makeRipple(event, 0.01);
 }
 
 function onDown(event) {
@@ -172,7 +177,7 @@ function createRippleScene() {
 
             uniform float u_time;
             uniform vec2 u_ballPosition;
-            uniform vec2 u_ballVelocityDir; 
+            uniform vec2 u_ballVelocityDir;
             uniform float u_frustumWidth;
             uniform float u_frustumHeight;
 
@@ -221,7 +226,7 @@ function createRippleScene() {
                 float dirSpeed = 2.0;
                 float dirWave = sin((-dLong * dirFreq) - u_time * dirSpeed);
 
-                float behindFade = dLong < 0.0 ? 1.0 : 0.3; 
+                float behindFade = dLong < 0.0 ? 1.0 : 0.3;
                 float distanceFade = exp(-dist * 0.2);
                 float perpFade = exp(-abs(dPerp) * 0.5);
                 float combinedFade = behindFade * distanceFade * perpFade;
