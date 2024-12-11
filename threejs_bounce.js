@@ -422,7 +422,8 @@ function animate() {
 function onWindowResize() {
     containerWidth = container.clientWidth;
     containerHeight = container.clientHeight;
-
+    // clear targets
+    targets.length = 0;
     camera.aspect = containerWidth / containerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(containerWidth, containerHeight);
