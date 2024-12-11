@@ -19,7 +19,7 @@ let dragging = false;
 let timer = null;
 // Target management
 const targets = []; // { pos: THREE.Vector3, hue: number }
-const tolerance = 0.2; // Distance tolerance to consider the target "reached"
+const tolerance = 0.5; // Distance tolerance to consider the target "reached"
 
 // Added for debug click ripple
 let debugRipple = false;
@@ -336,7 +336,6 @@ function animate() {
       // start timer before ball stops
       if (timer == null) {
         timer = setTimeout(() => {
-          console.log('stop')
           ballVelocity = new THREE.Vector3(0, 0, 0);
           timer = null;
         }, 500);
