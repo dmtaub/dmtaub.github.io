@@ -16,7 +16,9 @@ let accumMaterial;
 
 let globalTime = 0;
 let dragging = false;
-let timer = null;
+
+let timer = undefined;
+let slowFactor = 0.99999;
 // Target management
 const targets = []; // { pos: THREE.Vector3, hue: number }
 const tolerance = 0.5; // Distance tolerance to consider the target "reached"
@@ -65,7 +67,7 @@ function init() {
     scene.add(light);
 
     // Initial slow velocity
-    ballVelocity = new THREE.Vector3(0.0, 0.02, 0);
+    ballVelocity = new THREE.Vector3(0.0, 0.04, 0);
 
     // Add interaction
     renderer.domElement.addEventListener('click', onClick, false);
@@ -127,6 +129,10 @@ function makeRipple(event, amount) {
 }
 
 function onClick(event, amount) {
+  if (timer === undefined) {
+    slowFactor = 0.99;
+    timer = null;
+  }
   clickHue = Math.random();
   const pos = makeRipple(event,amount);
   // Add the target to the queue
@@ -334,13 +340,17 @@ function animate() {
       }
     } else {
       // start timer before ball stops
-      if (timer == null) {
+      if (timer === null) {
         timer = setTimeout(() => {
-          ballVelocity = new THREE.Vector3(0, 0, 0);
+          slowFactor = 0.95;
           timer = null;
         }, 500);
       }
-      ballVelocity.multiplyScalar(0.99); // Slow down the ball
+      ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
+      // check if velocity magnitude is close to zero
+      if (ballVelocity.lengthSq() < 0.00000001) {
+        ballVelocity.set(0, 0, 0);
+      }
     }
     // Move the ball
     ball.position.add(ballVelocity);
