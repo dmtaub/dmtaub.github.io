@@ -67,14 +67,14 @@ function init() {
     scene.add(light);
 
     // Initial slow velocity
-    ballVelocity = new THREE.Vector3(0.0, 0.04, 0);
+    ballVelocity = new THREE.Vector3(0.04, 0, 0);
 
-    // Add interaction
-    renderer.domElement.addEventListener('click', onClick, false);
-    renderer.domElement.addEventListener('mousemove', onMove, false);
-    renderer.domElement.addEventListener('mousedown', onDown, false);
-    renderer.domElement.addEventListener('mouseup', onUp, false);
-    renderer.domElement.addEventListener('mouseout', onOut, false);
+    // Add interaction using pointer events as well
+    renderer.domElement.addEventListener('pointerdown', onDown, false);
+    renderer.domElement.addEventListener('pointerup', onUp, false);
+    renderer.domElement.addEventListener('pointermove', onMove, false);
+    renderer.domElement.addEventListener('pointerout', onOut, false);
+
 
     createRippleScene();
     createAccumulationScene();
@@ -152,6 +152,7 @@ function onDown(event) {
 }
 function onUp(event) {
   dragging = false;
+  onClick(event);
 }
 function onOut(event) {
   dragging = false;
