@@ -30,6 +30,59 @@ let debugRippleStartTime = 0.0;
 const debugRippleDuration = 1.0;
 let clickHue = 0.0;
 
+window.objects = [];
+
+
+const max_attractors = 3;
+let rightClickCount = 0;
+
+// Create the dodecahedron base
+const ddGeom = new THREE.DodecahedronGeometry(0.3, 0);
+const ddMat = new THREE.MeshStandardMaterial({
+    color: 0xd0d000,
+    emissive: 0xff0fff,
+    emissiveIntensity: 0.2
+});
+/*
+function generateRandomTexture(size) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d');
+
+    const imageData = context.createImageData(size, size);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+        const value = Math.random() * 255;
+        imageData.data[i] = value;     // Red
+        imageData.data[i + 1] = value; // Green
+        imageData.data[i + 2] = value; // Blue
+        imageData.data[i + 3] = 255;   // Alpha
+    }
+    context.putImageData(imageData, 0, 0);
+
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+}
+
+const ddMat1 = new THREE.PointsMaterial({
+    color: 0xff0fff,
+    size: 0.01,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.8,
+    map: generateRandomTexture(64),
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+});
+
+// Create a buffer geometry for the particles
+const particleGeometry = new THREE.BufferGeometry();
+const positionClone = ddGeom.attributes.position.clone();
+
+particleGeometry.setAttribute('position', positionClone);
+*/
+
 export function start() {
     init();
     animate();
@@ -74,6 +127,8 @@ function init() {
     renderer.domElement.addEventListener('pointerup', onUp, false);
     renderer.domElement.addEventListener('pointermove', onMove, false);
     renderer.domElement.addEventListener('pointerout', onOut, false);
+    // right click adds attractors if we're on a desktop
+    renderer.domElement.addEventListener('contextmenu', onRightClick, false);
 
 
     createRippleScene();
@@ -106,14 +161,16 @@ function getRectUnproject(event) {
   return mousePos;
 }
 
+function getClickPosition(event) {
+  const unprojected = getRectUnproject(event);
+  const dir = unprojected.sub(camera.position).normalize();
+  const distance = -camera.position.z / dir.z;
+  return camera.position.clone().add(dir.multiplyScalar(distance));
+}
 
 function makeRipple(event, amount) {
     // Determine click position relative to the ball
-    const mousePos = getRectUnproject(event);
-    const dir = mousePos.sub(camera.position).normalize();
-    const distance = -camera.position.z / dir.z;
-    const pos = camera.position.clone().add(dir.multiplyScalar(distance));
-
+    const pos = getClickPosition(event);
     ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
 
     // Debug ripple behavior
@@ -157,6 +214,24 @@ function onUp(event) {
 function onOut(event) {
   dragging = false;
 }
+
+
+// Create a dodecahedron on right click, up to max_attractors
+function onRightClick(event) {
+  event.stopPropagation();
+  event.preventDefault();
+  const pos = getClickPosition(event);
+  if (rightClickCount++ < max_attractors) {
+    const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
+    newShape.position.copy(pos);
+    scene.add(newShape);
+    objects.push(newShape);
+  } else {
+    // wrap around the index to move the first shape to the location
+    objects[rightClickCount % max_attractors].position.copy(pos);
+  }
+}
+
 
 function createRippleScene() {
     rippleScene = new THREE.Scene();
@@ -428,6 +503,12 @@ function animate() {
     if (debugRipple && (globalTime - debugRippleStartTime > debugRippleDuration)) {
         debugRipple = false;
     }
+
+    // for each object, apply slight rotation
+    for (const object of objects) {
+        object.rotation.y += 0.01;
+    }
+
 }
 
 function onWindowResize() {
