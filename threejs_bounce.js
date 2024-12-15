@@ -17,6 +17,8 @@ let accumMaterial;
 
 let globalTime = 0;
 let dragging = false;
+let startMousePos = null;
+const moveTolerance = 0.01;
 
 let timer = undefined;
 let slowFactor = 0.99999;
@@ -33,6 +35,7 @@ let clickHue = 0.0;
 
 window.objects = [];
 let proximalToObject = 0; // 0: None, 1: Overlapping, 2: Ball radius, 3: Effect radius
+let lastProximalToObject = 0;
 
 const max_attractors = 1;
 let rightClickCount = 0;
@@ -167,12 +170,10 @@ function getClickPosition(event) {
   const unprojected = getRectUnproject(event);
   const dir = unprojected.sub(camera.position).normalize();
   const distance = -camera.position.z / dir.z;
-  return camera.position.clone().add(dir.multiplyScalar(distance));
+  return [camera.position.clone().add(dir.multiplyScalar(distance)), unprojected];
 }
 
-function makeRipple(event, amount) {
-    // Determine click position relative to the ball
-    const pos = getClickPosition(event);
+function makeRipple(event, pos, amount) {
     ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
 
     // Debug ripple behavior
@@ -195,7 +196,9 @@ function onClick(event, amount) {
   }
   // random hue for each click
   clickHue = Math.random();
-  const pos = makeRipple(event,amount);
+  // Determine click position relative to the ball
+  const [mousePos,] = getClickPosition(event);
+  const pos = makeRipple(event, mousePos, amount);
   // Add the target to the queue if not right click
   if (event.button !== 2) {
     // addTarget(pos.clone(), hue = Math.random());
@@ -207,14 +210,22 @@ function onClick(event, amount) {
 }
 
 function onMove(event) {
-  if (!dragging) return;
-  makeRipple(event, 0.01);
+  const [mousePos, unprojected] = getClickPosition(event);
+  if (startMousePos && unprojected.sub(startMousePos).length() > moveTolerance) {
+    dragging = true;
+  }
+  // buffer for drag
+  if (!dragging)
+    return;
+  makeRipple(event, mousePos, 0.01);
 }
 
 function onDown(event) {
-  dragging = true;
+  // set mouse position to unprojected position
+  startMousePos = getClickPosition(event)[1];
 }
 function onUp(event) {
+  startMousePos = null;
   dragging = false;
   onClick(event);
 }
@@ -227,7 +238,7 @@ function onOut(event) {
 function onRightClick(event) {
   event.stopPropagation();
   event.preventDefault();
-  const pos = getClickPosition(event);
+  const [pos,] = getClickPosition(event);
   if (rightClickCount++ < max_attractors) {
     const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
     newShape.name = "attractor";
@@ -456,8 +467,14 @@ function animate() {
     }
     // Move the ball
     ball.position.add(ballVelocity);
-    checkProximity();
 
+    checkProximity();
+    if (proximalToObject !== lastProximalToObject) {
+        console.log("Proximity changed to", proximalToObject);
+    }
+    lastProximalToObject = proximalToObject;
+
+ 
     //  // Update velocity based on proximity state
     // if (proximalToObject === 1) {
     //     ballVelocity.set(0, 0, 0); // Stop when overlapping
@@ -470,6 +487,8 @@ function animate() {
     // if (proximalToObject) {
     //     clearTimeout(timer);
     // }
+    
+
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const radius = ballRadius;
