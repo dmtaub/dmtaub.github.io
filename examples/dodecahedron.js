@@ -1,6 +1,7 @@
 // spinning dodecahedron in shift+draggable container
 import * as THREE from 'three';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
 
 // Create a movable div
 const container = document.createElement('div');
