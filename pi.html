@@ -72,6 +72,9 @@
             border-radius: 3px;
             background: grey;
         }
+        .btn:hover {
+            filter: brightness(0.9);
+        }
 
         .new-btn {
             background: #4CAF50;
@@ -81,9 +84,10 @@
             background: #C50;
         }
 
-        .run-button:hover {
-            background-color: #45a049;
+        .run-btn {
+            background: #55f;
         }
+
 
         #overlay {
             position: fixed;
@@ -131,6 +135,7 @@
         <div id="editorPanel">
             <div id="editor"></div>
             <div id="editorButtons">
+                <button id="runButton" class="run-btn btn">Run</button>
                 <button id="saveButton" class="new-btn btn">Save</button>
                 <button id="hideButton" class="btn">Cancel</button>
                 <button id="clearButton" class="del-btn btn">Delete</button>
@@ -262,15 +267,15 @@
 
     <button id="paste" class="btn">Paste</button>
     <button id="clearDivs" class="btn" style="background: orange; margin-left: 10px;">Clear Divs</button>
-    <button id="clear" class="btn del-btn" style="margin-left: 10px;">Clear All</button>
+    <button id="clear" class="btn del-btn" style="margin-left: 10px;">Clear Code</button>
 `
         });
         // when clearing divs, exclude the essential UI elements
         const allIds = ['dropZone', 'fileList', 'overlay', 'pastePanel',
-                        'editor', 'editorButtons', 'hideButton', 
+                        'editor', 'editorButtons', 'hideButton', 'runButton',
                         'clearButton', 'saveButton', 'clear', 'file-dropdown',
                         'create', 'paste', 'clearDivs', 'editorPanel'];
-        const allClasses = ['file-item', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item'];
+        const allClasses = ['file-item', 'run-btn', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item'];
 
         document.body.appendChild(pastePanel);
         let currentIndex = null;
@@ -334,7 +339,7 @@
                     return;
                 }
                 // if on right side of button, show dropdown
-                if (e.clientX > e.target.getBoundingClientRect().left + e.target.offsetWidth / 2) {                 
+                if (e.clientX > e.target.getBoundingClientRect().left + e.target.offsetWidth / 2) {
                     const dropdown = document.getElementById('file-dropdown');
                     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
                     return;
@@ -348,34 +353,74 @@
             document.getElementById('clearButton').addEventListener('click', () => {
                 codeEditor.setValue('');
             });
-
-            document.getElementById('saveButton').addEventListener('click', () => {
-                const code = codeEditor.getValue();
+            // Common function to save code
+            function saveCode(code) {
                 const firstline = code.split('\n')[0];
                 if (firstline === '') {
                     alert('Please provide a name for the file');
-                    return;
+                    return false; // Indicate failure
                 } else if (firstline == '// amy.js') {
                     eval(code);
                     alert('Level Saved!');
-                    return;
+                    return false; // Special case, no further processing
                 }
+
                 if (currentIndex !== null) {
                     droppedFiles[currentIndex].content = code;
                     droppedFiles[currentIndex].name = firstline;
                     updateFileList();
-                    hideOverlay();
-                    return;
+                } else {
+                    const mockFileBlob = new Blob([code], { type: 'application/javascript' });
+                    const mockFile = new File([mockFileBlob], firstline, { type: 'application/javascript' });
+
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(mockFile);
+
+                    dropZone.dispatchEvent(new DragEvent('drop', { dataTransfer }));
                 }
-                const mockFileBlob = new Blob([code], { type: 'application/javascript' });
-                const mockFile = new File([mockFileBlob], firstline, { type: 'application/javascript' });
 
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(mockFile);
-
-                dropZone.dispatchEvent(new DragEvent('drop', { dataTransfer }));
                 hideOverlay();
+                return true; // Indicate success
+            }
+
+            // Common function to run code
+            function runCode(code) {
+                try {
+                    const blob = new Blob([code], { type: 'application/javascript' });
+                    const blobURL = URL.createObjectURL(blob);
+
+                    // Import and execute the script
+                    import(blobURL)
+                        .then(() => {
+                            console.log('Script executed successfully!');
+                        })
+                        .catch(error => {
+                            console.error('Error running the script:', error);
+                            alert(`Error running the script: ${error.message}`);
+                        })
+                        .finally(() => {
+                            URL.revokeObjectURL(blobURL); // Free up resources
+                        });
+                } catch (error) {
+                    console.error('Unexpected error:', error);
+                    alert(`Error running the script: ${error.message}`);
+                }
+            }
+
+            // Save button event listener
+            document.getElementById('saveButton').addEventListener('click', () => {
+                const code = codeEditor.getValue();
+                saveCode(code);
             });
+
+            // Run button event listener
+            document.getElementById('runButton').addEventListener('click', () => {
+                const code = codeEditor.getValue();
+                if (saveCode(code)) {
+                    runCode(code);
+                }
+            });
+
             // Function to fetch files and populate the dropdown
             async function fetchExamples() {
                 try {
@@ -410,7 +455,7 @@
         });
             // Initialize the CodeMirror codeEditor
         }
-        
+
         codeEditor = CodeMirror(document.getElementById('editor'), {
             mode: 'javascript',           // Set syntax highlighting for JavaScript
             theme: 'dracula',             // Choose a theme
