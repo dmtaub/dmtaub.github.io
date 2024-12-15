@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drop JS Files</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"
+            }
+        }
+    </script>
     <style>
         body,
         html {
@@ -210,11 +217,28 @@
 
         function runFile(index) {
             try {
-                eval(droppedFiles[index].content);
+                const blob = new Blob([droppedFiles[index].content], { type: 'application/javascript' });
+                const blobURL = URL.createObjectURL(blob);
+
+                // Dynamically import the script as a module
+                import(blobURL)
+                    .then(() => {
+                        console.log('Script executed successfully!');
+                    })
+                    .catch(error => {
+                        console.error('Error running the script:', error);
+                        alert(`Error running the script: ${error.message}`);
+                    })
+                    .finally(() => {
+                        // Revoke the blob URL to free up resources
+                        URL.revokeObjectURL(blobURL);
+                    });
             } catch (error) {
+                console.error('Unexpected error:', error);
                 alert(`Error running the script: ${error.message}`);
             }
         }
+
 
         // Create the paste panel dynamically
         const pastePanel = Object.assign(document.createElement('div'), {
