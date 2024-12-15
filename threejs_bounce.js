@@ -31,13 +31,14 @@ const debugRippleDuration = 1.0;
 let clickHue = 0.0;
 
 window.objects = [];
+let proximalToObject = false;
 
-
-const max_attractors = 3;
+const max_attractors = 1;
 let rightClickCount = 0;
 
 // Create the dodecahedron base
 const ddGeom = new THREE.DodecahedronGeometry(0.3, 0);
+ddGeom.computeBoundingSphere();
 const ddMat = new THREE.MeshStandardMaterial({
     color: 0xd0d000,
     emissive: 0xff0fff,
@@ -186,17 +187,22 @@ function makeRipple(event, amount) {
 }
 
 function onClick(event, amount) {
+  // first click, init timer params
   if (timer === undefined) {
     slowFactor = 0.99;
     timer = null;
   }
+  // random hue for each click
   clickHue = Math.random();
   const pos = makeRipple(event,amount);
-  // Add the target to the queue
-  targets.push({
-    pos: pos.clone(),
-    hue: Math.random() // Assign a random hue for the ripple
-  });
+  // Add the target to the queue if not right click
+  if (event.button !== 2) {
+    // addTarget(pos.clone(), hue = Math.random());
+    targets.push({
+      pos: pos.clone(),
+      hue: Math.random() // Assign a random hue for the ripple
+    });
+  }
 }
 
 function onMove(event) {
@@ -223,6 +229,7 @@ function onRightClick(event) {
   const pos = getClickPosition(event);
   if (rightClickCount++ < max_attractors) {
     const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
+    newShape.name = "attractor";
     newShape.position.copy(pos);
     scene.add(newShape);
     objects.push(newShape);
@@ -232,6 +239,17 @@ function onRightClick(event) {
   }
 }
 
+// check intersection of ball with objects
+function checkProximity() {
+    for (const object of objects) {
+        const dist = ball.position.distanceTo(object.position);
+        if (dist < object.geometry.boundingSphere.radius + ballRadius) {
+            proximalToObject = true;
+            return;
+        }
+        proximalToObject = false;
+    }
+}
 
 function createRippleScene() {
     rippleScene = new THREE.Scene();
@@ -408,7 +426,7 @@ function animate() {
       const dist = ball.position.distanceTo(currentTarget.pos);
 
       // If the ball reaches the target, remove it from the queue
-      if (dist <= tolerance) {
+      if (dist <= tolerance && !proximalToObject) {
           targets.shift();
       } else {
           // Move the ball towards the current target
@@ -416,7 +434,7 @@ function animate() {
       }
     } else {
       // start timer before ball stops
-      if (timer === null) {
+      if (timer === null && !proximalToObject) {
         timer = setTimeout(() => {
           slowFactor = 0.95;
           timer = null;
@@ -430,7 +448,11 @@ function animate() {
     }
     // Move the ball
     ball.position.add(ballVelocity);
-
+    checkProximity();
+    // if the ball is close to an object, stop the timer, we don't want to slow down
+    if (proximalToObject) {
+        clearTimeout(timer);
+    }
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const radius = ballRadius;
