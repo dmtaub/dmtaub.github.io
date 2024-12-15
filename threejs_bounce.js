@@ -4,6 +4,7 @@ let scene, camera, renderer;
 let ball, ballVelocity;
 let container, containerWidth, containerHeight;
 const ballRadius = 0.5;
+const effectRadius = 2.0; // New effect radius
 
 let rippleScene, rippleCamera;
 let quadScene, quadCamera;
@@ -31,7 +32,7 @@ const debugRippleDuration = 1.0;
 let clickHue = 0.0;
 
 window.objects = [];
-let proximalToObject = false;
+let proximalToObject = 0; // 0: None, 1: Overlapping, 2: Ball radius, 3: Effect radius
 
 const max_attractors = 1;
 let rightClickCount = 0;
@@ -240,15 +241,22 @@ function onRightClick(event) {
 }
 
 // check intersection of ball with objects
+// todo make octree or something
 function checkProximity() {
-    for (const object of objects) {
-        const dist = ball.position.distanceTo(object.position);
-        if (dist < object.geometry.boundingSphere.radius + ballRadius) {
-            proximalToObject = true;
-            return;
-        }
-        proximalToObject = false;
-    }
+  proximalToObject = 0; // Reset
+  for (const object of objects) {
+      const dist = ball.position.distanceTo(object.position);
+      const combinedRadius = object.geometry.boundingSphere.radius + ballRadius;
+    
+      if (dist < combinedRadius) {
+          proximalToObject = 1; // Overlapping
+          return;
+      } else if (dist < combinedRadius + ballRadius) {
+          proximalToObject = Math.max(proximalToObject, 2); // Within ball radius
+      } else if (dist < combinedRadius + effectRadius) {
+          proximalToObject = Math.max(proximalToObject, 3); // Within effect radius
+      }
+  }
 }
 
 function createRippleScene() {
@@ -426,7 +434,7 @@ function animate() {
       const dist = ball.position.distanceTo(currentTarget.pos);
 
       // If the ball reaches the target, remove it from the queue
-      if (dist <= tolerance && !proximalToObject) {
+      if (dist <= tolerance) {
           targets.shift();
       } else {
           // Move the ball towards the current target
@@ -434,7 +442,7 @@ function animate() {
       }
     } else {
       // start timer before ball stops
-      if (timer === null && !proximalToObject) {
+      if (timer === null) {
         timer = setTimeout(() => {
           slowFactor = 0.95;
           timer = null;
@@ -449,10 +457,19 @@ function animate() {
     // Move the ball
     ball.position.add(ballVelocity);
     checkProximity();
+
+    //  // Update velocity based on proximity state
+    // if (proximalToObject === 1) {
+    //     ballVelocity.set(0, 0, 0); // Stop when overlapping
+    // } else if (proximalToObject === 2) {
+    //     ballVelocity.multiplyScalar(1); // Slow down if within ball radius
+    // } else if (proximalToObject === 3) {
+    //     ballVelocity.multiplyScalar(2); // Slightly slow down within effect radius
+    // }
     // if the ball is close to an object, stop the timer, we don't want to slow down
-    if (proximalToObject) {
-        clearTimeout(timer);
-    }
+    // if (proximalToObject) {
+    //     clearTimeout(timer);
+    // }
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const radius = ballRadius;
