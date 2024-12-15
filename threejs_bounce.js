@@ -174,8 +174,9 @@ function getClickPosition(event) {
 }
 
 function makeRipple(event, pos, amount) {
-    ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
-
+    if (!event.button == 2) {
+      ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
+    }
     // Debug ripple behavior
     // Map click position to normalized UV coordinates (0 to 1)
     const rect = renderer.domElement.getBoundingClientRect();
