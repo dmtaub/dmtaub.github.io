@@ -88,6 +88,10 @@
         .run-btn {
             background: #55f;
         }
+        .toggle-btn {
+            width: 50px;
+
+        }
 
 
         #overlay {
@@ -153,6 +157,21 @@
         let codeEditor = null;
 
         const files = ['examples/dodecahedron.js'];
+
+        function togglePersist(index, button) {
+            const isPersisting = button.textContent === 'Keep';
+            button.textContent = isPersisting ? 'Clear' : 'Keep';
+            button.style.backgroundColor = isPersisting ? 'lightblue' : 'orange';
+
+            if (isPersisting) {
+            console.log(`Saving file "${droppedFiles[index].name}" to IndexedDB.`);
+            // Stub: Add logic to save the file to IndexedDB here
+            } else {
+            console.log(`Clearing file "${droppedFiles[index].name}" from IndexedDB.`);
+            // Stub: Add logic to remove the file from IndexedDB here
+            }
+        }
+
 
         // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -221,9 +240,17 @@
                     currentIndex = index;
                 });
 
+                // Add the toggle button
+                const toggleButton = document.createElement('button');
+                toggleButton.className = 'toggle-btn btn wide-btn';
+                toggleButton.textContent = 'Keep';
+                toggleButton.style.backgroundColor = 'orange';
+                toggleButton.addEventListener('click', () => togglePersist(index, toggleButton));
+
                 fileItemDiv.appendChild(runButton);
                 fileItemDiv.appendChild(editButton);
                 fileListDiv.appendChild(fileItemDiv);
+                fileItemDiv.appendChild(toggleButton);
             });
 
             if (droppedFiles.length > 0) {
@@ -276,7 +303,7 @@
                         'editor', 'editorButtons', 'hideButton', 'runButton',
                         'clearButton', 'saveButton', 'clear', 'file-dropdown',
                         'create', 'paste', 'clearDivs', 'editorPanel'];
-        const allClasses = ['file-item', 'run-btn', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item'];
+        const allClasses = ['file-item', 'run-btn', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item', 'toggle-persist'];
 
         document.body.appendChild(pastePanel);
         let currentIndex = null;
