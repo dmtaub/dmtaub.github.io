@@ -167,16 +167,22 @@
 
         const files = ['examples/dodecahedron.js'];
 
-        function togglePersist(index, button) {
+        function togglePersist(droppedFile, button) {
             const isPersisting = button.textContent === 'Keep';
-            button.textContent = isPersisting ? 'Drop' : 'Keep';
-            button.style.backgroundColor = isPersisting ? 'lightblue' : 'orange';
-
+            if ( isPersisting ) {
+                droppedFile.persist = true;
+                button.textContent = 'Drop';
+                button.style.backgroundColor = 'lightblue';
+            } else {
+                droppedFile.persist = false;
+                button.textContent = 'Keep';
+                button.style.backgroundColor = 'orange';
+            }
             if (isPersisting) {
-                console.log(`Saving file "${droppedFiles[index].name}" to IndexedDB.`);
+                console.log(`Saving file "${droppedFile.name}" to IndexedDB.`);
                 // Stub: Add logic to save the file to IndexedDB here
             } else {
-                console.log(`Clearing file "${droppedFiles[index].name}" from IndexedDB.`);
+                console.log(`Clearing file "${droppedFile.name}" from IndexedDB.`);
                 // Stub: Add logic to remove the file from IndexedDB here
             }
         }
@@ -221,7 +227,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileContent = e.target.result;
-                droppedFiles.push({ name: file.name, content: fileContent });
+                droppedFiles.push({ name: file.name, content: fileContent, persist: false });
                 updateFileList();
             };
             reader.readAsText(file);
@@ -230,6 +236,7 @@
         function updateFileList() {
             fileListDiv.innerHTML = '';
             droppedFiles.forEach((file, index) => {
+                file.index = index;
                 const fileItemDiv = document.createElement('div');
                 fileItemDiv.classList.add('file-item');
                 fileItemDiv.textContent = file.name;
@@ -237,7 +244,7 @@
                 const runButton = document.createElement('button');
                 runButton.className = 'new-btn btn wide-btn';
                 runButton.textContent = 'Run';
-                runButton.addEventListener('click', () => runFile(index));
+                runButton.addEventListener('click', () => runFile(file));
 
                 // add "edit" button
                 const editButton = document.createElement('button');
@@ -245,16 +252,21 @@
                 editButton.textContent = 'Edit';
                 editButton.addEventListener('click', () => {
                     document.getElementById('overlay').style.visibility = 'visible';
-                    codeEditor.setValue(droppedFiles[index].content);
-                    currentIndex = index;
+                    codeEditor.setValue(file.content);
+                    currentIndex = file.index;
                 });
 
                 // Add the toggle button
                 const toggleButton = document.createElement('button');
                 toggleButton.className = 'toggle-btn btn wide-btn';
-                toggleButton.textContent = 'Keep';
-                toggleButton.style.backgroundColor = 'orange';
-                toggleButton.addEventListener('click', () => togglePersist(index, toggleButton));
+                if (file.persist) {
+                    toggleButton.textContent = 'Drop';
+                    toggleButton.style.backgroundColor = 'lightblue';
+                } else {
+                    toggleButton.textContent = 'Keep';
+                    toggleButton.style.backgroundColor = 'orange';
+                }
+                toggleButton.addEventListener('click', () => togglePersist(file, toggleButton));
 
                 fileItemDiv.appendChild(runButton);
                 fileItemDiv.appendChild(editButton);
@@ -269,9 +281,9 @@
             }
         }
 
-        function runFile(index) {
+        function runFile(file) {
             try {
-                const blob = new Blob([droppedFiles[index].content], { type: 'application/javascript' });
+                const blob = new Blob([file.content], { type: 'application/javascript' });
                 const blobURL = URL.createObjectURL(blob);
 
                 // Dynamically import the script as a module
@@ -330,7 +342,7 @@
             const dropdown = document.getElementById('file-dropdown');
 
             pastePanel.querySelector('#clearDivs').addEventListener('click', () => {
-                const allDivs = document.querySelectorAll(`div:not(#editor div)`);
+                const allDivs = document.querySelectorAll(`div:not(#editor div):not(.keep)`);
                 allDivs.forEach(div => {
                     // Exclude essential UI elements like #dropZone, #fileList, etc.
                     if (!div.id || !allIds.includes(div.id)) {
@@ -345,10 +357,23 @@
             pastePanel.querySelector('#clear').addEventListener('click', () => {
                 // clear running scripts and remove any html added by them
                 //TODO: document.querySelectorAll('script[src^="blob:"]').forEach(s => s.remove());
-                droppedFiles.length = 0;
+                const toSplice = [];
+                droppedFiles.forEach((file, index) => {
+                    if (!file.persist) {
+                        if (currentIndex === index) {
+                            currentIndex = null;
+                        }
+                        if (currentIndex !== null && index < currentIndex) {
+                            currentIndex--;
+                            file.index = index - 1;
+                        }
+                        toSplice.push(index);
+                    }
+                });
+                // remove entries in reverse order
+                toSplice.sort((a, b) => b - a).forEach(i => droppedFiles.splice(i, 1));
                 updateFileList();
                 hideOverlay();
-                currentIndex = null;
             });
 
             // Event listener for "Paste" button
