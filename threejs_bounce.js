@@ -266,7 +266,7 @@ function checkProximity() {
   for (const object of objects) {
       const dist = ball.position.distanceTo(object.position);
       const combinedRadius = object.geometry.boundingSphere.radius + ballRadius;
-    
+
       if (dist < combinedRadius) {
           proximalToObject = 1; // Overlapping
           return;
@@ -446,7 +446,15 @@ function createAccumulationScene() {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // updates:
     globalTime += 0.01;
+    checkProximity();
+    if (proximalToObject !== lastProximalToObject) {
+        console.log("Proximity changed to", proximalToObject);
+    }
+    lastProximalToObject = proximalToObject;
+
     // Handle targets
     if (targets.length > 0) {
       const currentTarget = targets[0];
@@ -462,46 +470,31 @@ function animate() {
     } else {
       // start timer before ball stops
       if (timer === null) {
+        console.log('settimeout')
         timer = setTimeout(() => {
-          slowFactor = 0.95;
-          timer = null;
+          if (proximalToObject === 0) {
+            console.log("Ball stopped");
+            slowFactor = 0.95;
+          }
+          // once it finishes, independent of proximity, reset timer so we no longer create timesouts
+          timer = undefined;
         }, 500);
       }
-      ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
+      if (proximalToObject > 2 || proximalToObject === 0) {
+        ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
+      }
       // check if velocity magnitude is close to zero
       if (ballVelocity.lengthSq() < 0.00000001) {
         ballVelocity.set(0, 0, 0);
       }
     }
-    // Move the ball
-    ball.position.add(ballVelocity);
 
-    checkProximity();
-    if (proximalToObject !== lastProximalToObject) {
-        console.log("Proximity changed to", proximalToObject);
-    }
-    lastProximalToObject = proximalToObject;
-
- 
-    //  // Update velocity based on proximity state
-    // if (proximalToObject === 1) {
-    //     ballVelocity.set(0, 0, 0); // Stop when overlapping
-    // } else if (proximalToObject === 2) {
-    //     ballVelocity.multiplyScalar(1); // Slow down if within ball radius
-    // } else if (proximalToObject === 3) {
-    //     ballVelocity.multiplyScalar(2); // Slightly slow down within effect radius
-    // }
-    // if the ball is close to an object, stop the timer, we don't want to slow down
-    // if (proximalToObject) {
-    //     clearTimeout(timer);
-    // }
-    
-
+    // Bounce the ball off the walls
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const radius = ballRadius;
 
-    // Bounce off walls
+    // Update ball velocity if it hits the wall
     if (ball.position.x + radius > frustumWidth / 2 || ball.position.x - radius < -frustumWidth / 2) {
         ballVelocity.x = -ballVelocity.x;
     }
@@ -569,6 +562,9 @@ function animate() {
     if (debugRipple && (globalTime - debugRippleStartTime > debugRippleDuration)) {
         debugRipple = false;
     }
+
+    // Move 3d objects
+    ball.position.add(ballVelocity);
 
     // for each object, apply slight rotation
     for (const object of objects) {
