@@ -51,7 +51,14 @@
         .file-item {
             margin-bottom: 5px;
         }
-
+        .file-list-item {
+            cursor: pointer;
+            padding: 5px;
+            color: black;
+        }
+        .file-list-item:hover {
+            background: #ddd;
+        }
         .wide-btn {
             padding: 5px 10px !important;
             margin: 0px 5px !important;
@@ -138,6 +145,8 @@
         const fileListDiv = document.getElementById('fileList');
         const droppedFiles = [];
         let codeEditor = null;
+
+        const files = ['examples/dodecahedron.js'];
 
         // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -248,7 +257,9 @@
         const pastePanel = Object.assign(panel, {
             style: 'position: absolute; top: 0; left: 0; z-index: 23; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px;',
             innerHTML: `
-    <button id="create" class="btn new-btn" style="margin-right: 10px;">New</button>
+    <button id="create" class="btn new-btn" style="margin-right: 10px;">New ▼</button>
+    <div id="file-dropdown" style="display: none; position: absolute; background: white; border: 1px solid #ccc; list-style: none; padding: 5px; margin-top: 5px; z-index: 100;"></div>
+
     <button id="paste" class="btn">Paste</button>
     <button id="clearDivs" class="btn" style="background: orange; margin-left: 10px;">Clear Divs</button>
     <button id="clear" class="btn del-btn" style="margin-left: 10px;">Clear All</button>
@@ -257,9 +268,9 @@
         // when clearing divs, exclude the essential UI elements
         const allIds = ['dropZone', 'fileList', 'overlay', 'pastePanel',
                         'editor', 'editorButtons', 'hideButton', 
-                        'clearButton', 'saveButton', 'clear',
+                        'clearButton', 'saveButton', 'clear', 'file-dropdown',
                         'create', 'paste', 'clearDivs', 'editorPanel'];
-        const allClasses = ['file-item', 'new-btn', 'del-btn', 'btn', 'wide-btn'];
+        const allClasses = ['file-item', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item'];
 
         document.body.appendChild(pastePanel);
         let currentIndex = null;
@@ -322,6 +333,12 @@
                     fetch('exampleLevel.js').then(r => r.text()).then(setEditorText);
                     return;
                 }
+                // if on right side of button, show dropdown
+                if (e.clientX > e.target.getBoundingClientRect().left + e.target.offsetWidth / 2) {                 
+                    const dropdown = document.getElementById('file-dropdown');
+                    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                    return;
+                }
                 setEditorText(defaultText);
             });
 
@@ -359,8 +376,41 @@
                 dropZone.dispatchEvent(new DragEvent('drop', { dataTransfer }));
                 hideOverlay();
             });
+            // Function to fetch files and populate the dropdown
+            async function fetchExamples() {
+                try {
+                    // fetch and list all files in /examples
+                    const dropdown = document.getElementById('file-dropdown');
+                    dropdown.innerHTML = ''; // Clear existing items
+                    files.forEach(file => {
+                        const item = document.createElement('div');
+                        item.className = 'file-list-item';
+                        item.textContent = file;
+                        item.style.cursor = 'pointer';
+                        item.style.padding = '5px';
+                        item.addEventListener('click', () => {
+                            fetch(file)
+                                .then(response => response.text())
+                                .then(content => setEditorText(content));
+                            dropdown.style.display = 'none'; // Hide dropdown after selection
+                        });
+                        dropdown.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error('Failed to fetch examples:', error);
+                }
+            }
+            fetchExamples();
+            document.addEventListener('click', (event) => {
+            const dropdown = document.getElementById('file-dropdown');
+            const createButton = document.getElementById('create');
+            if (!dropdown.contains(event.target) && event.target !== createButton) {
+                dropdown.style.display = 'none';
+            }
+        });
             // Initialize the CodeMirror codeEditor
         }
+        
         codeEditor = CodeMirror(document.getElementById('editor'), {
             mode: 'javascript',           // Set syntax highlighting for JavaScript
             theme: 'dracula',             // Choose a theme
