@@ -5,6 +5,7 @@ let ball, ballVelocity;
 let container, containerWidth, containerHeight;
 const ballRadius = 0.5;
 const effectRadius = 2.0; // New effect radius
+const rightClickRipple = true;
 
 let rippleScene, rippleCamera;
 let quadScene, quadCamera;
@@ -173,10 +174,7 @@ function getClickPosition(event) {
   return [camera.position.clone().add(dir.multiplyScalar(distance)), unprojected];
 }
 
-function makeRipple(event, pos, amount) {
-    if (!event.button == 2) {
-      ballVelocity = pos.clone().sub(ball.position).normalize().multiplyScalar(amount || 0.1);
-    }
+function makeRipple(event) {
     // Debug ripple behavior
     // Map click position to normalized UV coordinates (0 to 1)
     const rect = renderer.domElement.getBoundingClientRect();
@@ -186,7 +184,6 @@ function makeRipple(event, pos, amount) {
     debugRipplePos.set(x, 1.0 - y);
     debugRippleStartTime = globalTime;
     debugRipple = true;
-    return pos;
 }
 
 function onClick(event, amount) {
@@ -199,18 +196,21 @@ function onClick(event, amount) {
   clickHue = Math.random();
   // Determine click position relative to the ball
   const [mousePos,] = getClickPosition(event);
-  const pos = makeRipple(event, mousePos, amount);
+  makeRipple(event, amount);
   // Add the target to the queue if not right click
   if (event.button !== 2) {
     // addTarget(pos.clone(), hue = Math.random());
     targets.push({
-      pos: pos.clone(),
+      pos: mousePos.clone(),
       hue: Math.random() // Assign a random hue for the ripple
     });
   }
 }
 
 function onMove(event) {
+  if (event.button == 2 || !startMousePos) {
+    return
+  }
   const [mousePos, unprojected] = getClickPosition(event);
   if (startMousePos && unprojected.sub(startMousePos).length() > moveTolerance) {
     dragging = true;
@@ -218,7 +218,9 @@ function onMove(event) {
   // buffer for drag
   if (!dragging)
     return;
-  makeRipple(event, mousePos, 0.01);
+  // set ball velocity to the direction of the mouse when dragging with left click
+  ballVelocity = mousePos.clone().sub(ball.position).normalize().multiplyScalar(0.01 || 0.1);
+  // sparkles here
 }
 
 function onDown(event) {
@@ -228,6 +230,9 @@ function onDown(event) {
 function onUp(event) {
   startMousePos = null;
   dragging = false;
+  if (event.button === 2) {
+    return;
+  }
   onClick(event);
 }
 function onOut(event) {
@@ -240,6 +245,8 @@ function onRightClick(event) {
   event.stopPropagation();
   event.preventDefault();
   const [pos,] = getClickPosition(event);
+  if (rightClickRipple)
+    makeRipple(event);
   if (rightClickCount++ < max_attractors) {
     const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
     newShape.name = "attractor";
