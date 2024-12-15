@@ -167,18 +167,14 @@
 
         const files = ['examples/dodecahedron.js'];
 
+        function updateButtonStyle(button, isPersisting) {
+            button.textContent = !isPersisting ? 'Keep' : 'Drop';
+            button.style.backgroundColor = !isPersisting ? 'orange' : 'lightblue';
+        }
         function togglePersist(droppedFile, button) {
-            const isPersisting = button.textContent === 'Keep';
-            if ( isPersisting ) {
-                droppedFile.persist = true;
-                button.textContent = 'Drop';
-                button.style.backgroundColor = 'lightblue';
-            } else {
-                droppedFile.persist = false;
-                button.textContent = 'Keep';
-                button.style.backgroundColor = 'orange';
-            }
-            if (isPersisting) {
+            droppedFile.persist = !droppedFile.persist;
+            updateButtonStyle(button, droppedFile.persist);
+            if (droppedFile.persist) {
                 console.log(`Saving file "${droppedFile.name}" to IndexedDB.`);
                 // Stub: Add logic to save the file to IndexedDB here
             } else {
@@ -259,13 +255,7 @@
                 // Add the toggle button
                 const toggleButton = document.createElement('button');
                 toggleButton.className = 'toggle-btn btn wide-btn';
-                if (file.persist) {
-                    toggleButton.textContent = 'Drop';
-                    toggleButton.style.backgroundColor = 'lightblue';
-                } else {
-                    toggleButton.textContent = 'Keep';
-                    toggleButton.style.backgroundColor = 'orange';
-                }
+                updateButtonStyle(toggleButton, file.persist);
                 toggleButton.addEventListener('click', () => togglePersist(file, toggleButton));
 
                 fileItemDiv.appendChild(runButton);
