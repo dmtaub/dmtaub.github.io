@@ -1,7 +1,10 @@
-let title = 'Draggable Window';
-
-// Simplified floating window with a draggable title bar, close, minimize icons, and canvas
-const createFloatingWindow = (canvasId = null) => {
+const title = 'Draggable Window'; // Keep this assignment as first line if you want to update the in the UI automatically
+const myId = title.toLowerCase().replace(/\s/g, '-'); // ID for canvas element
+if (document.getElementById(myId)) {
+    console.error(`Canvas ID '${myId}' already exists!`);
+}
+// Simplified floating window with editable title bar
+const createFloatingWindow = (canvasId = null, onUpdateTitle = null) => {
     // Create the main container
     const container = document.createElement('div');
     container.style.position = 'absolute';
@@ -27,10 +30,41 @@ const createFloatingWindow = (canvasId = null) => {
     titleBar.style.alignItems = 'center';
     container.appendChild(titleBar);
 
-    // Add title text
+    // Add editable title text
     const titleText = document.createElement('span');
     titleText.textContent = title;
+    titleText.contentEditable = false;
+    titleText.style.outline = 'none';
+    titleText.style.flexGrow = '1';
     titleBar.appendChild(titleText);
+
+    // set contentEditable to true to allow editing the title
+    titleText.addEventListener('dblclick', () => {
+        titleText.style.cursor = 'text';
+        titleText.contentEditable = true;
+        titleText.focus();
+    });
+    // Listen for changes to the title
+    titleText.addEventListener('blur', () => {
+        titleText.style.cursor = 'move';
+        titleText.contentEditable = false;
+        if (onUpdateTitle) {
+            onUpdateTitle(titleText.textContent.trim());
+        }
+    });
+    // listen for Enter key to update title
+    titleText.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            titleText.blur();
+        }
+    });
+    // listen for Escape key to cancel title update
+    titleText.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            titleText.textContent = title;
+            titleText.blur();
+        }
+    });
 
     // Add minimize and close buttons
     const controlButtons = document.createElement('div');
@@ -104,16 +138,45 @@ const createFloatingWindow = (canvasId = null) => {
         isMinimized = !isMinimized;
     });
 
-    // Close functionality with explicit cleanup
+    // Close functionality
     closeButton.addEventListener('click', () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        container.remove(); // Removes the element and its children
+        container.remove();
     });
 
     return canvas;
 };
 
+// Example of an `onUpdateTitle` function
+const onUpdateTitle = (newTitle) => {
+    console.log(`Title updated to: ${newTitle}`);
+
+    // Notify the hosting page to update the `const title` line
+    const updateEvent = new CustomEvent('update-title', { detail: { newTitle } });
+    document.dispatchEvent(updateEvent);
+};
+
 // Usage
-const canvas = createFloatingWindow('myCanvas');
-// The `canvas` can now be used for rendering content, e.g., using WebGL or 2D contexts.
+const canvas = createFloatingWindow(myId, onUpdateTitle);
+
+document.addEventListener('update-title', (e) => {
+    console.log(`pi.html received title update: ${e.detail.newTitle}`);
+    const { newTitle } = e.detail;
+    const fileList = droppedFiles || [];
+    const updatedLine = `const title = '${newTitle}';`;
+
+    // Find the file with the first line starting with 'const title ='
+    const fileToUpdate = fileList.find(file => file.content.trim().startsWith('const title ='));
+    if (fileToUpdate) {
+        const lines = fileToUpdate.content.split('\n');
+        lines[0] = updatedLine; // Update the first line
+        fileToUpdate.content = lines.join('\n'); // Recombine the content
+        fileToUpdate.name = `${newTitle}.js`; // Update the filename
+
+        console.log(`Updated title in file: ${fileToUpdate.name}`);
+        updateFileList(); // Refresh the file list in the UI
+    } else {
+        console.warn('No file found with a title line to update.');
+    }
+});
+// fire one off to update the title in the hosting page
+document.dispatchEvent(new CustomEvent('update-title', { detail: { newTitle: title } }));
