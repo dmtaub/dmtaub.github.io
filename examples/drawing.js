@@ -1,4 +1,4 @@
-const title = 'Draggable Window'; // Keep this assignment as first line if you want to update the in the UI automatically
+const title = 'Drawing Window'; // Keep this assignment as first line if you want to update the in the UI automatically
 
 // using library at lib/floatingWindow.js
 import('floatingWindow').then(({ createFloatingWindow }) => {

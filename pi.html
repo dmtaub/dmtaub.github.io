@@ -167,7 +167,7 @@
         const droppedFiles = [];
         let codeEditor = null;
 
-        const files = ['examples/dodecahedron.js', 'examples/floatingwindow.js']
+        const exampleFiles = ['examples/dodecahedron.js', 'examples/drawing.js']
 
         function updateButtonStyle(button, isPersisting) {
             button.textContent = !isPersisting ? 'Keep' : 'Drop';
@@ -509,10 +509,10 @@
                 try {
                     // fetch and list all files in /examples
                     dropdown.innerHTML = ''; // Clear existing items
-                    files.forEach(file => {
+                    exampleFiles.forEach(file => {
                         const item = document.createElement('div');
                         item.className = 'file-list-item';
-                        item.textContent = file;
+                        item.textContent = file.replace('examples/', '');
                         item.style.cursor = 'pointer';
                         item.style.padding = '5px';
                         item.addEventListener('click', () => {
