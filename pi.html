@@ -167,7 +167,12 @@
         const droppedFiles = [];
         let codeEditor = null;
 
-        const exampleFiles = ['examples/dodecahedron.js', 'examples/drawing.js', 'examples/todo.js']
+        const exampleFiles = [
+            'examples/dodecahedron.js',
+            'examples/drawing.js',
+            'examples/todo.js',
+            'examples/bouncing.js'
+        ];
 
         function updateButtonStyle(button, isPersisting) {
             button.textContent = !isPersisting ? 'Keep' : 'Drop';
