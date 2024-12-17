@@ -168,7 +168,7 @@
         const fileListDiv = document.getElementById('fileList');
         const droppedFiles = [];
         let codeEditor = null;
-
+        const styleAdded = {};
         const exampleFiles = [
             'examples/dodecahedron.js',
             'examples/drawing.js',
@@ -227,11 +227,24 @@
                     addFileToList(file);
                 } else if (file.type === 'text/plain' || isTextFile) {
                     addFileToList(file, true); // Pass a flag indicating it's a text file
+                } else if (file.type === 'text/css') {
+                    addFileToStyleList(file);
                 } else {
-                    alert('Only JavaScript files are allowed--this is a' + file.type);
+                    alert('Only JavaScript and text files are allowed--this is a: ' + file.type);
                 }
             }
         });
+        function addFileToStyleList(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const style = document.createElement('style');
+                style.textContent = e.target.result;
+                document.head.appendChild(style);
+                styleAdded[file.name] = style;
+                updateFileList();
+            };
+            reader.readAsText(file);
+        }
 
         function addFileToList(file, isTextFile = false) {
             const reader = new FileReader();
@@ -283,8 +296,22 @@
                 fileListDiv.appendChild(fileItemDiv);
                 fileItemDiv.appendChild(toggleButton);
             });
-
-            fileListDiv.style.display = droppedFiles.length > 0 ? 'block' : 'none';
+            for (const [name, style] of Object.entries(styleAdded)) {
+                const fileItemDiv = document.createElement('div');
+                fileItemDiv.classList.add('file-item');
+                fileItemDiv.textContent = name;
+                const toggleButton = document.createElement('button');
+                toggleButton.className = 'del-btn btn wide-btn';
+                toggleButton.textContent = 'Remove';
+                toggleButton.addEventListener('click', () => {
+                    style.remove();
+                    delete styleAdded[name];
+                    updateFileList();
+                });
+                fileItemDiv.appendChild(toggleButton);
+                fileListDiv.appendChild(fileItemDiv);
+            }
+            fileListDiv.style.display = (droppedFiles.length + Object.keys(styleAdded).length) > 0 ? 'block' : 'none';
         }
 
         function runFile(file) {
