@@ -212,6 +212,9 @@
             }, false);
         });
 
+        const allowedTextExtensions = ['.txt', '.md', '.log'];
+        const allowedImageTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
+
         // Handle dropped files and text
         dropZone.addEventListener('drop', (e) => {
             if (e.dataTransfer.files.length === 0) {
@@ -220,20 +223,43 @@
             }
             const files = e.dataTransfer.files;
             for (let file of files) {
-                const allowedTextExtensions = ['.txt', '.md', '.log'];
                 const isTextFile = allowedTextExtensions.some(ext => file.name.endsWith(ext));
-
+                const isImageFile = allowedImageTypes.includes(file.type);
                 if (file.type === 'application/javascript' || file.type === 'text/javascript') {
                     addFileToList(file);
                 } else if (file.type === 'text/plain' || isTextFile) {
                     addFileToList(file, true); // Pass a flag indicating it's a text file
                 } else if (file.type === 'text/css') {
                     addFileToStyleList(file);
+                } else if (isImageFile) {
+                    showImagePreview(file);
                 } else {
                     alert('Only JavaScript and text files are allowed--this is a: ' + file.type);
                 }
             }
         });
+
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+               // use floatingWindow.js to show the image
+                import('floatingWindow').then(({ FloatingWindow }) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    // set image to scale to fit the window
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = 'calc(100% - 30px)';
+                    // set image to center
+                    img.style.display = 'block';
+                    img.style.margin = 'auto';
+
+                    const fw = new FloatingWindow(file.name, img);
+                    fw.show();
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
         function addFileToStyleList(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
