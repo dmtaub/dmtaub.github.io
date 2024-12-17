@@ -213,6 +213,7 @@
         });
 
         const allowedTextExtensions = ['.txt', '.md', '.log'];
+        const allowedHTMLExtensions = ['.html', '.htm'];
         const allowedImageTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
 
         // Handle dropped files and text
@@ -228,13 +229,15 @@
                 if (file.type === 'application/javascript' || file.type === 'text/javascript') {
                     addFileToList(file);
                 } else if (file.type === 'text/plain' || isTextFile) {
-                    addFileToList(file, true); // Pass a flag indicating it's a text file
+                    addFileToList(file, 'txt'); // Pass a flag indicating it's a text file
                 } else if (file.type === 'text/css') {
                     addFileToStyleList(file);
+                } else if (file.type === 'text/html' || allowedHTMLExtensions.some(ext => file.name.endsWith(ext))) {
+                    showHTMLPreview(file);
                 } else if (isImageFile) {
                     showImagePreview(file);
                 } else {
-                    alert('Only JavaScript and text files are allowed--this is a: ' + file.type);
+                    alert('Only js,css,text, and images are supported--this is a file of type: ' + (file.type ? ` ${file.type}` : 'unknown'));
                 }
             }
         });
@@ -260,6 +263,45 @@
             reader.readAsDataURL(file);
         }
 
+        function showHTMLPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                import('floatingWindow').then(({ FloatingWindow }) => {
+                    const div = document.createElement('div');
+                    div.style.width = '100%';
+                    div.style.height = 'calc(100% - 30px)';
+                    div.style.overflow = 'auto';
+
+                    // Create the iframe and set its content
+                    const iframe = document.createElement('iframe');
+                    iframe.srcdoc = e.target.result;
+                    iframe.style.width = '100%';
+                    iframe.style.height = 'calc(100% - 60px)';
+                    iframe.style.border = 'none';
+
+                    // add button for refreshing iframe
+                    const refreshButton = document.createElement('button');
+                    refreshButton.textContent = 'Refresh';
+                    refreshButton.className = 'new-btn btn wide-btn';
+                    refreshButton.style.margin = '5px';
+                    refreshButton.addEventListener('click', () => {
+                        iframe.srcdoc = e.target.result;
+                    });
+                    if (iframe.srcdoc.includes('boxadon')) {
+                        window.refreshButton = refreshButton;
+                    }
+
+                    div.appendChild(iframe);
+                    div.appendChild(refreshButton);
+
+                    // Show the iframe in a floating window
+                    const fw = new FloatingWindow(file.name, div, { width: 310, height: 310 });
+                });
+            };
+            reader.readAsText(file);
+        }
+
+
         function addFileToStyleList(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -272,11 +314,11 @@
             reader.readAsText(file);
         }
 
-        function addFileToList(file, isTextFile = false) {
+        function addFileToList(file, fileExtension = null) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileContent = e.target.result;
-                droppedFiles.push({ name: file.name, content: fileContent, persist: false, isTextFile });
+                droppedFiles.push({ name: file.name, content: fileContent, persist: false, fileExtension});
                 updateFileList();
             };
             reader.readAsText(file);
@@ -293,8 +335,8 @@
                 const runButton = document.createElement('button');
                 runButton.className = 'new-btn btn wide-btn';
                 runButton.textContent = 'Run';
-                runButton.disabled = file.isTextFile;
-                if (file.isTextFile) {
+                runButton.disabled = file.fileExtension === 'txt';
+                if (runButton.disabled) {
                     runButton.title = 'Text files cannot be run';
                 } else {
                     runButton.addEventListener('click', () => runFile(file));
@@ -308,7 +350,7 @@
                     document.getElementById('overlay').style.visibility = 'visible';
                     codeEditor.setValue(file.content);
                     currentIndex = file.index;
-                    document.getElementById('runButton').disabled = file.isTextFile;
+                    document.getElementById('runButton').disabled = file.fileExtension === 'txt';
                 });
 
                 // Add the toggle button
@@ -512,7 +554,12 @@
                     return false; // Indicate failure
                 } else if (firstline == '// amy.js') {
                     eval(code);
-                    alert('Level Saved!');
+                    if (window.refreshButton?.isConnected) {
+                        window.refreshButton.click();
+                    } else {
+                        // todo, open iframe for preview?
+                        alert('Level Saved!');
+                    }
                     return false; // Special case, no further processing
                 }
                 // if firstline is a const title assignment, pull out the title
