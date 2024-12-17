@@ -101,10 +101,12 @@
 
         .toggle-btn {
             width: 50px;
-
         }
 
-
+        :disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
         #overlay {
             position: fixed;
             visibility: hidden;
@@ -218,19 +220,24 @@
             }
             const files = e.dataTransfer.files;
             for (let file of files) {
+                const allowedTextExtensions = ['.txt', '.md', '.log'];
+                const isTextFile = allowedTextExtensions.some(ext => file.name.endsWith(ext));
+
                 if (file.type === 'application/javascript' || file.type === 'text/javascript') {
                     addFileToList(file);
+                } else if (file.type === 'text/plain' || isTextFile) {
+                    addFileToList(file, true); // Pass a flag indicating it's a text file
                 } else {
                     alert('Only JavaScript files are allowed--this is a' + file.type);
                 }
             }
         });
 
-        function addFileToList(file) {
+        function addFileToList(file, isTextFile = false) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileContent = e.target.result;
-                droppedFiles.push({ name: file.name, content: fileContent, persist: false });
+                droppedFiles.push({ name: file.name, content: fileContent, persist: false, isTextFile });
                 updateFileList();
             };
             reader.readAsText(file);
@@ -247,7 +254,12 @@
                 const runButton = document.createElement('button');
                 runButton.className = 'new-btn btn wide-btn';
                 runButton.textContent = 'Run';
-                runButton.addEventListener('click', () => runFile(file));
+                runButton.disabled = file.isTextFile;
+                if (file.isTextFile) {
+                    runButton.title = 'Text files cannot be run';
+                } else {
+                    runButton.addEventListener('click', () => runFile(file));
+                }
 
                 // add "edit" button
                 const editButton = document.createElement('button');
@@ -257,6 +269,7 @@
                     document.getElementById('overlay').style.visibility = 'visible';
                     codeEditor.setValue(file.content);
                     currentIndex = file.index;
+                    document.getElementById('runButton').disabled = file.isTextFile;
                 });
 
                 // Add the toggle button
@@ -271,11 +284,7 @@
                 fileItemDiv.appendChild(toggleButton);
             });
 
-            if (droppedFiles.length > 0) {
-                fileListDiv.style.display = 'block';
-            } else {
-                fileListDiv.style.display = 'none';
-            }
+            fileListDiv.style.display = droppedFiles.length > 0 ? 'block' : 'none';
         }
 
         function runFile(file) {
@@ -329,10 +338,11 @@
         const hideOverlay = () => {
             document.getElementById('overlay').style.visibility = 'hidden';
         };
-        const setEditorText = (text) => {
+        const setEditorText = (text, isCode = true) => {
             codeEditor.setValue(text);
             currentIndex = null;
             document.getElementById('overlay').style.visibility = 'visible';
+            document.getElementById('runButton').disabled = !isCode;
         };
         const events = () => {
             const createButton = pastePanel.querySelector('#create')
