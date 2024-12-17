@@ -438,7 +438,7 @@
             });
             // Common function to save code
             function saveCode(code) {
-                const firstline = code.split('\n')[0];
+                let firstline = code.split('\n')[0];
                 if (firstline === '') {
                     alert('Please provide a name for the file');
                     return false; // Indicate failure
@@ -446,6 +446,11 @@
                     eval(code);
                     alert('Level Saved!');
                     return false; // Special case, no further processing
+                }
+                // if firstline is a const title assignment, pull out the title
+                const titleMatch = firstline.match(/const\s+title\s*=\s*['"]([^'"]+)['"]/);
+                if (titleMatch) {
+                    firstline = titleMatch[1];
                 }
 
                 if (currentIndex !== null) {
