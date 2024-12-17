@@ -9,9 +9,11 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
     });
 
     // contentElement is a canvas element, so allow drawing on it with mouse or touch
+    const ctx = contentElement.getContext('2d');
+    const clickTests = [];
+    ctx.fillStyle = 'black';
+
     const draw = (e) => {
-        const ctx = contentElement.getContext('2d');
-        ctx.fillStyle = 'black';
         ctx.beginPath();
         ctx.arc(e.offsetX, e.offsetY, 5, 0, Math.PI * 2);
         ctx.fill();
@@ -23,6 +25,13 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
             ctx.fillStyle = color;
             // document: fillRect(xOff + i * spacing, y, width, height)
             ctx.fillRect(10 + index * 60, 10, 50, 50);
+            clickTests.push((e)=> {
+                const { offsetX, offsetY } = e;
+                if (offsetX > 10 + index * 60 && offsetX < 60 + index * 60 &&
+                    offsetY > 10 && offsetY < 60) {
+                    ctx.fillStyle = color;
+                }
+            });
         });
     };
     // on resize, update canvas size
@@ -34,8 +43,12 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
     });
     observer.observe(container);
 
+    // simple event listeners for drawing
     const startDrawing = (e) => contentElement.addEventListener(e.type === 'mousedown' ? 'mousemove' : 'touchmove', draw);
     const stopDrawing = (e) => contentElement.removeEventListener(e.type === 'mouseup' ? 'mousemove' : 'touchmove', draw);
     ['mousedown', 'touchstart'].forEach( event => contentElement.addEventListener(event, startDrawing) );
     ['mouseup', 'touchend'].forEach( event => contentElement.addEventListener(event, stopDrawing) );
+
+    // handle click color palette
+    contentElement.addEventListener('mousedown', (e) => { clickTests.forEach(test => test(e)); e.stopImmediatePropagation(); });
 });
