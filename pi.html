@@ -576,7 +576,7 @@
                         window.refreshButton.click();
                     } else {
                         // If no refreshButton, open or refresh boxadon.html in a floating window
-                        if (!window.boxadonFW || window.boxadonFW.closed) {
+                        if (!window.boxadonFW || !window.fwIframe?.isConnected) {
                             import('floatingWindow').then(({ FloatingWindow }) => {
                                 const div = document.createElement('div');
                                 div.style.width = '100%';
@@ -599,6 +599,7 @@
                                 div.appendChild(refreshButton);
                                 const fw = new FloatingWindow('boxadon.html', div, { width: 400, height: 400, top: 100, left: 30 });
                                 window.boxadonFW = fw;
+                                window.refreshButton = refreshButton;
                             });
                         } else {
                             // Refresh existing floating window
