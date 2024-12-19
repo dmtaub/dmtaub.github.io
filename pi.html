@@ -118,13 +118,11 @@
             z-index: 10;
             top: 70px;
             bottom: 10px;
-            overflow: scroll;
+            /* overflow: scroll; */
         }
         #overlay.amush {
             width: 50%;
             right: 3px;
-            top: 3px;
-            overflow: scroll;
         }
 
         .full-screen {
@@ -141,10 +139,16 @@
         }
 
         #editor {
-            height: 80%;
             width: 100%;
+            top: 0;
+            bottom:0;
         }
-
+        #editor .CodeMirror {
+            height: 80vh;
+        }
+        #editor .CodeMirror-scroll {
+            overscroll-behavior: contain;
+        }
         #editorButtons {
             margin: 5px;
         }
@@ -514,12 +518,12 @@
                 if (e.shiftKey) {
                     document.getElementById('editorPanel').classList.add('full-screen');
                     overlay.classList.add('amush');
-                    codeEditor.setSize('100%', '100%');
+                    // codeEditor.setSize('100%', '100%');
                     fetch('exampleLevel.js').then(r => r.text()).then(setEditorText);
                     return;
                 } else {
                     overlay.classList.remove('amush');
-                    codeEditor.setSize('100%', '80%');
+                    // codeEditor.setSize('100%', '80%');
                 }
                 // if on right side of button, show dropdown
                 if (e.target.classList.contains('right-side') || e.target.parentElement.classList.contains('right-side')) {
