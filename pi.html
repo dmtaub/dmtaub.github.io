@@ -120,9 +120,18 @@
             bottom: 10px;
             /* overflow: scroll; */
         }
+        #levelDropdown {
+            display: none;
+        }
         #overlay.amush {
             width: 50%;
             right: 3px;
+        }
+        #overlay.amush #clearButton,#saveButton {
+            display: none;
+        }
+        #overlay.amush #levelDropdown {
+            display: inline-block;
         }
 
         .full-screen {
@@ -166,6 +175,7 @@
         <div id="editorPanel">
             <div id="editor"></div>
             <div id="editorButtons">
+                <select id="levelDropdown"></select>
                 <button id="runButton" class="run-btn btn">Run</button>
                 <button id="saveButton" class="new-btn btn">Save</button>
                 <button id="hideButton" class="btn">Cancel</button>
@@ -181,6 +191,7 @@
         const fileListDiv = document.getElementById('fileList');
         const droppedFiles = [];
         let codeEditor = null;
+        let exampleLevel = null;
         const styleAdded = {};
         const exampleFiles = [
             'examples/dodecahedron.js',
@@ -436,7 +447,7 @@
         });
         // when clearing divs, exclude the essential UI elements
         const allIds = ['dropZone', 'fileList', 'overlay', 'pastePanel',
-            'editor', 'editorButtons', 'hideButton', 'runButton',
+            'editor', 'editorButtons', 'hideButton', 'runButton', 'levelDropdown',
             'clearButton', 'saveButton', 'clear', 'file-dropdown',
             'create', 'paste', 'clearDivs', 'editorPanel'];
         const allClasses = ['file-item', 'run-btn', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item', 'toggle-persist'];
@@ -519,17 +530,23 @@
                     document.getElementById('editorPanel').classList.add('full-screen');
                     overlay.classList.add('amush');
                     // codeEditor.setSize('100%', '100%');
-                    fetch('exampleLevel.js').then(r => r.text()).then(setEditorText);
+                    if (exampleLevel) {
+                        setEditorText(exampleLevel);
+                        return;
+                    }
+                    fetch('exampleLevel.js').then(r => r.text()).then(function (content) {
+                        exampleLevel = content;
+                        setEditorText(content);
+                    });
                     return;
-                } else {
-                    overlay.classList.remove('amush');
-                    // codeEditor.setSize('100%', '80%');
                 }
                 // if on right side of button, show dropdown
                 if (e.target.classList.contains('right-side') || e.target.parentElement.classList.contains('right-side')) {
                     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
                     return;
                 }
+                overlay.classList.remove('amush');
+                // restore to normal size and show overlay
                 dropdown.style.display = 'none';
                 setEditorText(defaultText);
             });
@@ -563,6 +580,27 @@
 
             document.getElementById('clearButton').addEventListener('click', () => {
                 codeEditor.setValue('');
+            });
+
+            // add options to select level - levelDropdown
+            const lvlDropdown = document.getElementById('levelDropdown');
+            lvlDropdown.innerHTML = '<option value="">Select a level</option>';
+            ['Level 1', 'Level 2', 'Level 3'].forEach(level => {
+                const option = document.createElement('option');
+                option.value = level;
+                option.textContent = level;
+                lvlDropdown.appendChild(option);
+            });
+            const levelPrefix = '// amy.js\n\nconst levelString = `';
+            lvlDropdown.addEventListener('change', (e) => {
+                const level = e.target.value.toLowerCase().replace(' ', '');
+                const levelData = JSON.parse(localStorage.getItem(level));
+                if (level) {
+                    const levelPostfix = `\`;\n\nlocalStorage.setItem('${level}', JSON.stringify(levelString));`;
+                    setEditorText(levelPrefix+levelData+levelPostfix);
+                } else {
+                    setEditorText(exampleLevel);
+                }
             });
 
             // create single iframe for all html previews of this special file
@@ -688,6 +726,7 @@
                         item.style.cursor = 'pointer';
                         item.style.padding = '5px';
                         item.addEventListener('click', () => {
+                            overlay.classList.remove('amush');
                             fetch(file)
                                 .then(response => response.text())
                                 .then(content => setEditorText(content));
