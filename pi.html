@@ -115,7 +115,16 @@
             background-color: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
-            z-index: 24;
+            z-index: 10;
+            top: 70px;
+            bottom: 10px;
+            overflow: scroll;
+        }
+        #overlay.amush {
+            width: 50%;
+            right: 3px;
+            top: 3px;
+            overflow: scroll;
         }
 
         .full-screen {
@@ -175,6 +184,7 @@
             'examples/todo.js',
             'examples/bouncing.js'
         ];
+        let boxadonFW = null; // Global reference to the floating window for boxadon.html
 
         function updateButtonStyle(button, isPersisting) {
             button.textContent = !isPersisting ? 'Keep' : 'Drop';
@@ -500,12 +510,16 @@
             createButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 // on shift-click, use a game template instead (from exampleLevel.js in the same path)
+                const overlay = document.getElementById('overlay');
                 if (e.shiftKey) {
                     document.getElementById('editorPanel').classList.add('full-screen');
-                    document.getElementById('overlay').style.height = '100%';
+                    overlay.classList.add('amush');
                     codeEditor.setSize('100%', '100%');
                     fetch('exampleLevel.js').then(r => r.text()).then(setEditorText);
                     return;
+                } else {
+                    overlay.classList.remove('amush');
+                    codeEditor.setSize('100%', '80%');
                 }
                 // if on right side of button, show dropdown
                 if (e.target.classList.contains('right-side') || e.target.parentElement.classList.contains('right-side')) {
@@ -546,6 +560,10 @@
             document.getElementById('clearButton').addEventListener('click', () => {
                 codeEditor.setValue('');
             });
+
+            // create single iframe for all html previews of this special file
+            const fwIframe = document.createElement('iframe');
+            fwIframe.src = 'boxadon.html';
             // Common function to save code
             function saveCode(code) {
                 let firstline = code.split('\n')[0];
@@ -557,8 +575,37 @@
                     if (window.refreshButton?.isConnected) {
                         window.refreshButton.click();
                     } else {
-                        // todo, open iframe for preview?
-                        alert('Level Saved!');
+                        // If no refreshButton, open or refresh boxadon.html in a floating window
+                        if (!window.boxadonFW || window.boxadonFW.closed) {
+                            import('floatingWindow').then(({ FloatingWindow }) => {
+                                const div = document.createElement('div');
+                                div.style.width = '100%';
+                                div.style.height = 'calc(100% - 30px)';
+                                div.style.overflow = 'auto';
+
+                                fwIframe.style.width = '100%';
+                                fwIframe.style.height = 'calc(100% - 60px)';
+                                fwIframe.style.border = 'none';
+
+                                const refreshButton = document.createElement('button');
+                                refreshButton.textContent = 'Refresh';
+                                refreshButton.className = 'new-btn btn wide-btn';
+                                refreshButton.style.margin = '5px';
+                                refreshButton.addEventListener('click', () => {
+                                    fwIframe.src = fwIframe.src;
+                                });
+
+                                div.appendChild(fwIframe);
+                                div.appendChild(refreshButton);
+                                const fw = new FloatingWindow('boxadon.html', div, { width: 400, height: 400, top: 100, left: 30 });
+                                window.boxadonFW = fw;
+                            });
+                        } else {
+                            // Refresh existing floating window
+                            if (fwIframe) {
+                                fwIframe.src = fwIframe.src; // reload
+                            }
+                        }
                     }
                     return false; // Special case, no further processing
                 }
