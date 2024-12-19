@@ -596,8 +596,13 @@
                 const level = e.target.value.toLowerCase().replace(' ', '');
                 const levelData = JSON.parse(localStorage.getItem(level));
                 if (level) {
-                    const levelPostfix = `\`;\n\nlocalStorage.setItem('${level}', JSON.stringify(levelString));`;
-                    setEditorText(levelPrefix+levelData+levelPostfix);
+                    if (!levelData) {
+                        console.log('No data found for this level');
+                        setEditorText(exampleLevel.replaceAll('level1', level.replace('level ', '')));
+                    } else {
+                        const levelPostfix = `\`;\n\nlocalStorage.setItem('${level}', JSON.stringify(levelString));`;
+                        setEditorText(levelPrefix+levelData+levelPostfix);
+                    }
                 } else {
                     setEditorText(exampleLevel);
                 }
