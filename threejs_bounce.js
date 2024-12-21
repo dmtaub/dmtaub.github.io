@@ -5,7 +5,7 @@ let ball, ballVelocity;
 let container, containerWidth, containerHeight;
 const ballRadius = 0.5;
 const effectRadius = 2.0; // New effect radius
-const rightClickRipple = true;
+const placementRipple = true;
 
 let rippleScene, rippleCamera;
 let quadScene, quadCamera;
@@ -39,7 +39,7 @@ let proximalToObject = 0; // 0: None, 1: Overlapping, 2: Ball radius, 3: Effect 
 let lastProximalToObject = 0;
 
 const max_attractors = 1;
-let rightClickCount = 0;
+let attractorCount = 0;
 
 // Create the dodecahedron base
 const ddGeom = new THREE.DodecahedronGeometry(0.3, 0);
@@ -49,6 +49,23 @@ const ddMat = new THREE.MeshStandardMaterial({
     emissive: 0xff0fff,
     emissiveIntensity: 0.2
 });
+
+
+/**
+ * Generates a random position within the visible frustum.
+ *
+ * @returns {THREE.Vector3} A random position vector.
+ */
+function getRandomPosition() {
+  const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+  const frustumWidth = frustumHeight * camera.aspect;
+
+  const x = THREE.MathUtils.randFloatSpread(frustumWidth - 1); // Leave some margin
+  const y = THREE.MathUtils.randFloatSpread(frustumHeight - 1);
+  const z = 0; // Place attractors on the z=0 plane
+
+  return new THREE.Vector3(x, y, z);
+}
 /*
 function generateRandomTexture(size) {
     const canvas = document.createElement('canvas');
@@ -123,14 +140,7 @@ function addUI(container) {
   button2.classList.add('ui-button');
   button2.innerText = 'Add Attractor';
   button2.addEventListener('click', () => {
-    const pos = new THREE.Vector3(0, 0, 0);
-    pos.x = Math.random() * 10 - 5;
-    pos.y = Math.random() * 10 - 5;
-    const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
-    newShape.name = "attractor";
-    newShape.position.copy(pos);
-    scene.add(newShape);
-    objects.push(newShape);
+    addAttractor()
   });
 
   [button1, button2].forEach((button) => {
@@ -237,30 +247,65 @@ function init() {
     return container;
 }
 
+/**
+ * Converts a mouse event's 2D screen coordinates to a 3D world position.
+ *
+ * @param {MouseEvent} event - The mouse event containing the click coordinates.
+ * @returns {THREE.Vector3} The unprojected 3D position in world space.
+ */
 function getRectUnproject(event) {
+  // Get the bounding rectangle of the renderer's DOM element
   const rect = renderer.domElement.getBoundingClientRect();
+
+  // Normalize mouse coordinates to range [-1, 1] based on container size
   const x = (event.clientX - rect.left) / containerWidth * 2 - 1;
   const y = -(event.clientY - rect.top) / containerHeight * 2 + 1;
+
+  // Create a vector with normalized device coordinates (NDC)
   const mousePos = new THREE.Vector3(x, y, 0);
+
+  // Convert NDC to world coordinates using the camera's projection matrix
   mousePos.unproject(camera);
+
+  // Return the unprojected world position
   return mousePos;
 }
 
+/**
+ * Determines the 3D position in the scene where a click intersects the z=0 plane.
+ *
+ * @param {MouseEvent} event - The mouse event containing the click coordinates.
+ * @returns {[THREE.Vector3, THREE.Vector3]} An array containing:
+ *   - The intersection point on the z=0 plane.
+ *   - The unprojected direction vector from the camera through the mouse position.
+ */
 function getClickPosition(event) {
+  // Get the unprojected mouse position in world space
   const unprojected = getRectUnproject(event);
+
+  // Calculate the direction vector from the camera to the unprojected point
   const dir = unprojected.sub(camera.position).normalize();
+
+  // Compute the distance to intersect with the z=0 plane
   const distance = -camera.position.z / dir.z;
-  return [camera.position.clone().add(dir.multiplyScalar(distance)), unprojected];
+
+  // Calculate the exact intersection point on the z=0 plane
+  const intersectionPoint = camera.position.clone().add(dir.multiplyScalar(distance));
+
+  // Return the intersection point and the direction vector
+  return [intersectionPoint, unprojected];
 }
 
-function makeRipple(event) {
-    // Debug ripple behavior
-    // Map click position to normalized UV coordinates (0 to 1)
-    const rect = renderer.domElement.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
 
-    debugRipplePos.set(x, 1.0 - y);
+function makeRipple(mousePos) {
+    // Convert mousePos to normalized UV coordinates (0 to 1)
+    const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+    const frustumWidth = frustumHeight * camera.aspect;
+
+    const x = (mousePos.x + frustumWidth / 2) / frustumWidth;
+    const y = (mousePos.y + frustumHeight / 2) / frustumHeight;
+
+    debugRipplePos.set(x, y);
     debugRippleStartTime = globalTime;
     debugRipple = true;
 }
@@ -274,13 +319,13 @@ function onClick(event, amount) {
   // random hue for each click
   clickHue = Math.random();
   // Determine click position relative to the ball
-  const [mousePos,] = getClickPosition(event);
-  makeRipple(event, amount);
+  const [pos, unprojected] = getClickPosition(event);
+  makeRipple(pos);
   // Add the target to the queue if not right click
   if (event.button !== 2) {
     // addTarget(pos.clone(), hue = Math.random());
     targets.push({
-      pos: mousePos.clone(),
+      pos: pos.clone(),
       hue: Math.random() // Assign a random hue for the ripple
     });
   }
@@ -323,10 +368,14 @@ function onOut(event) {
 function onRightClick(event) {
   event.stopPropagation();
   event.preventDefault();
-  const [pos,] = getClickPosition(event);
-  if (rightClickRipple)
-    makeRipple(event);
-  if (rightClickCount++ < max_attractors) {
+  const [mousePos, unprojected] = getClickPosition(event);
+  addAttractor(mousePos);
+}
+
+function addAttractor(pos = getRandomPosition()) {
+  if (placementRipple)
+    makeRipple(pos);
+  if (attractorCount++ < max_attractors) {
     const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
     newShape.name = "attractor";
     newShape.position.copy(pos);
@@ -334,7 +383,7 @@ function onRightClick(event) {
     objects.push(newShape);
   } else {
     // wrap around the index to move the first shape to the location
-    objects[rightClickCount % max_attractors].position.copy(pos);
+    objects[attractorCount % max_attractors].position.copy(pos);
   }
 }
 
