@@ -668,6 +668,8 @@ function animate() {
     renderer.clearColor();
     renderer.render(quadScene, quadCamera);
 
+    // Swap the render targets to avoid feedback loop errors in WebGL.
+    // This ensures that the texture used as the source in one frame is used as the destination in the next frame, and vice versa.
     let swap = accumRenderTarget;
     accumRenderTarget = tempRenderTarget;
     tempRenderTarget = swap;
