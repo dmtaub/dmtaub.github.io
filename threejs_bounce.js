@@ -247,11 +247,14 @@ function init() {
     return container;
 }
 
+
 /**
- * Converts a mouse event's 2D screen coordinates to a 3D world position.
+ * Converts normalized device coordinates to world coordinates.
  *
- * @param {MouseEvent} event - The mouse event containing the click coordinates.
- * @returns {THREE.Vector3} The unprojected 3D position in world space.
+ * @param {MouseEvent} event - The mouse event.
+ * @returns {[THREE.Vector3, THREE.Vector3]} An array containing:
+ *   - The unprojected position in world space.
+ *   - The direction vector from the camera through the mouse position.
  */
 function getRectUnproject(event) {
   // Get the bounding rectangle of the renderer's DOM element
@@ -267,8 +270,8 @@ function getRectUnproject(event) {
   // Convert NDC to world coordinates using the camera's projection matrix
   mousePos.unproject(camera);
 
-  // Return the unprojected world position
-  return mousePos;
+  // Return the unprojected world position and the direction vector
+  return [mousePos, mousePos.clone().sub(camera.position).normalize()];
 }
 
 /**
@@ -281,10 +284,7 @@ function getRectUnproject(event) {
  */
 function getClickPosition(event) {
   // Get the unprojected mouse position in world space
-  const unprojected = getRectUnproject(event);
-
-  // Calculate the direction vector from the camera to the unprojected point
-  const dir = unprojected.sub(camera.position).normalize();
+  const [unprojected, dir] = getRectUnproject(event);
 
   // Compute the distance to intersect with the z=0 plane
   const distance = -camera.position.z / dir.z;
