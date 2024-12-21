@@ -8,13 +8,11 @@ const effectRadius = 2.0; // New effect radius
 const placementRipple = true;
 
 let rippleScene, rippleCamera;
-let quadScene, quadCamera;
 
-let rippleRenderTarget, accumRenderTarget, tempRenderTarget;
+let rippleRenderTarget;
 
 let rippleUniforms;
 let rippleMaterial;
-let accumMaterial;
 
 let globalTime = 0;
 let dragging = false;
@@ -224,26 +222,12 @@ function init() {
     // right click adds attractors if we're on a desktop
     renderer.domElement.addEventListener('contextmenu', onRightClick, false);
 
-
     createRippleScene();
-    createAccumulationScene();
 
     rippleRenderTarget = new THREE.WebGLRenderTarget(containerWidth, containerHeight);
     rippleRenderTarget.texture.minFilter = THREE.LinearFilter;
     rippleRenderTarget.texture.magFilter = THREE.LinearFilter;
 
-    accumRenderTarget = new THREE.WebGLRenderTarget(containerWidth, containerHeight);
-    accumRenderTarget.texture.minFilter = THREE.LinearFilter;
-    accumRenderTarget.texture.magFilter = THREE.LinearFilter;
-
-    tempRenderTarget = new THREE.WebGLRenderTarget(containerWidth, containerHeight);
-    tempRenderTarget.texture.minFilter = THREE.LinearFilter;
-    tempRenderTarget.texture.magFilter = THREE.LinearFilter;
-
-    // Initialize accumulation with black
-    renderer.setRenderTarget(accumRenderTarget);
-    renderer.clearColor();
-    renderer.setRenderTarget(null);
     return container;
 }
 
@@ -533,44 +517,6 @@ function createRippleScene() {
     rippleScene.add(plane);
 }
 
-function createAccumulationScene() {
-    quadScene = new THREE.Scene();
-    quadCamera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-
-    accumMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            u_oldAccum: { value: null },
-            u_newRipple: { value: null },
-            u_oldWeight: { value: 0.90 },
-            u_newWeight: { value: 0.10 }
-        },
-        vertexShader: /* glsl */`
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = vec4(position,1.0);
-            }
-        `,
-        fragmentShader: /* glsl */`
-            precision highp float;
-            varying vec2 vUv;
-            uniform sampler2D u_oldAccum;
-            uniform sampler2D u_newRipple;
-            uniform float u_oldWeight;
-            uniform float u_newWeight;
-
-            void main() {
-                vec4 oldColor = texture2D(u_oldAccum, vUv);
-                vec4 newColor = texture2D(u_newRipple, vUv);
-                vec4 result = oldColor * u_oldWeight + newColor * u_newWeight;
-                gl_FragColor = result;
-            }
-        `
-    });
-
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), accumMaterial);
-    quadScene.add(quad);
-}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -660,27 +606,13 @@ function animate() {
     renderer.clearColor();
     renderer.render(rippleScene, rippleCamera);
 
-    // 2. Accumulate
-    accumMaterial.uniforms.u_oldAccum.value = accumRenderTarget.texture;
-    accumMaterial.uniforms.u_newRipple.value = rippleRenderTarget.texture;
-
-    renderer.setRenderTarget(tempRenderTarget);
-    renderer.clearColor();
-    renderer.render(quadScene, quadCamera);
-
-    // Swap the render targets to avoid feedback loop errors in WebGL.
-    // This ensures that the texture used as the source in one frame is used as the destination in the next frame, and vice versa.
-    let swap = accumRenderTarget;
-    accumRenderTarget = tempRenderTarget;
-    tempRenderTarget = swap;
-
     // 3. Render accumulated pattern as background, then ball
     renderer.setRenderTarget(null);
     renderer.clearColor();
 
     let backgroundMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(frustumWidth, frustumHeight),
-        new THREE.MeshBasicMaterial({ map: accumRenderTarget.texture })
+        new THREE.MeshBasicMaterial({ map: rippleRenderTarget.texture })
     );
     backgroundMesh.position.z = -0.1;
     scene.add(backgroundMesh);
@@ -722,6 +654,4 @@ function onWindowResize() {
     }
 
     rippleRenderTarget.setSize(containerWidth, containerHeight);
-    accumRenderTarget.setSize(containerWidth, containerHeight);
-    tempRenderTarget.setSize(containerWidth, containerHeight);
 }
