@@ -89,9 +89,87 @@ const positionClone = ddGeom.attributes.position.clone();
 particleGeometry.setAttribute('position', positionClone);
 */
 
+let currentMaterialIndex = 0;
+const materials = [
+  new THREE.MeshStandardMaterial({ color: 'hsl(200, 100%, 50%)', metalness: 0.9, roughness: 0.2 }),
+  new THREE.MeshStandardMaterial({ color: 'hsl(100, 100%, 50%)', metalness: 0.5, roughness: 0.8 }),
+  new THREE.MeshPhongMaterial({ color: 'hsl(300, 100%, 50%)', shininess: 30 }),
+];
+
+// Function to change material
+function switchMaterial() {
+  currentMaterialIndex = (currentMaterialIndex + 1) % materials.length;
+  ball.material = materials[currentMaterialIndex];
+}
+
 export function start() {
-    init();
+    const container = init();
     animate();
+    setupCSS();
+
+    const rowDiv = document.createElement('div');
+    rowDiv.classList.add('ui-row');
+    container.appendChild(rowDiv);
+    addUI(rowDiv);
+}
+
+function addUI(container) {
+  const button1 = document.createElement('div');
+  button1.classList.add('ui-button');
+  button1.innerText = 'Switch Material';
+  button1.addEventListener('click', switchMaterial);
+
+  const button2 = document.createElement('div');
+  button2.classList.add('ui-button');
+  button2.innerText = 'Add Attractor';
+  button2.addEventListener('click', () => {
+    const pos = new THREE.Vector3(0, 0, 0);
+    pos.x = Math.random() * 10 - 5;
+    pos.y = Math.random() * 10 - 5;
+    const newShape = new THREE.Mesh(ddGeom, ddMat.clone());
+    newShape.name = "attractor";
+    newShape.position.copy(pos);
+    scene.add(newShape);
+    objects.push(newShape);
+  });
+
+  [button1, button2].forEach((button) => {
+    button.addEventListener('mouseover', (event) => {
+      button.style.borderColor = '#888';
+    });
+    button.addEventListener('mouseout', (event) => {
+      button.style.borderColor = '#ccc';
+    });
+  });
+
+  container.appendChild(button1);
+  container.appendChild(button2);
+}
+
+function setupCSS() {
+    const buttonStyle = document.createElement('style');
+    buttonStyle.textContent = `
+      .ui-row {
+        display: flex;
+        justify-content: left;
+        margin-top: 10px;
+        gap: 10px;
+      }
+      .ui-button {
+        width: 175px;
+        height: 45px;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        border: 2px solid #ccc;
+        line-height: 1.5;
+        border-radius: 5px;
+        user-select: none;
+      }
+    `;
+    document.head.appendChild(buttonStyle);
 }
 
 function init() {
@@ -156,6 +234,7 @@ function init() {
     renderer.setRenderTarget(accumRenderTarget);
     renderer.clearColor();
     renderer.setRenderTarget(null);
+    return container;
 }
 
 function getRectUnproject(event) {
