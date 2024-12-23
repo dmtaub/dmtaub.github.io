@@ -521,19 +521,49 @@ function createRippleScene() {
     rippleScene.add(plane);
 }
 
+let cameraAngleX = 0;
+let cameraAngleY = 0;
+const cameraSpeed = 0.05;
+/*
+document.addEventListener('keydown', (event) => {
+    switch (event.key) {
+        case 'ArrowUp':
+            cameraAngleX -= cameraSpeed;
+            break;
+        case 'ArrowDown':
+            cameraAngleX += cameraSpeed;
+            break;
+        case 'ArrowLeft':
+            cameraAngleY -= cameraSpeed;
+            break;
+        case 'ArrowRight':
+            cameraAngleY += cameraSpeed;
+            break;
+    }
+    updateCameraPosition();
+});
 
+function updateCameraPosition() {
+    camera.position.x = 20 * Math.sin(cameraAngleY) * Math.cos(cameraAngleX);
+    camera.position.y = 20 * Math.sin(cameraAngleX);
+    camera.position.z = 20 * Math.cos(cameraAngleY) * Math.cos(cameraAngleX);
+    camera.lookAt(scene.position);
+}
+*/
 function animate() {
     requestAnimationFrame(animate);
 
     // updates:
     globalTime += 0.01;
+
+    /* Check Proximity of the Ball to Attractors */
     checkProximity();
     if (proximalToObject !== lastProximalToObject) {
         console.log("Proximity changed to", proximalToObject);
     }
     lastProximalToObject = proximalToObject;
 
-    // Handle targets
+    /* Handle Targets (Ball movement towards targets) */
     if (targets.length > 0) {
       const currentTarget = targets[0];
       const dist = ball.position.distanceTo(currentTarget.pos);
@@ -560,6 +590,13 @@ function animate() {
       }
       if (proximalToObject > 2 || proximalToObject === 0) {
         ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
+      } else {
+        /* Apply attraction force from attractors */
+        objects.forEach(attractor => {
+          const distance = ball.position.distanceTo(attractor.position);
+          const force = attractor.position.clone().sub(ball.position).normalize().multiplyScalar(0.0005 / distance);
+          ballVelocity.add(force);
+        });
       }
       // check if velocity magnitude is close to zero
       if (ballVelocity.lengthSq() < 0.00000001) {
