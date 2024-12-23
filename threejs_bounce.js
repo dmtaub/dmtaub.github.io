@@ -18,6 +18,7 @@ let globalTime = 0;
 let dragging = false;
 let startMousePos = null;
 const moveTolerance = 0.01;
+const attractionStrength = 0.0005;
 
 let timer = undefined;
 let slowFactor = 0.99999;
@@ -524,6 +525,22 @@ function createRippleScene() {
 let cameraAngleX = 0;
 let cameraAngleY = 0;
 const cameraSpeed = 0.05;
+
+const applyGravity = () => {
+  // special cases to slow down when close or far from attractors
+  // if (proximalToObject > 2 || proximalToObject === 0) {
+  // }
+  ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
+
+  /* Apply attraction force from attractors */
+  objects.forEach(attractor => {
+    const distance = ball.position.distanceTo(attractor.position);
+    const force = attractor.position.clone().sub(ball.position).normalize().multiplyScalar(attractionStrength / distance);
+    ballVelocity.add(force);
+  });
+};
+
+
 /*
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
@@ -588,21 +605,12 @@ function animate() {
           timer = undefined;
         }, 500);
       }
-      if (proximalToObject > 2 || proximalToObject === 0) {
-        ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
-      } else {
-        /* Apply attraction force from attractors */
-        objects.forEach(attractor => {
-          const distance = ball.position.distanceTo(attractor.position);
-          const force = attractor.position.clone().sub(ball.position).normalize().multiplyScalar(0.0005 / distance);
-          ballVelocity.add(force);
-        });
-      }
       // check if velocity magnitude is close to zero
       if (ballVelocity.lengthSq() < 0.00000001) {
         ballVelocity.set(0, 0, 0);
       }
     }
+    applyGravity();
 
     // Bounce the ball off the walls
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
