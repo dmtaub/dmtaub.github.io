@@ -129,29 +129,33 @@ export function start() {
 }
 
 function addUI(container) {
-  const button1 = document.createElement('div');
-  button1.classList.add('ui-button');
-  button1.innerText = 'Switch Material';
-  button1.addEventListener('click', switchMaterial);
+  const buttons = [
+    ['Switch Material', switchMaterial],
+    ['Add Attractor', () => addAttractor()],
+    ['Placeholder', () => {}],
+    ['Placeholder', () => {}]
+  ];
 
-  const button2 = document.createElement('div');
-  button2.classList.add('ui-button');
-  button2.innerText = 'Add Attractor';
-  button2.addEventListener('click', () => {
-    addAttractor()
-  });
-
-  [button1, button2].forEach((button) => {
+  const setupButtons = () => {
+    for (const [text, callback] of buttons) {
+      const button = document.createElement('div');
+      button.classList.add('ui-button');
+      button.innerText = text;
+      button.addEventListener('click', callback);
+      addListeners(button);
+      container.appendChild(button);
+    }
+  }
+  const addListeners = (button) => {
     button.addEventListener('mouseover', (event) => {
       button.style.borderColor = '#888';
     });
     button.addEventListener('mouseout', (event) => {
       button.style.borderColor = '#ccc';
     });
-  });
+  }
 
-  container.appendChild(button1);
-  container.appendChild(button2);
+  setupButtons();
 }
 
 function setupCSS() {
