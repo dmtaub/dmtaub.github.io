@@ -178,7 +178,7 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
      * @param {number} frequency - frequency of the note
      * @param {number} duration - duration (in seconds)
      */
-    function playNote(frequency, duration = 2) {
+    function playNote(frequency, duration = 1.5) {
         const oscillator = audioCtx.createOscillator();
         oscillator.frequency.value = frequency;
 
