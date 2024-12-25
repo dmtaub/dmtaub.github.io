@@ -3,7 +3,7 @@ const title = 'Piano App'; // Title for the floating window
 import('floatingWindow').then(({ createFloatingWindow }) => {
     const { contentElement } = createFloatingWindow({
         rootElement: document.body,
-        startDimensions: { width: 800, height: 340, top: 50, left: 50 },
+        startDimensions: { width: 800, height: 240, top: 50, left: 50 },
         title,
         contentElement: document.createElement('div'),
     });
@@ -106,12 +106,13 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
         .piano-container {
             display: flex;
             flex-wrap: wrap;
+            margin-left: 40px;
             /* If you want each octave side by side, remove flex-wrap or adjust as needed */
         }
         .octave {
             position: relative;
             display: inline-block;
-            margin-right: 20px;
+            margin-right: -1px;
         }
         /* White keys styling */
         .white-keys {
@@ -127,7 +128,7 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
             cursor: pointer;
             user-select: none;
             text-align: center;
-            line-height: 180px;
+            line-height: 220px;
         }
         .white-key:last-child {
             border-right: 1px solid #000;
@@ -152,7 +153,7 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
             cursor: pointer;
             user-select: none;
             text-align: center;
-            line-height: 100px;
+            line-height: 180px;
             color: #fff;
             pointer-events: auto; /* re-enable clicks for black keys */
         }
@@ -177,7 +178,7 @@ import('floatingWindow').then(({ createFloatingWindow }) => {
      * @param {number} frequency - frequency of the note
      * @param {number} duration - duration (in seconds)
      */
-    function playNote(frequency, duration = 1) {
+    function playNote(frequency, duration = 2) {
         const oscillator = audioCtx.createOscillator();
         oscillator.frequency.value = frequency;
 
