@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Crosshatch Overlay with Holes</title>
+</head>
+<body>
+  <!-- Your normal page content goes here -->
+  <h1>Welcome!</h1>
+  <p>There's an overlay with a crosshatch pattern and random holes behind this text.</p>
+
+  <script>
+    (function() {
+      // 1) Create and style the overlay div
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '9999'; // put it on top of other elements
+      document.body.appendChild(overlay);
+
+      // 2) Create a canvas to hold the crosshatch pattern
+      const canvas = document.createElement('canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      overlay.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+
+      // 3) Create a small (20x20) pattern canvas to draw the crosshatch
+      const patternCanvas = document.createElement('canvas');
+      patternCanvas.width = 20;
+      patternCanvas.height = 20;
+
+      const pCtx = patternCanvas.getContext('2d');
+      pCtx.strokeStyle = 'rgba(0, 0, 0, 0.5)'; // half-transparent black lines
+      pCtx.lineWidth = 1;
+      
+      // Draw diagonal line (top-left to bottom-right)
+      pCtx.beginPath();
+      pCtx.moveTo(0, 0);
+      pCtx.lineTo(20, 20);
+      pCtx.stroke();
+
+      // Draw diagonal line (top-right to bottom-left)
+      pCtx.beginPath();
+      pCtx.moveTo(20, 0);
+      pCtx.lineTo(0, 20);
+      pCtx.stroke();
+
+      // Use the small pattern canvas as a repeating fill pattern
+      const pattern = ctx.createPattern(patternCanvas, 'repeat');
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 4) “Cut out” random holes by switching composite operation
+      ctx.globalCompositeOperation = 'destination-out';
+
+      // Randomly create some holes
+      for (let i = 0; i < 30; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const radius = Math.random() * 60 + 20; // random size between 20 and 80
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    })();
+  </script>
+</body>
+</html>

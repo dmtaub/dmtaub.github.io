@@ -10,7 +10,8 @@
             "imports": {
                 "three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.js",
                 "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/controls/OrbitControls.js",
-                "floatingWindow": "./lib/floatingWindow.js"
+                "floatingWindow": "./lib/floatingWindow.js",
+                "datastore": "./lib/DataStore.js"
             }
         }
     </script>
@@ -199,6 +200,8 @@
             'examples/todo.js',
             'examples/bouncing.js',
             'examples/piano.js',
+            'examples/archive.html',
+            'examples/crosshatch.html',
         ];
         let boxadonFW = null; // Global reference to the floating window for boxadon.html
 
@@ -241,6 +244,23 @@
         const allowedTextExtensions = ['.txt', '.md', '.log'];
         const allowedHTMLExtensions = ['.html', '.htm'];
         const allowedImageTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
+        const handleFile = (file) => {
+            const isTextFile = allowedTextExtensions.some(ext => file.name.endsWith(ext));
+            const isImageFile = allowedImageTypes.includes(file.type);
+            if (file.type === 'application/javascript' || file.type === 'text/javascript') {
+                addFileToList(file);
+            } else if (file.type === 'text/plain' || isTextFile) {
+                addFileToList(file, 'txt'); // Pass a flag indicating it's a text file
+            } else if (file.type === 'text/css') {
+                addFileToStyleList(file);
+            } else if (file.type === 'text/html' || allowedHTMLExtensions.some(ext => file.name.endsWith(ext))) {
+                showHTMLPreview(file);
+            } else if (isImageFile) {
+                showImagePreview(file);
+            } else {
+                alert('Only js,css,text, and images are supported--this is a file of type: ' + (file.type ? ` ${file.type}` : 'unknown'));
+            }
+        }
 
         // Handle dropped files and text
         dropZone.addEventListener('drop', (e) => {
@@ -250,21 +270,7 @@
             }
             const files = e.dataTransfer.files;
             for (let file of files) {
-                const isTextFile = allowedTextExtensions.some(ext => file.name.endsWith(ext));
-                const isImageFile = allowedImageTypes.includes(file.type);
-                if (file.type === 'application/javascript' || file.type === 'text/javascript') {
-                    addFileToList(file);
-                } else if (file.type === 'text/plain' || isTextFile) {
-                    addFileToList(file, 'txt'); // Pass a flag indicating it's a text file
-                } else if (file.type === 'text/css') {
-                    addFileToStyleList(file);
-                } else if (file.type === 'text/html' || allowedHTMLExtensions.some(ext => file.name.endsWith(ext))) {
-                    showHTMLPreview(file);
-                } else if (isImageFile) {
-                    showImagePreview(file);
-                } else {
-                    alert('Only js,css,text, and images are supported--this is a file of type: ' + (file.type ? ` ${file.type}` : 'unknown'));
-                }
+                handleFile(file);
             }
         });
 
@@ -289,7 +295,7 @@
             reader.readAsDataURL(file);
         }
 
-        function showHTMLPreview(file) {
+        function showHTMLPreview(file, size = { width: 310, height: 310 }) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 import('floatingWindow').then(({ FloatingWindow }) => {
@@ -321,7 +327,7 @@
                     div.appendChild(refreshButton);
 
                     // Show the iframe in a floating window
-                    const fw = new FloatingWindow(file.name, div, { width: 310, height: 310 });
+                    const fw = new FloatingWindow(file.name, div, size, onTitleChange = null);
                 });
             };
             reader.readAsText(file);
@@ -544,6 +550,14 @@
                 // if on right side of button, show dropdown
                 if (e.target.classList.contains('right-side') || e.target.parentElement.classList.contains('right-side')) {
                     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                    // hide html files, or if control or command pressed, show ONLY html files
+                    dropdown.childNodes.forEach(node => {
+                        if (node.textContent.includes('.html')) {
+                            node.style.display = e.ctrlKey || e.metaKey ? 'block' : 'none';
+                        } else {
+                            node.style.display = e.ctrlKey || e.metaKey ? 'none' : 'block';
+                        }
+                    });
                     return;
                 }
                 overlay.classList.remove('amush');
@@ -735,8 +749,17 @@
                         item.addEventListener('click', () => {
                             overlay.classList.remove('amush');
                             fetch(file)
-                                .then(response => response.text())
-                                .then(content => setEditorText(content));
+                                .then(async (response) => {
+                                    const type = response.headers.get('content-type');
+                                    const content = await response.text();
+                                    // special case for html files
+                                    if (type.includes('html')) {
+                                        hideOverlay();
+                                        showHTMLPreview(new File([content], file), { width: 600, height: 400 });
+                                    } else {
+                                        setEditorText(content)
+                                    }
+                                });
                             dropdown.style.display = 'none'; // Hide dropdown after selection
                         });
                         dropdown.appendChild(item);
