@@ -1,4 +1,4 @@
-const title = 'To-Do List'; // Title for the floating window
+const title = 'ToDo List'; // Title for the floating window
 
 import('floatingWindow').then(({ createFloatingWindow }) => {
     const { contentElement } = createFloatingWindow({
