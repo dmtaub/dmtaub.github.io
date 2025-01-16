@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 
+let started = false;
 let scene, camera, renderer;
 let ball, ballVelocity;
 let container, containerWidth, containerHeight;
@@ -15,6 +16,7 @@ let rippleUniforms;
 let rippleMaterial;
 
 let globalTime = 0;
+let currentFrame = null;
 let dragging = false;
 let startMousePos = null;
 const moveTolerance = 0.01;
@@ -118,7 +120,21 @@ function switchMaterial() {
   ball.material = materials[currentMaterialIndex];
 }
 
+export function pause() {
+  // pause the animation
+  cancelAnimationFrame(currentFrame);
+
+}
+export function resume() {
+  if (!started) {
+    start();
+    return;
+  }
+  // resume the animation
+  currentFrame = requestAnimationFrame(animate);
+}
 export function start() {
+    started = true;
     const container = init();
     animate();
     setupCSS();
@@ -568,7 +584,7 @@ function updateCameraPosition() {
 }
 */
 function animate() {
-    requestAnimationFrame(animate);
+    currentFrame = requestAnimationFrame(animate);
 
     // updates:
     globalTime += 0.01;

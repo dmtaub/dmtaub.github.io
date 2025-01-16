@@ -1,4 +1,4 @@
-import { start } from './threejs_bounce.js';
+import { start, pause, resume } from './threejs_bounce.js';
 
 
 export function showSection(sectionId) {
@@ -19,9 +19,14 @@ export function init(){
     window.addEventListener('hashchange', () => {
         const sectionId = location.hash.substring(1);
         showSection(sectionId);
+           // if hiding three.js "introduction" section, pause the animation
+        if (sectionId === 'introduction') {
+            resume()
+        } else {
+            pause()
+        }
     });
 }
-
 
 const adjectives = document.querySelectorAll('.descriptive-text');
 const parentDesc = adjectives[0].parentElement.parentElement; //h2
@@ -56,7 +61,12 @@ function fade() {
 // create bindings when first loaded
 document.addEventListener('DOMContentLoaded', () => {
     init();
-    start();
+    // get current hash
+    const sectionId = location.hash.substring(1);
+    // if showing the introduction section, start the animation
+    if (!sectionId || sectionId === 'introduction') {
+        start()
+    }
     fade();
 });
 
