@@ -15,6 +15,82 @@
             margin: 0;
             padding: 0;
         }
+
+        .debug-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+        }
+        .debug-wrapper {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .debug-row-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .debug-row-group .debug-text span {
+            width: 85px;
+        }
+
+        .debug-row-group, .debug-row-single {
+            margin: 0px 2px;
+        }
+
+        .debug-checkbox,
+        .debug-color,
+        .debug-select,
+        .debug-slider,
+        .debug-text{
+            display: flex;
+            flex-direction: row;
+            margin-bottom: 2px;
+            align-items: center;
+            margin: 2px;
+        }
+
+        .debug-checkbox,
+        .debug-color,
+        .debug-select,
+        .debug-text { justify-content: space-between; }
+
+        .debug-slider {
+            justify-content: space-between;
+        }
+
+        .debug-slider span {
+            width: 80px;
+        }
+
+        .debug-slider output {
+            width: 30px;
+            text-align: right;
+        }
+
+        .debug-container input,
+        .debug-container select {
+            padding: 2px;
+            font-size: 14px;
+        }
+
+        .debug-checkbox input {
+            width: 20px;
+            height: 20px;
+        }
+
+        .debug-color input,
+        .debug-text input {
+            max-width: 50px;
+        }
+
+        .debug-sprite {
+            margin: 20px;
+        }
+
+        .debug-sprite > .debug-container {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>

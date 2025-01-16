@@ -177,7 +177,7 @@ function setupCSS() {
         align-items: center;
         cursor: pointer;
         border: 2px solid #ccc;
-        line-height: 1.5;
+        line-height: 1;
         border-radius: 5px;
         user-select: none;
       }
