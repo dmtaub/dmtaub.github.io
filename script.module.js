@@ -24,6 +24,7 @@ export function init(){
 
 
 const adjectives = document.querySelectorAll('.descriptive-text');
+const parentDesc = adjectives[0].parentElement.parentElement; //h2
 let index = 0;
 function fade() {
     function showNextAdjective() {
@@ -33,11 +34,19 @@ function fade() {
         // Show the next adjective
         adjectives[index].classList.add('show');
 
+        // add class to parent of 0 index 'spaced' if index is not 3, otherwise remove it
+        if (index !== 0) {
+                setTimeout(() => {
+                    parentDesc.classList.add('spaced');
+                }, 1000);
+            } else {
+                parentDesc.classList.remove('spaced');
+            }
         // Update the index for the next adjective
         index = (index + 1) % adjectives.length;
 
         // Call this function again after a delay
-        setTimeout(showNextAdjective, 4000); // Change adjectives every 3 seconds
+        setTimeout(showNextAdjective, 5000); // Change adjectives every 3 seconds
     }
 
     // Start the cycle

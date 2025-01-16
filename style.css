@@ -18,12 +18,16 @@ header {
 header img.header-robot {
     width: 15%;
     height: auto;
-    margin: auto;
 }
 
 header img.main-robot {
     /* flip image */
     transform: scaleX(-1);
+    margin: 10px auto 10px 30px;
+}
+
+header img.last-robot {
+    margin: 10px 30px 10px auto;
 }
 
 .header-title {
@@ -149,20 +153,30 @@ nav a:hover {
     width: 125px;
     height: 1.3em;
     line-height: 1.25em;
+    margin-right: 0.25em;
     vertical-align: middle;
+    text-align: right;  /* or 'left' if you prefer */
+    white-space: nowrap; /* prevents the text from wrapping */
 }
 
 .descriptive-text {
     position: absolute;
     top: 0;
     left: 0;
+    width: 100%;
     transition: opacity 2s ease-in-out;
     opacity: 0;
+}
+h2 {
+    letter-spacing: 0;
+    transition: letter-spacing 2s ease-out;
+}
+h2.spaced {
+    letter-spacing: 0.05em;
 }
 .adj1, .adj2, .adj3 {
     display: inline;
 }
-
 .adj1.show, .adj2.show, .adj3.show {
     opacity: 1;
 }
