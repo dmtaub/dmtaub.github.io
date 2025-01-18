@@ -15,3 +15,8 @@ Update the button that cycles through materials to include the new material when
 Add a button to toggle the secondary camera and preview pane
 
 ---
+
+Ok but the secondary camera should have the view from the point of the ball, and they should both be updated in the animate() function, if the secondary camera is enabled. Use the shader output to render onto a quad so the secondary camera can see that too, and make sure there's a separate canvas to preview the secondary camera view from.
+---
+secondary canvas should be floating over the current canvas, preferably with a title bar, white border 2px, and an "x" to hide, but the 4th button should show it again
+
