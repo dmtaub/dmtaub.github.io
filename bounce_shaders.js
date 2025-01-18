@@ -1,28 +1,23 @@
 // bounce_shaders.js
-// This file contains the ripple effect shader code. It provides a factory function
-// for creating the scene, camera, uniforms, and material for the ripple effect.
+// This file contains the ripple effect shader code and utility functions for updating it.
 
 import * as THREE from 'three';
 
 /**
  * Creates the ripple Scene, Orthographic camera, uniforms, and shader material.
- * @param {number} containerWidth The width of the main container.
- * @param {number} containerHeight The height of the main container.
- * @param {THREE.PerspectiveCamera} mainCamera A reference to the main perspective camera
- *   so we can calculate frustum width & height.
- * @returns {{ rippleScene, rippleCamera, rippleUniforms, rippleMaterial }}
+ * @param {number} containerWidth Width of the main container.
+ * @param {number} containerHeight Height of the main container.
+ * @param {THREE.PerspectiveCamera} mainCamera For computing frustum sizes.
  */
 export function createRippleScene(containerWidth, containerHeight, mainCamera) {
-
-    // Compute initial frustum sizes
   const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(mainCamera.fov / 2)) * mainCamera.position.z;
-  const frustumWidth  = frustumHeight * mainCamera.aspect;
+  const frustumWidth = frustumHeight * mainCamera.aspect;
 
-  // Scene & camera
-  const rippleScene  = new THREE.Scene();
+  // Scene and Orthographic camera for the ripple pass
+  const rippleScene = new THREE.Scene();
   const rippleCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  // Shader uniforms
+  // Basic uniform data
   const rippleUniforms = {
     u_time: { value: 0.0 },
     u_ballPosition: { value: new THREE.Vector2(0.0, 0.0) },
@@ -30,13 +25,13 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
     u_resolution: { value: new THREE.Vector2(containerWidth, containerHeight) },
     u_frustumWidth: { value: frustumWidth },
     u_frustumHeight: { value: frustumHeight },
+    // Debug ripple flags
     u_debugRipple: { value: false },
     u_debugRipplePos: { value: new THREE.Vector2(0.5, 0.5) },
     u_debugRippleStartTime: { value: 0.0 },
     u_clickHue: { value: 0.0 }
   };
 
-  // Shader material
   const rippleMaterial = new THREE.ShaderMaterial({
     uniforms: rippleUniforms,
     vertexShader: /* glsl */`
@@ -78,7 +73,7 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
       }
 
       void main() {
-        // Convert from vUv in [0,1] to the same coordinate system as the main camera
+        // Convert vUv (0..1) to the same coordinate system as the main camera
         float scaledX = (vUv.x - 0.5) * u_frustumWidth;
         float scaledY = (vUv.y - 0.5) * u_frustumHeight;
 
@@ -114,10 +109,8 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
         // Base color shift
         float hue = mod(0.6 + 0.1 * u_time + 0.02 * dist, 1.0);
         vec3 rippleColor = hsl2rgb(vec3(hue, 0.8, 0.5));
-
-        float intensity = combinedWave;
         vec3 baseColor = vec3(0.0, 0.0, 0.05);
-        vec3 finalColor = baseColor + rippleColor * intensity;
+        vec3 finalColor = baseColor + rippleColor * combinedWave;
 
         // Debug ripple effect
         if (u_debugRipple) {
@@ -140,7 +133,7 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
     `
   });
 
-  // Add the plane to the rippleScene
+  // Create a plane for the full-screen pass
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), rippleMaterial);
   rippleScene.add(plane);
 
@@ -150,4 +143,33 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
     rippleUniforms,
     rippleMaterial
   };
+}
+
+/**
+ * Allows external code to update the ripple shader's uniforms cleanly.
+ * Moves more logic here, so the main file can just pass relevant data.
+ */
+export function updateRippleShaderUniforms(rippleUniforms, {
+  time,
+  ballPosition,
+  ballVelocityDir,
+  frustumWidth,
+  frustumHeight,
+  debugRipple,
+  debugRipplePos,
+  debugRippleStartTime,
+  clickHue
+}) {
+  if (!rippleUniforms) return;
+
+  rippleUniforms.u_time.value = time;
+  rippleUniforms.u_ballPosition.value.set(ballPosition.x, ballPosition.y);
+  rippleUniforms.u_ballVelocityDir.value.set(ballVelocityDir.x, ballVelocityDir.y);
+  rippleUniforms.u_frustumWidth.value = frustumWidth;
+  rippleUniforms.u_frustumHeight.value = frustumHeight;
+
+  rippleUniforms.u_debugRipple.value = debugRipple;
+  rippleUniforms.u_debugRipplePos.value.copy(debugRipplePos);
+  rippleUniforms.u_debugRippleStartTime.value = debugRippleStartTime;
+  rippleUniforms.u_clickHue.value = clickHue;
 }

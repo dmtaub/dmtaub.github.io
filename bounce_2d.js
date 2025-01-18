@@ -1,9 +1,8 @@
 // bounce_2d.js
-// This file focuses on creating and managing the HTML UI, including buttons,
-// the floating secondary canvas container, and basic styling.
+// Focuses on creating/managing the HTML UI and floating secondary canvas container.
 
+// This function adds basic styling for UI elements.
 export function setupCSS() {
-  // Basic styling for UI buttons and rows
   const style = document.createElement('style');
   style.textContent = `
     .ui-row {
@@ -24,6 +23,7 @@ export function setupCSS() {
       line-height: 1;
       border-radius: 5px;
       user-select: none;
+      font-family: sans-serif;
     }
     .ui-button:hover {
       border-color: #888;
@@ -33,17 +33,19 @@ export function setupCSS() {
 }
 
 /**
- * Creates the UI row inside the main container, then populates it with 4 buttons.
- * @param {HTMLElement} container The main container (usually .interactive).
- * @param {Array<[string, Function]>} buttonDefs Pairs of [label, callback].
+ * Creates the UI row inside the main container, then populates it with multiple buttons.
+ * @param {HTMLElement} container The main container (.interactive usually).
+ * @param {Array<[string, Function]>} buttonDefs Array of [label, callback].
  */
 export function addUI(container, buttonDefs) {
-  // Create a row container
+  if (!container) {
+    console.warn("No container found for UI.");
+    return;
+  }
   const rowDiv = document.createElement('div');
   rowDiv.classList.add('ui-row');
   container.appendChild(rowDiv);
 
-  // Populate buttons
   for (const [label, callback] of buttonDefs) {
     const button = document.createElement('div');
     button.classList.add('ui-button');
@@ -54,12 +56,12 @@ export function addUI(container, buttonDefs) {
 }
 
 /**
- * Creates and returns a floating container with a title bar and close button.
- * This will be used to hold the secondary camera's canvas.
- * @param {string} title The title displayed on the title bar.
+ * Creates a floating container with a title bar and a close button.
+ * This is used to hold the secondary camera's preview canvas.
+ * @param {string} title Text displayed in the title bar.
  */
 export function createFloatingContainer(title = 'Secondary Camera') {
-  // Wrapper DIV
+  // Outer container
   const secondaryContainer = document.createElement('div');
   secondaryContainer.style.position = 'absolute';
   secondaryContainer.style.top = '10px';
@@ -80,12 +82,11 @@ export function createFloatingContainer(title = 'Secondary Camera') {
   titleBar.style.fontFamily = 'sans-serif';
   titleBar.style.padding = '5px';
 
-  // Title text
   const titleSpan = document.createElement('span');
   titleSpan.innerText = title;
   titleBar.appendChild(titleSpan);
 
-  // "X" button
+  // Close ("x") button
   const closeButton = document.createElement('span');
   closeButton.innerText = 'x';
   closeButton.style.cursor = 'pointer';
@@ -96,9 +97,5 @@ export function createFloatingContainer(title = 'Secondary Camera') {
 
   secondaryContainer.appendChild(titleBar);
 
-  // Return the created container
   return secondaryContainer;
 }
-
-// Ask user to continue
-// (After you review this file, say "continue" and I'll provide the other two files.)

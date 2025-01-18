@@ -25,3 +25,6 @@ secondary canvas should be floating over the current canvas, preferably with a t
 Let's refactor this file so we can more easily read and process it. Be sure to keep clear and concise comments. We will have the main threejs_bounce file, bounce_2d which will handle the html UI, and bounce_shaders for the ripple effect shader code. First provide the bounce_2d file, then ask me to continue. When I reply continue, give me the other 2 files
 ---
 continue
+---
+So, I'm not seeing the UI anymore, can you fix that? Also, can you move more to the bounce_shaders file? Especially things like setting up the uniforms 
+Z
