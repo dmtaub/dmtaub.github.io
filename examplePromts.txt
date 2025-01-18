@@ -27,4 +27,5 @@ Let's refactor this file so we can more easily read and process it. Be sure to k
 continue
 ---
 So, I'm not seeing the UI anymore, can you fix that? Also, can you move more to the bounce_shaders file? Especially things like setting up the uniforms 
-Z
+===
+Let's improve the UI some more. Break the css out to a separate programatically-created style element. Also, can we make the secondary camera canvas window appear, initially, directly over the current canvas, and have it be draggable with the titlebar? Return the full file
