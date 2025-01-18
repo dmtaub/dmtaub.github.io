@@ -149,7 +149,7 @@ function addUI(container) {
   const buttons = [
     ['Switch Material', switchMaterial],
     ['Add Attractor', () => addAttractor()],
-    ['Placeholder', () => {}],
+    ['Toggle Camera', toggleCamera], // P8ed8
     ['Placeholder', () => {}]
   ];
 
@@ -249,9 +249,37 @@ function init() {
     rippleRenderTarget.texture.minFilter = THREE.LinearFilter;
     rippleRenderTarget.texture.magFilter = THREE.LinearFilter;
 
+    createSecondaryCamera(); // P71a6
+
     return container;
 }
 
+function createSecondaryCamera() {
+    secondaryCamera = new THREE.PerspectiveCamera(20, containerWidth / containerHeight, 0.1, 100);
+    secondaryCamera.position.set(0, 0, 20);
+    secondaryCamera.lookAt(scene.position);
+
+    secondaryCameraActive = false;
+
+    previewPane = document.createElement('div');
+    previewPane.style.position = 'absolute';
+    previewPane.style.top = '10px';
+    previewPane.style.left = '10px';
+    previewPane.style.width = '22%';
+    previewPane.style.height = '22%';
+    previewPane.style.border = '2px solid #ccc';
+    previewPane.style.display = 'none';
+    container.appendChild(previewPane);
+
+    previewRenderer = new THREE.WebGLRenderer({ antialias: true });
+    previewRenderer.setSize(previewPane.clientWidth, previewPane.clientHeight);
+    previewPane.appendChild(previewRenderer.domElement);
+}
+
+function toggleCamera() {
+  secondaryCameraActive = !secondaryCameraActive;
+  previewPane.style.display = secondaryCameraActive ? 'block' : 'none';
+}
 
 /**
  * Converts normalized device coordinates to world coordinates.
@@ -698,6 +726,10 @@ function animate() {
         object.rotation.y += 0.01;
     }
 
+    // P8d13
+    if (secondaryCameraActive) {
+      previewRenderer.render(scene, secondaryCamera);
+    }
 }
 
 function onWindowResize() {
