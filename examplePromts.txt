@@ -20,3 +20,8 @@ Ok but the secondary camera should have the view from the point of the ball, and
 ---
 secondary canvas should be floating over the current canvas, preferably with a title bar, white border 2px, and an "x" to hide, but the 4th button should show it again
 
+===
+
+Let's refactor this file so we can more easily read and process it. Be sure to keep clear and concise comments. We will have the main threejs_bounce file, bounce_2d which will handle the html UI, and bounce_shaders for the ripple effect shader code. First provide the bounce_2d file, then ask me to continue. When I reply continue, give me the other 2 files
+---
+continue
