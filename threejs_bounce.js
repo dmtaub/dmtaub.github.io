@@ -88,7 +88,7 @@ const materials = [
  */
 function switchMaterial() {
   let nextIndex = (currentMaterialIndex + 1) % materials.length;
-  if (!secondaryCameraEnabled && materials[nextIndex] === reflectionMaterial) {
+  if (/*!secondaryCameraEnabled &&*/ materials[nextIndex] === reflectionMaterial) {
     nextIndex = (nextIndex + 1) % materials.length;
   }
   currentMaterialIndex = nextIndex;
@@ -115,7 +115,11 @@ function toggleReflection() {
  */
 function showSecondaryPreview() {
   if (secondaryContainer) {
-    secondaryContainer.style.display = 'block';
+    if (secondaryContainer.style.display !== 'block') {
+      secondaryContainer.style.display = 'block';
+    } else {
+      secondaryContainer.style.display = 'none';
+    }
   }
 }
 
@@ -217,15 +221,15 @@ function init() {
   rippleRenderTarget.texture.magFilter = THREE.LinearFilter;
 
   // Secondary camera setup
-  createSecondaryCameraContainer();
+  createSecondaryCameraContainer(renderer.domElement);
   createSecondaryRenderer();
 }
 
 /**
  * Prepares the floating container for the secondary camera preview.
  */
-function createSecondaryCameraContainer() {
-  secondaryContainer = createFloatingContainer('Secondary Camera');
+function createSecondaryCameraContainer(target) {
+  secondaryContainer = createFloatingContainer('Secondary Camera', target);
   document.body.appendChild(secondaryContainer);
 }
 
