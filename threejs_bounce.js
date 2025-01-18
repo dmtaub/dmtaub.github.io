@@ -1,3 +1,5 @@
+// Adding comments throughout for clarity
+
 import * as THREE from 'three';
 
 let started = false;
@@ -9,7 +11,6 @@ const effectRadius = 2.0; // New effect radius
 const placementRipple = true;
 
 let rippleScene, rippleCamera;
-
 let rippleRenderTarget;
 
 let rippleUniforms;
@@ -51,6 +52,41 @@ const ddMat = new THREE.MeshStandardMaterial({
     emissiveIntensity: 0.2
 });
 
+/*
+ *  Secondary camera data for optional preview and reflection
+ */
+let secondaryCamera;
+let secondaryCameraEnabled = false;
+let secondaryCameraRenderTarget;
+
+/**
+ * Creates and configures the secondary camera and its render target
+ */
+function createSecondaryCamera() {
+  secondaryCamera = new THREE.PerspectiveCamera(40, containerWidth / containerHeight, 0.1, 100);
+  secondaryCamera.position.set(10, 10, 10);
+  secondaryCamera.lookAt(new THREE.Vector3(0, 0, 0));
+
+  // Render target for reflection or preview usage
+  secondaryCameraRenderTarget = new THREE.WebGLRenderTarget(512, 512);
+  secondaryCameraRenderTarget.texture.minFilter = THREE.LinearFilter;
+  secondaryCameraRenderTarget.texture.magFilter = THREE.LinearFilter;
+}
+
+/**
+ * Toggles the secondary camera and preview pane on/off
+ * Also adjusts the reflection material's envMap if active
+ */
+function toggleCamera() {
+  secondaryCameraEnabled = !secondaryCameraEnabled;
+
+  // If the reflection material is in use, set or unset the envMap
+  if (secondaryCameraEnabled) {
+    reflectionMaterial.envMap = secondaryCameraRenderTarget.texture;
+  } else {
+    reflectionMaterial.envMap = null;
+  }
+}
 
 /**
  * Generates a random position within the visible frustum.
@@ -67,6 +103,7 @@ function getRandomPosition() {
 
   return new THREE.Vector3(x, y, z);
 }
+
 /*
 function generateRandomTexture(size) {
     const canvas = document.createElement('canvas');
@@ -108,23 +145,48 @@ particleGeometry.setAttribute('position', positionClone);
 */
 
 let currentMaterialIndex = 0;
+
+/**
+ * A new material that uses the secondary camera data for reflections.
+ * Note: its envMap will be toggled on/off by toggleCamera.
+ */
+const reflectionMaterial = new THREE.MeshPhongMaterial({
+  color: 0xffffff,
+  envMap: null, // Will be set to secondaryCameraRenderTarget.texture if camera is enabled
+  reflectivity: 1.0,
+  shininess: 100
+});
+
+// Existing materials plus the reflection material
 const materials = [
   new THREE.MeshStandardMaterial({ color: 'hsl(200, 100%, 50%)', metalness: 0.9, roughness: 0.2 }),
   new THREE.MeshStandardMaterial({ color: 'hsl(100, 100%, 50%)', metalness: 0.5, roughness: 0.8 }),
   new THREE.MeshPhongMaterial({ color: 'hsl(300, 100%, 50%)', shininess: 30 }),
+  reflectionMaterial // Add reflection material to the list
 ];
 
-// Function to change material
+/**
+ * Updates current material on the ball, but skips the reflection material if
+ * the secondary camera is not active.
+ */
 function switchMaterial() {
-  currentMaterialIndex = (currentMaterialIndex + 1) % materials.length;
+  // Attempt to move to the next index
+  let nextIndex = (currentMaterialIndex + 1) % materials.length;
+
+  // If the camera is not enabled and the next material is reflectionMaterial, skip it
+  if (!secondaryCameraEnabled && materials[nextIndex] === reflectionMaterial) {
+    nextIndex = (nextIndex + 1) % materials.length;
+  }
+
+  currentMaterialIndex = nextIndex;
   ball.material = materials[currentMaterialIndex];
 }
 
 export function pause() {
   // pause the animation
   cancelAnimationFrame(currentFrame);
-
 }
+
 export function resume() {
   if (!started) {
     start();
@@ -133,6 +195,7 @@ export function resume() {
   // resume the animation
   currentFrame = requestAnimationFrame(animate);
 }
+
 export function start() {
     started = true;
     const container = init();
@@ -145,11 +208,14 @@ export function start() {
     addUI(rowDiv);
 }
 
+/**
+ * Adds UI buttons, including one to toggle the secondary camera.
+ */
 function addUI(container) {
   const buttons = [
     ['Switch Material', switchMaterial],
     ['Add Attractor', () => addAttractor()],
-    ['Placeholder', () => {}],
+    ['Toggle Secondary Camera', toggleCamera],  // New toggle camera button
     ['Placeholder', () => {}]
   ];
 
@@ -163,6 +229,7 @@ function addUI(container) {
       container.appendChild(button);
     }
   }
+
   const addListeners = (button) => {
     button.addEventListener('mouseover', (event) => {
       button.style.borderColor = '#888';
@@ -201,6 +268,9 @@ function setupCSS() {
     document.head.appendChild(buttonStyle);
 }
 
+/**
+ * Initializes the main scene, cameras, renderer, and sets event listeners.
+ */
 function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     scene = new THREE.Scene();
@@ -235,12 +305,12 @@ function init() {
     // Initial slow velocity
     ballVelocity = new THREE.Vector3(0.04, 0, 0);
 
-    // Add interaction using pointer events as well
+    // Pointer events
     renderer.domElement.addEventListener('pointerdown', onDown, false);
     renderer.domElement.addEventListener('pointerup', onUp, false);
     renderer.domElement.addEventListener('pointermove', onMove, false);
     renderer.domElement.addEventListener('pointerout', onOut, false);
-    // right click adds attractors if we're on a desktop
+    // right click
     renderer.domElement.addEventListener('contextmenu', onRightClick, false);
 
     createRippleScene();
@@ -249,9 +319,11 @@ function init() {
     rippleRenderTarget.texture.minFilter = THREE.LinearFilter;
     rippleRenderTarget.texture.magFilter = THREE.LinearFilter;
 
+    // Create the secondary camera and its render target
+    createSecondaryCamera();
+
     return container;
 }
-
 
 /**
  * Converts normalized device coordinates to world coordinates.
@@ -301,7 +373,6 @@ function getClickPosition(event) {
   return [intersectionPoint, unprojected];
 }
 
-
 function makeRipple(mousePos) {
     // Convert mousePos to normalized UV coordinates (0 to 1)
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
@@ -328,7 +399,6 @@ function onClick(event, amount) {
   makeRipple(pos);
   // Add the target to the queue if not right click
   if (event.button !== 2) {
-    // addTarget(pos.clone(), hue = Math.random());
     targets.push({
       pos: pos.clone(),
       hue: Math.random() // Assign a random hue for the ripple
@@ -338,18 +408,16 @@ function onClick(event, amount) {
 
 function onMove(event) {
   if (event.button == 2 || !startMousePos) {
-    return
+    return;
   }
   const [mousePos, unprojected] = getClickPosition(event);
   if (startMousePos && unprojected.sub(startMousePos).length() > moveTolerance) {
     dragging = true;
   }
-  // buffer for drag
-  if (!dragging)
-    return;
+  if (!dragging) return;
+
   // set ball velocity to the direction of the mouse when dragging with left click
-  ballVelocity = mousePos.clone().sub(ball.position).normalize().multiplyScalar(0.01 || 0.1);
-  // sparkles here
+  ballVelocity = mousePos.clone().sub(ball.position).normalize().multiplyScalar(0.01);
 }
 
 function onDown(event) {
@@ -367,7 +435,6 @@ function onUp(event) {
 function onOut(event) {
   dragging = false;
 }
-
 
 // Create a dodecahedron on right click, up to max_attractors
 function onRightClick(event) {
@@ -393,7 +460,6 @@ function addAttractor(pos = getRandomPosition()) {
 }
 
 // check intersection of ball with objects
-// todo make octree or something
 function checkProximity() {
   proximalToObject = 0; // Reset
   for (const object of objects) {
@@ -515,7 +581,6 @@ function createRippleScene() {
                 if (u_debugRipple) {
                     float dt = u_time - u_debugRippleStartTime;
                     if (dt < 1.0) {
-                        // Use vUv directly for debug ripple
                         vec2 diff = vUv - u_debugRipplePos;
                         float d = length(diff);
 
@@ -542,13 +607,12 @@ let cameraAngleX = 0;
 let cameraAngleY = 0;
 const cameraSpeed = 0.05;
 
+/**
+ * Applies slow movement fade and attractor-based gravity to the ball.
+ */
 const applyGravity = () => {
-  // special cases to slow down when close or far from attractors
-  // if (proximalToObject > 2 || proximalToObject === 0) {
-  // }
   ballVelocity.multiplyScalar(slowFactor); // Slow down the ball
-
-  /* Apply attraction force from attractors */
+  // Apply attraction force from attractors
   objects.forEach(attractor => {
     const distance = ball.position.distanceTo(attractor.position);
     const force = attractor.position.clone().sub(ball.position).normalize().multiplyScalar(attractionStrength / distance);
@@ -556,84 +620,50 @@ const applyGravity = () => {
   });
 };
 
-
-/*
-document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-        case 'ArrowUp':
-            cameraAngleX -= cameraSpeed;
-            break;
-        case 'ArrowDown':
-            cameraAngleX += cameraSpeed;
-            break;
-        case 'ArrowLeft':
-            cameraAngleY -= cameraSpeed;
-            break;
-        case 'ArrowRight':
-            cameraAngleY += cameraSpeed;
-            break;
-    }
-    updateCameraPosition();
-});
-
-function updateCameraPosition() {
-    camera.position.x = 20 * Math.sin(cameraAngleY) * Math.cos(cameraAngleX);
-    camera.position.y = 20 * Math.sin(cameraAngleX);
-    camera.position.z = 20 * Math.cos(cameraAngleY) * Math.cos(cameraAngleX);
-    camera.lookAt(scene.position);
-}
-*/
 function animate() {
     currentFrame = requestAnimationFrame(animate);
 
-    // updates:
     globalTime += 0.01;
 
-    /* Check Proximity of the Ball to Attractors */
+    // Check object proximity
     checkProximity();
     if (proximalToObject !== lastProximalToObject) {
         console.log("Proximity changed to", proximalToObject);
     }
     lastProximalToObject = proximalToObject;
 
-    /* Handle Targets (Ball movement towards targets) */
+    // Handle Targets (Ball movement towards targets)
     if (targets.length > 0) {
       const currentTarget = targets[0];
       const dist = ball.position.distanceTo(currentTarget.pos);
-
-      // If the ball reaches the target, remove it from the queue
       if (dist <= tolerance) {
           targets.shift();
       } else {
-          // Move the ball towards the current target
+          // Move ball towards current target
           ballVelocity = currentTarget.pos.clone().sub(ball.position).normalize().multiplyScalar(0.05);
       }
     } else {
-      // start timer before ball stops
       if (timer === null) {
-        console.log('settimeout')
         timer = setTimeout(() => {
           if (proximalToObject === 0) {
             console.log("Ball stopped");
             slowFactor = 0.95;
           }
-          // once it finishes, independent of proximity, reset timer so we no longer create timesouts
           timer = undefined;
         }, 500);
       }
-      // check if velocity magnitude is close to zero
       if (ballVelocity.lengthSq() < 0.00000001) {
         ballVelocity.set(0, 0, 0);
       }
     }
+
     applyGravity();
 
-    // Bounce the ball off the walls
+    // Check boundary collisions
     const frustumHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
     const frustumWidth = frustumHeight * camera.aspect;
     const radius = ballRadius;
 
-    // Update ball velocity if it hits the wall
     if (ball.position.x + radius > frustumWidth / 2 || ball.position.x - radius < -frustumWidth / 2) {
         ballVelocity.x = -ballVelocity.x;
     }
@@ -645,7 +675,7 @@ function animate() {
     ball.position.x = Math.max(-frustumWidth/2 + radius, Math.min(ball.position.x, frustumWidth/2 - radius));
     ball.position.y = Math.max(-frustumHeight/2 + radius, Math.min(ball.position.y, frustumHeight/2 - radius));
 
-    // Update uniforms
+    // Update ripple uniforms
     rippleUniforms.u_time.value = globalTime;
     rippleUniforms.u_ballPosition.value.set(ball.position.x, ball.position.y);
     rippleUniforms.u_frustumWidth.value = frustumWidth;
@@ -660,46 +690,64 @@ function animate() {
     ballColor.setHSL(hueShift, 1.0, 0.5);
     ball.material.color = ballColor;
 
-    // Update debug ripple uniforms
     rippleUniforms.u_debugRipple.value = debugRipple;
     rippleUniforms.u_debugRipplePos.value.copy(debugRipplePos);
     rippleUniforms.u_debugRippleStartTime.value = debugRippleStartTime;
     rippleUniforms.u_clickHue.value = clickHue;
 
-    // 1. Render current ripple pattern
+    // 1. Render ripple to its target
     renderer.setRenderTarget(rippleRenderTarget);
     renderer.clearColor();
     renderer.render(rippleScene, rippleCamera);
 
-    // 3. Render accumulated pattern as background, then ball
+    // 2. Render ripple target as background plane
     renderer.setRenderTarget(null);
     renderer.clearColor();
-
     let backgroundMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(frustumWidth, frustumHeight),
         new THREE.MeshBasicMaterial({ map: rippleRenderTarget.texture })
     );
     backgroundMesh.position.z = -0.1;
     scene.add(backgroundMesh);
-
     renderer.render(scene, camera);
     scene.remove(backgroundMesh);
 
-    // Disable debug ripple after its duration
+    // Disable debug ripple if beyond its duration
     if (debugRipple && (globalTime - debugRippleStartTime > debugRippleDuration)) {
         debugRipple = false;
     }
 
-    // Move 3d objects
+    // Move ball
     ball.position.add(ballVelocity);
 
-    // for each object, apply slight rotation
+    // Rotate any attractor objects
     for (const object of objects) {
         object.rotation.y += 0.01;
     }
 
+    // Render from secondary camera if enabled
+    if (secondaryCameraEnabled) {
+      // First render scene to secondary camera's render target for reflection
+      renderer.setRenderTarget(secondaryCameraRenderTarget);
+      renderer.clear();
+      renderer.render(scene, secondaryCamera);
+      renderer.setRenderTarget(null);
+
+      // Then draw a small preview pane at top-left
+      const previewWidth = containerWidth * 0.22;
+      const previewHeight = containerHeight * 0.22;
+
+      renderer.setViewport(0, containerHeight - previewHeight, previewWidth, previewHeight);
+      renderer.render(scene, secondaryCamera);
+
+      // Reset viewport
+      renderer.setViewport(0, 0, containerWidth, containerHeight);
+    }
 }
 
+/**
+ * Handles window resizing
+ */
 function onWindowResize() {
     containerWidth = container.clientWidth;
     containerHeight = container.clientHeight;
@@ -719,4 +767,13 @@ function onWindowResize() {
     }
 
     rippleRenderTarget.setSize(containerWidth, containerHeight);
+
+    // Update secondary camera aspect & render target if needed
+    if (secondaryCamera) {
+      secondaryCamera.aspect = containerWidth / containerHeight;
+      secondaryCamera.updateProjectionMatrix();
+    }
+    if (secondaryCameraRenderTarget) {
+      secondaryCameraRenderTarget.setSize(512, 512);
+    }
 }

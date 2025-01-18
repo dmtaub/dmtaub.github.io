@@ -1,0 +1,17 @@
+Edit the following file, which begins after START CODE, keeping as consistent as possible except adding features and comments where appropriate. We are going to add an optional secondary camera that can be toggled by one of the placeholder buttons as a toggle button. When toggled on, the button lets you toggle a "preview" pane at the top left of the canvas, taking up 22% of the other canvas height and width.
+Now add a new material to cycle through when pressing the that simulatesAdd a function createSecondaryCamera to create and configure the secondary camera
+Here are some of the steps. fill in what's missing, and respond only in code with comments:
+
+Add a function toggleCamera to enable or disable the secondary camera and preview pane
+
+Update the init function to call createSecondaryCamera and add the preview pane
+
+Update the animate function to render the scene from both cameras to their respective canvases
+
+Add a new material that uses the secondary camera data for reflections
+
+Update the button that cycles through materials to include the new material when the camera is active
+
+Add a button to toggle the secondary camera and preview pane
+
+---
