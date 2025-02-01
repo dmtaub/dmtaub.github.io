@@ -22,6 +22,7 @@
             margin: 0;
             padding: 0;
             height: 100%;
+            width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -30,7 +31,7 @@
         }
 
         #dropZone {
-            width: 100%;
+            /* width: 100%; */
             height: 100%;
             display: flex;
             justify-content: center;
@@ -108,6 +109,7 @@
             background: #999;
             cursor: not-allowed;
         }
+
         #overlay {
             position: fixed;
             visibility: hidden;
@@ -121,16 +123,21 @@
             bottom: 10px;
             /* overflow: scroll; */
         }
+
         #levelDropdown {
             display: none;
         }
+
         #overlay.amush {
             width: 50%;
             right: 3px;
         }
-        #overlay.amush #clearButton,#saveButton {
+
+        #overlay.amush #clearButton,
+        #saveButton {
             display: none;
         }
+
         #overlay.amush #levelDropdown {
             display: inline-block;
         }
@@ -151,16 +158,50 @@
         #editor {
             width: 100%;
             top: 0;
-            bottom:0;
+            bottom: 0;
         }
+
         #editor .CodeMirror {
             height: 80vh;
         }
+
         #editor .CodeMirror-scroll {
             overscroll-behavior: contain;
         }
+
         #editorButtons {
             margin: 5px;
+        }
+
+        /* Dark mode styles */
+        .dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+
+        .dark-mode #dropZone {
+            border-color: #555;
+            color: #ccc;
+        }
+
+        .dark-mode #paste-panel, .dark-mode #fileList {
+            background: rgba(77, 77, 77, 0.7);
+        }
+
+        .dark-mode #editorPanel {
+            background: rgba(55, 55, 55);
+        }
+
+        #paste-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 23;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
@@ -171,6 +212,8 @@
 
     <div id="dropZone">Drop here</div>
     <div id="fileList"></div>
+    <button id="darkModeToggle" class="btn" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">Dark
+        Mode</button>
 
     <div id="overlay">
         <div id="editorPanel">
@@ -277,7 +320,7 @@
         function showImagePreview(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-               // use floatingWindow.js to show the image
+                // use floatingWindow.js to show the image
                 import('floatingWindow').then(({ FloatingWindow }) => {
                     const img = new Image();
                     img.src = e.target.result;
@@ -350,7 +393,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileContent = e.target.result;
-                droppedFiles.push({ name: file.name, content: fileContent, persist: false, fileExtension});
+                droppedFiles.push({ name: file.name, content: fileContent, persist: false, fileExtension });
                 updateFileList();
             };
             reader.readAsText(file);
@@ -440,9 +483,8 @@
 
         // Create the paste panel dynamically
         const panel = document.createElement('div');
-        panel.id = 'pastePanel';
+        panel.id = 'paste-panel';
         const pastePanel = Object.assign(panel, {
-            style: 'position: absolute; top: 0; left: 0; z-index: 23; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px;',
             innerHTML: `
     <button id="create" class="btn new-btn" style="margin-right: 10px;">New <span>▼</span></button>
     <div id="file-dropdown" style="display: none; position: absolute; background: white; border: 1px solid #ccc; list-style: none; padding: 5px; margin-top: 5px; z-index: 100;"></div>
@@ -453,7 +495,7 @@
 `
         });
         // when clearing divs, exclude the essential UI elements
-        const allIds = ['dropZone', 'fileList', 'overlay', 'pastePanel',
+        const allIds = ['dropZone', 'fileList', 'overlay', 'paste-panel',
             'editor', 'editorButtons', 'hideButton', 'runButton', 'levelDropdown',
             'clearButton', 'saveButton', 'clear', 'file-dropdown',
             'create', 'paste', 'clearDivs', 'editorPanel'];
@@ -508,6 +550,18 @@
                 toSplice.sort((a, b) => b - a).forEach(i => droppedFiles.splice(i, 1));
                 updateFileList();
                 hideOverlay();
+            });
+
+            // Dark Mode Toggle
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                // Update button text based on mode
+                if (document.body.classList.contains('dark-mode')) {
+                    darkModeToggle.textContent = 'Light Mode';
+                } else {
+                    darkModeToggle.textContent = 'Dark Mode';
+                }
             });
 
             // Event listener for "Paste" button
@@ -616,7 +670,7 @@
                         setEditorText(exampleLevel.replaceAll('level1', level.replace('level ', '')));
                     } else {
                         const levelPostfix = `\`;\n\nlocalStorage.setItem('${level}', JSON.stringify(levelString));`;
-                        setEditorText(levelPrefix+levelData+levelPostfix);
+                        setEditorText(levelPrefix + levelData + levelPostfix);
                     }
                 } else {
                     setEditorText(exampleLevel);
