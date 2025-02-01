@@ -53,6 +53,13 @@
             border-radius: 5px;
         }
 
+        #darkModeToggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+
         .file-item {
             margin-bottom: 5px;
         }
@@ -184,7 +191,8 @@
             color: #ccc;
         }
 
-        .dark-mode #paste-panel, .dark-mode #fileList {
+        .dark-mode #paste-panel,
+        .dark-mode #fileList {
             background: rgba(77, 77, 77, 0.7);
         }
 
@@ -212,8 +220,7 @@
 
     <div id="dropZone">Drop here</div>
     <div id="fileList"></div>
-    <button id="darkModeToggle" class="btn" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">Dark
-        Mode</button>
+    <button id="darkModeToggle" class="btn">Dark Mode</button>
 
     <div id="overlay">
         <div id="editorPanel">
@@ -554,13 +561,20 @@
 
             // Dark Mode Toggle
             const darkModeToggle = document.getElementById('darkModeToggle');
+            if (localStorage.getItem('darkMode')) {
+                document.body.classList.add('dark-mode');
+                darkModeToggle.textContent = 'Light Mode';
+            }
             darkModeToggle.addEventListener('click', () => {
-                document.body.classList.toggle('dark-mode');
                 // Update button text based on mode
+                document.body.classList.toggle('dark-mode');
                 if (document.body.classList.contains('dark-mode')) {
                     darkModeToggle.textContent = 'Light Mode';
+                    // store in local storage
+                    localStorage.setItem('darkMode', 'true');
                 } else {
                     darkModeToggle.textContent = 'Dark Mode';
+                    localStorage.removeItem('darkMode');
                 }
             });
 
