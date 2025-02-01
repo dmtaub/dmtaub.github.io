@@ -62,6 +62,9 @@
 
         .file-item {
             margin-bottom: 5px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
         }
 
         .file-list-item {
@@ -411,8 +414,10 @@
                 file.index = index;
                 const fileItemDiv = document.createElement('div');
                 fileItemDiv.classList.add('file-item');
-                fileItemDiv.textContent = file.name;
-
+                fileItemSpan = document.createElement('span');
+                fileItemSpan.className = 'file-list-title';
+                fileItemSpan.textContent = file.name;
+                fileItemDiv.appendChild(fileItemSpan);
                 const runButton = document.createElement('button');
                 runButton.className = 'new-btn btn wide-btn';
                 runButton.textContent = 'Run';
@@ -440,10 +445,27 @@
                 updateButtonStyle(toggleButton, file.persist);
                 toggleButton.addEventListener('click', () => togglePersist(file, toggleButton));
 
+                const deleteX = document.createElement('button');
+                deleteX.className = 'btn wide-btn';
+                deleteX.textContent = 'X';
+                deleteX.addEventListener('click', () => {
+                    const result = confirm('are you sure you wish to delete this?');
+                    if (result) {
+                        // remove file list entry - todo: and associated div
+                        const fileDiv = document.querySelector(`.file-item:nth-child(${index + 1})`);
+                        if (fileDiv) {
+                            fileDiv.remove();
+                        }
+                        droppedFiles.splice(index, 1);
+                        updateFileList();
+                    }
+                });
+
                 fileItemDiv.appendChild(runButton);
                 fileItemDiv.appendChild(editButton);
                 fileListDiv.appendChild(fileItemDiv);
                 fileItemDiv.appendChild(toggleButton);
+                fileItemDiv.appendChild(deleteX);
             });
             for (const [name, style] of Object.entries(styleAdded)) {
                 const fileItemDiv = document.createElement('div');
@@ -505,7 +527,8 @@
             'editor', 'editorButtons', 'hideButton', 'runButton', 'levelDropdown',
             'clearButton', 'saveButton', 'clear', 'file-dropdown',
             'create', 'paste', 'clearDivs', 'editorPanel'];
-        const allClasses = ['file-item', 'run-btn', 'new-btn', 'del-btn', 'btn', 'wide-btn', 'file-list-item', 'toggle-persist'];
+        const allClasses = ['file-item', 'file-list-title', 'run-btn', 'new-btn',
+            'del-btn', 'btn', 'wide-btn', 'file-list-item', 'toggle-persist'];
 
         document.body.appendChild(pastePanel);
         let currentIndex = null;
