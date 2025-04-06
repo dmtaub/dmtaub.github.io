@@ -6,24 +6,26 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FloatingWindow } from 'floatingWindow';
 
 let scene, camera, renderer, controls;
-let logo;
+let logo, reflectiveSurface;
 let container;
 let floatingWindow;
 let animationFrameId;
 
 export function start() {
-  // Create container
-  container = document.createElement('div');
-  container.className = 'interactive';
-  container.style.width = '100%';
-  container.style.height = '400px';
-  container.style.position = 'relative';
+  // Create a floating window container instead of directly adding to body
+  const canvas = document.createElement('canvas');
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  const div = document.createElement('div');
+  div.style.width = '100%';
+  div.style.height = '100%';
+  div.appendChild(canvas);
 
-  // Create the floating window with the container
+  // Create a floating window with the canvas
   floatingWindow = new FloatingWindow(
     'C Logo',
-    container,
-    { width: 500, height: 500, top: 100, left: 100 },
+    div,
+    { width: 400, height: 400, top: 100, left: 100 },
     null, // No title change handler
     {
       // Callbacks
@@ -31,47 +33,38 @@ export function start() {
       onMinimize: (isMinimized) => {
         // Pause animation when minimized, resume when maximized
         if (isMinimized) {
-          console.log('Window minimized');
           cancelAnimationFrame(animationFrameId);
         } else {
-          console.log('Window opened');
           animate();
         }
-      },
-      onBeforeClose: () => {
-        // You can return false here to prevent closing if needed
-        console.log('Window is about to close');
-        return true; // Allow closing
-      },
-      onOpen: (container) => {
-        console.log('Window opened');
       }
     }
   );
 
-  // Make sure the window is visible
-  if (floatingWindow.container) {
-    floatingWindow.container.style.display = 'block';
-  }
+  container = canvas;
 
   init();
   animate();
-  addColorButton();
+
+  // Add color change button
+  addColorButton(div);
 }
 
 function init() {
   // Scene setup
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x444444);
+  scene.background = new THREE.Color(0x000000); // Black background
 
   // Camera setup
-  camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(0, 0, 10);
+  camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000); // Use 1:1 aspect ratio
+  camera.position.set(0, 0, 5);
 
   // Renderer setup
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({
+    canvas: container,
+    antialias: true
+  });
   renderer.setSize(container.clientWidth, container.clientHeight);
-  container.appendChild(renderer.domElement);
 
   // Controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -79,25 +72,34 @@ function init() {
   controls.dampingFactor = 0.05;
 
   // Lights
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(5, 5, 5);
   scene.add(directionalLight);
+
+  // Add point light for reflections
+  const pointLight = new THREE.PointLight(0xffffff, 1);
+  pointLight.position.set(0, 0, 3);
+  scene.add(pointLight);
 
   createLogo();
 
   // Handle window resize
   window.addEventListener('resize', onWindowResize);
+
+  // Add observer to handle container resize
+  const resizeObserver = new ResizeObserver(() => {
+    onContainerResize();
+  });
+  resizeObserver.observe(container);
 }
 
 /**
  * Clean up Three.js resources and remove event listeners
  */
 function teardownScene() {
-  console.log('Tearing down Three.js scene');
-
   // Stop animation loop
   cancelAnimationFrame(animationFrameId);
 
@@ -117,6 +119,12 @@ function teardownScene() {
     scene.remove(logo);
   }
 
+  if (reflectiveSurface) {
+    if (reflectiveSurface.geometry) reflectiveSurface.geometry.dispose();
+    if (reflectiveSurface.material) reflectiveSurface.material.dispose();
+    scene.remove(reflectiveSurface);
+  }
+
   // Dispose of renderer
   if (renderer) {
     renderer.dispose();
@@ -130,8 +138,7 @@ function teardownScene() {
   camera = null;
   controls = null;
   logo = null;
-
-  console.log('Three.js resources cleaned up');
+  reflectiveSurface = null;
 }
 
 function createLogo() {
@@ -142,7 +149,7 @@ function createLogo() {
   const outerRadius = 2;
   const startAngle = Math.PI * 0.25;
   const endAngle = Math.PI * 1.75;
-  const arcPoints = 32;
+  const arcPoints = 64; // More points for smoother wireframe
 
   // Start at beginning of arc
   const startX = outerRadius * Math.cos(startAngle);
@@ -176,26 +183,27 @@ function createLogo() {
   // Close the shape
   shape.closePath();
 
-  // Extrusion settings
+  // Extrusion settings - thinner for wireframe look
   const extrudeSettings = {
-    steps: 2,
-    depth: 0.5,
+    steps: 1,
+    depth: 0.2,
     bevelEnabled: true,
-    bevelThickness: 0.2,
-    bevelSize: 0.1,
-    bevelSegments: 3
+    bevelThickness: 0.05,
+    bevelSize: 0.05,
+    bevelSegments: 2
   };
 
-  // Create geometry and material
+  // Create geometry and wireframe material
   const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x2194ce,
-    metalness: 0.3,
-    roughness: 0.4,
+  const wireframeMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.8
   });
 
   // Create mesh
-  logo = new THREE.Mesh(geometry, material);
+  logo = new THREE.Mesh(geometry, wireframeMaterial);
 
   // Center the logo
   geometry.computeBoundingBox();
@@ -205,23 +213,86 @@ function createLogo() {
 
   // Add to scene
   scene.add(logo);
+
+  // Create a reflective surface in the middle of the "C"
+  const circleGeometry = new THREE.CircleGeometry(0.5, 32);
+  const reflectiveMaterial = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    specular: 0xffffff,
+    shininess: 100,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.9
+  });
+
+  reflectiveSurface = new THREE.Mesh(circleGeometry, reflectiveMaterial);
+  reflectiveSurface.position.set(0, 0, 0);
+  scene.add(reflectiveSurface);
+
+  // Add a white center dot
+  const dotGeometry = new THREE.CircleGeometry(0.1, 16);
+  const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+  dot.position.set(0, 0, 0.05);
+  scene.add(dot);
+
+  // Add text as provided by the user
+  let text = 'demo';
+  const loader = new THREE.TextureLoader();
+  // Create a canvas for the text
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  canvas.width = 256;
+  canvas.height = 64;
+  context.fillStyle = 'black';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.font = 'bold 36px Arial';
+  context.fillStyle = 'white';
+  context.textAlign = 'left';
+  context.textBaseline = 'middle';
+  context.fillText('demo', 20, canvas.height / 2);
+
+  const textTexture = new THREE.CanvasTexture(canvas);
+  const textMaterial = new THREE.MeshBasicMaterial({
+    map: textTexture,
+    transparent: true,
+    side: THREE.DoubleSide
+  });
+
+  const textGeometry = new THREE.PlaneGeometry(2, 0.5);
+  const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+  textMesh.position.set(0.8, 0, 0.1);
+  scene.add(textMesh);
 }
 
 function onWindowResize() {
+  onContainerResize();
+}
+
+function onContainerResize() {
   if (!container || !renderer) return;
 
-  camera.aspect = container.clientWidth / container.clientHeight;
+  // Maintain the aspect ratio for the renderer and camera
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(container.clientWidth, container.clientHeight);
+
+  renderer.setSize(width, height);
 }
 
 function animate() {
-  // Store the ID so we can cancel it later
   animationFrameId = requestAnimationFrame(animate);
 
   // Rotate logo
   if (logo) {
     logo.rotation.y += 0.005;
+
+    // Rotate reflective surface in opposite direction
+    if (reflectiveSurface) {
+      reflectiveSurface.rotation.y -= 0.002;
+    }
   }
 
   // Update controls
@@ -234,7 +305,7 @@ function animate() {
 }
 
 // Add UI button to change color
-export function addColorButton() {
+export function addColorButton(div) {
   const button = document.createElement('button');
   button.textContent = 'Change Color';
   button.style.position = 'absolute';
@@ -250,37 +321,15 @@ export function addColorButton() {
   button.addEventListener('click', () => {
     if (logo && logo.material) {
       const hue = Math.random() * 360;
-      const color = new THREE.Color(`hsl(${hue}, 70%, 50%)`);
+      const color = new THREE.Color(`hsl(${hue}, 100%, 70%)`);
       logo.material.color.set(color);
     }
   });
 
-  // Add button to the container
-  container.appendChild(button);
+  // Add button to the floating window container
+  div.appendChild(button);
 }
 
-// Add a new button to manually close the window
-export function addCloseButton() {
-  if (!floatingWindow) return;
-
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = 'Close Window';
-  closeBtn.style.position = 'absolute';
-  closeBtn.style.bottom = '10px';
-  closeBtn.style.left = '10px';
-  closeBtn.style.padding = '8px 16px';
-  closeBtn.style.background = '#d55';
-  closeBtn.style.color = 'white';
-  closeBtn.style.border = 'none';
-  closeBtn.style.borderRadius = '4px';
-  closeBtn.style.cursor = 'pointer';
-
-  closeBtn.addEventListener('click', () => {
-    floatingWindow.close();
-  });
-
-  container.appendChild(closeBtn);
-}
-
-// Start automatically
+// Don't start automatically anymore
+// Let the user call start() explicitly
 start();
