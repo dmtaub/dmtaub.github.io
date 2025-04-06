@@ -14,6 +14,9 @@ let textMesh, textCanvas, textContext, textTexture;
 // get text from url hash location
 let currentText = window.location.hash.slice(1) || 'demo';
 
+// Reflection rendering
+let reflectionRenderTarget, reflectionCamera;
+
 export function start() {
   // Create a floating window container instead of directly adding to body
   const canvas = document.createElement('canvas');
@@ -87,6 +90,17 @@ function init() {
   pointLight.position.set(0, 0, 3);
   scene.add(pointLight);
 
+  // Setup reflection render target
+  reflectionRenderTarget = new THREE.WebGLRenderTarget(256, 256, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    format: THREE.RGBAFormat
+  });
+  
+  // Reflection camera
+  reflectionCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  reflectionCamera.position.set(0, 0, 5);
+
   createLogo();
 
   // Handle window resize
@@ -131,6 +145,8 @@ function teardownScene() {
   if (textMesh && textMesh.geometry) textMesh.geometry.dispose();
   if (textMesh && textMesh.material) textMesh.material.dispose();
   if (textTexture) textTexture.dispose();
+  
+  if (reflectionRenderTarget) reflectionRenderTarget.dispose();
 
   // Dispose of renderer
   if (renderer) {
@@ -150,6 +166,8 @@ function teardownScene() {
   textCanvas = null;
   textContext = null;
   textTexture = null;
+  reflectionRenderTarget = null;
+  reflectionCamera = null;
 }
 
 function createLogo() {
@@ -227,13 +245,16 @@ function createLogo() {
 
   // Create a reflective surface in the middle of the "C"
   const circleGeometry = new THREE.CircleGeometry(0.5, 32);
+  
+  // Create material that will use our render target as a texture
   const reflectiveMaterial = new THREE.MeshPhongMaterial({
-    color: 0xffffff,
+    color: 0x333333,
     specular: 0xffffff,
     shininess: 100,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: 0.9
+    opacity: 0.9,
+    map: reflectionRenderTarget.texture  // Use the render target texture
   });
 
   reflectiveSurface = new THREE.Mesh(circleGeometry, reflectiveMaterial);
@@ -241,11 +262,11 @@ function createLogo() {
   scene.add(reflectiveSurface);
 
   // Add a white center dot
-  // const dotGeometry = new THREE.CircleGeometry(0.1, 16);
-  // const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  // const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-  // dot.position.set(0, 0, 0.05);
-  // scene.add(dot);
+  const dotGeometry = new THREE.CircleGeometry(0.1, 16);
+  const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+  dot.position.set(0, 0, 0.05);
+  scene.add(dot);
 
   // Create text canvas
   createTextCanvas();
@@ -324,23 +345,56 @@ function onContainerResize() {
   renderer.setSize(width, height);
 }
 
+/**
+ * Updates the reflection camera to create a realistic reflection effect
+ */
+function updateReflectionCamera() {
+  if (!reflectionCamera || !logo || !reflectiveSurface) return;
+  
+  // Position the reflection camera to capture the logo from a good angle for reflection
+  const offset = new THREE.Vector3(0, 0, 3);
+  
+  // Calculate a position that's slightly offset from the reflective surface's position
+  // This creates an angle that looks like a realistic reflection
+  reflectionCamera.position.copy(reflectiveSurface.position).add(offset);
+  
+  // Look at the logo from this position
+  reflectionCamera.lookAt(logo.position);
+  
+  // Update the reflection camera's rotation based on the logo's rotation
+  // This creates the illusion that the reflection is following the logo's movement
+  reflectionCamera.rotation.z = -logo.rotation.y * 0.5;
+}
+
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
 
   // Rotate logo
   if (logo) {
     logo.rotation.y += 0.005;
+  }
 
-    // Rotate reflective surface in opposite direction
-    if (reflectiveSurface) {
-      reflectiveSurface.rotation.y -= 0.002;
-    }
+  // Update reflection camera
+  updateReflectionCamera();
+  
+  // First render the scene to the reflection render target
+  if (renderer && scene && reflectionCamera) {
+    // Make sure text isn't in the reflection
+    if (textMesh) textMesh.visible = false;
+    
+    // Render to our reflection target
+    renderer.setRenderTarget(reflectionRenderTarget);
+    renderer.render(scene, reflectionCamera);
+    
+    // Reset for normal rendering
+    if (textMesh) textMesh.visible = true;
+    renderer.setRenderTarget(null);
   }
 
   // Update controls
   controls.update();
 
-  // Render
+  // Render main scene
   if (renderer && scene && camera) {
     renderer.render(scene, camera);
   }
