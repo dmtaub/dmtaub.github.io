@@ -831,28 +831,40 @@
                 try {
                     // fetch and list all files in /examples
                     dropdown.innerHTML = ''; // Clear existing items
+                    const hash = window.location.hash.slice(1).split(':')[0];
                     exampleFiles.forEach(file => {
                         const item = document.createElement('div');
                         item.className = 'file-list-item';
                         item.textContent = file.replace('examples/', '');
                         item.style.cursor = 'pointer';
                         item.style.padding = '5px';
-                        item.addEventListener('click', () => {
+                        const clickHandler = () => {
                             overlay.classList.remove('amush');
                             fetch(file)
-                                .then(async (response) => {
-                                    const type = response.headers.get('content-type');
-                                    const content = await response.text();
-                                    // special case for html files
-                                    if (type.includes('html')) {
-                                        hideOverlay();
-                                        showHTMLPreview(new File([content], file), { width: 600, height: 400 });
-                                    } else {
-                                        setEditorText(content)
-                                    }
-                                });
+                            .then(async (response) => {
+                                const type = response.headers.get('content-type');
+                                const content = await response.text();
+                                // special case for html files
+                                if (type.includes('html')) {
+                                    hideOverlay();
+                                    showHTMLPreview(new File([content], file), { width: 600, height: 400 });
+                                } else {
+                                    setEditorText(content)
+                                }
+                            });
                             dropdown.style.display = 'none'; // Hide dropdown after selection
-                        });
+                        }
+                        item.addEventListener('click', clickHandler);
+                        // auto-load example file if in hash
+                        if (file.includes(hash)) {
+                            clickHandler();
+                            //run the code
+                            setTimeout(() => {
+                                // click the run button
+                                document.getElementById('runButton').click();
+                            }, 200);
+                        }
+
                         dropdown.appendChild(item);
                     });
                 } catch (error) {

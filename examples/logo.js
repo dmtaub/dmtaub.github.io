@@ -521,7 +521,6 @@ export function addControls(div) {
   textInput.type = 'text';
   textInput.value = currentText;
   textInput.placeholder = 'Logo text';
-  textInput.style.padding = '8px';
   textInput.style.borderRadius = '4px';
   textInput.style.border = 'none';
   textInput.style.background = '#333';
