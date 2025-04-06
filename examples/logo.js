@@ -9,6 +9,7 @@ let scene, camera, renderer, controls;
 let logo;
 let container;
 let floatingWindow;
+let animationFrameId;
 
 export function start() {
   // Create container
@@ -22,7 +23,28 @@ export function start() {
   floatingWindow = new FloatingWindow(
     'C Logo',
     container,
-    { width: 500, height: 500, top: 100, left: 100 }
+    { width: 500, height: 500, top: 100, left: 100 },
+    null, // No title change handler
+    {
+      // Callbacks
+      onClose: teardownScene,
+      onMinimize: (isMinimized) => {
+        // Pause animation when minimized, resume when maximized
+        if (isMinimized) {
+          cancelAnimationFrame(animationFrameId);
+        } else {
+          animate();
+        }
+      },
+      onBeforeClose: () => {
+        // You can return false here to prevent closing if needed
+        console.log('Window is about to close');
+        return true; // Allow closing
+      },
+      onOpen: (container) => {
+        console.log('Window opened');
+      }
+    }
   );
 
   // Make sure the window is visible
@@ -66,6 +88,48 @@ function init() {
 
   // Handle window resize
   window.addEventListener('resize', onWindowResize);
+}
+
+/**
+ * Clean up Three.js resources and remove event listeners
+ */
+function teardownScene() {
+  console.log('Tearing down Three.js scene');
+  
+  // Stop animation loop
+  cancelAnimationFrame(animationFrameId);
+  
+  // Remove event listeners
+  window.removeEventListener('resize', onWindowResize);
+  
+  // Dispose of Three.js resources
+  if (logo) {
+    if (logo.geometry) logo.geometry.dispose();
+    if (logo.material) {
+      if (Array.isArray(logo.material)) {
+        logo.material.forEach(material => material.dispose());
+      } else {
+        logo.material.dispose();
+      }
+    }
+    scene.remove(logo);
+  }
+  
+  // Dispose of renderer
+  if (renderer) {
+    renderer.dispose();
+    renderer.forceContextLoss();
+    renderer.domElement.remove();
+    renderer = null;
+  }
+  
+  // Clear references
+  scene = null;
+  camera = null;
+  controls = null;
+  logo = null;
+  
+  console.log('Three.js resources cleaned up');
 }
 
 function createLogo() {
@@ -150,8 +214,9 @@ function onWindowResize() {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
-
+  // Store the ID so we can cancel it later
+  animationFrameId = requestAnimationFrame(animate);
+  
   // Rotate logo
   if (logo) {
     logo.rotation.y += 0.005;
@@ -161,7 +226,9 @@ function animate() {
   controls.update();
 
   // Render
-  renderer.render(scene, camera);
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
 }
 
 // Add UI button to change color
@@ -179,13 +246,38 @@ export function addColorButton() {
   button.style.cursor = 'pointer';
 
   button.addEventListener('click', () => {
-    const hue = Math.random() * 360;
-    const color = new THREE.Color(`hsl(${hue}, 70%, 50%)`);
-    logo.material.color.set(color);
+    if (logo && logo.material) {
+      const hue = Math.random() * 360;
+      const color = new THREE.Color(`hsl(${hue}, 70%, 50%)`);
+      logo.material.color.set(color);
+    }
   });
 
   // Add button to the container
   container.appendChild(button);
+}
+
+// Add a new button to manually close the window
+export function addCloseButton() {
+  if (!floatingWindow) return;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close Window';
+  closeBtn.style.position = 'absolute';
+  closeBtn.style.bottom = '10px';
+  closeBtn.style.left = '10px';
+  closeBtn.style.padding = '8px 16px';
+  closeBtn.style.background = '#d55';
+  closeBtn.style.color = 'white';
+  closeBtn.style.border = 'none';
+  closeBtn.style.borderRadius = '4px';
+  closeBtn.style.cursor = 'pointer';
+  
+  closeBtn.addEventListener('click', () => {
+    floatingWindow.close();
+  });
+  
+  container.appendChild(closeBtn);
 }
 
 // Start automatically
