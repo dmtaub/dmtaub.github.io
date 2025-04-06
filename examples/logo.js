@@ -10,6 +10,9 @@ let logo, reflectiveSurface;
 let container;
 let floatingWindow;
 let animationFrameId;
+let textMesh, textCanvas, textContext, textTexture;
+// get text from url hash location
+let currentText = window.location.hash.slice(1) || 'demo';
 
 export function start() {
   // Create a floating window container instead of directly adding to body
@@ -46,8 +49,8 @@ export function start() {
   init();
   animate();
 
-  // Add color change button
-  addColorButton(div);
+  // Add UI controls
+  addControls(div);
 }
 
 function init() {
@@ -125,6 +128,10 @@ function teardownScene() {
     scene.remove(reflectiveSurface);
   }
 
+  if (textMesh && textMesh.geometry) textMesh.geometry.dispose();
+  if (textMesh && textMesh.material) textMesh.material.dispose();
+  if (textTexture) textTexture.dispose();
+
   // Dispose of renderer
   if (renderer) {
     renderer.dispose();
@@ -139,6 +146,10 @@ function teardownScene() {
   controls = null;
   logo = null;
   reflectiveSurface = null;
+  textMesh = null;
+  textCanvas = null;
+  textContext = null;
+  textTexture = null;
 }
 
 function createLogo() {
@@ -236,23 +247,11 @@ function createLogo() {
   dot.position.set(0, 0, 0.05);
   scene.add(dot);
 
-  // Add text as provided by the user
-  let text = 'demo';
-  const loader = new THREE.TextureLoader();
-  // Create a canvas for the text
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  canvas.width = 256;
-  canvas.height = 64;
-  context.fillStyle = 'black';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.font = 'bold 36px Arial';
-  context.fillStyle = 'white';
-  context.textAlign = 'left';
-  context.textBaseline = 'middle';
-  context.fillText('demo', 20, canvas.height / 2);
+  // Create text canvas
+  createTextCanvas();
 
-  const textTexture = new THREE.CanvasTexture(canvas);
+  // Create text texture
+  textTexture = new THREE.CanvasTexture(textCanvas);
   const textMaterial = new THREE.MeshBasicMaterial({
     map: textTexture,
     transparent: true,
@@ -260,9 +259,40 @@ function createLogo() {
   });
 
   const textGeometry = new THREE.PlaneGeometry(2, 0.5);
-  const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+  textMesh = new THREE.Mesh(textGeometry, textMaterial);
   textMesh.position.set(0.8, 0, 0.1);
   scene.add(textMesh);
+}
+
+// Create and initialize the text canvas
+function createTextCanvas() {
+  textCanvas = document.createElement('canvas');
+  textContext = textCanvas.getContext('2d');
+  textCanvas.width = 256;
+  textCanvas.height = 64;
+
+  updateTextCanvas(currentText);
+}
+
+// Update the text canvas with new text
+function updateTextCanvas(text) {
+  if (!textContext) return;
+
+  // Clear the canvas
+  textContext.fillStyle = 'black';
+  textContext.fillRect(0, 0, textCanvas.width, textCanvas.height);
+
+  // Draw the text
+  textContext.font = 'bold 36px Arial';
+  textContext.fillStyle = 'white';
+  textContext.textAlign = 'left';
+  textContext.textBaseline = 'middle';
+  textContext.fillText(text || 'demo', 20, textCanvas.height / 2);
+
+  // Update the texture if it exists
+  if (textTexture) {
+    textTexture.needsUpdate = true;
+  }
 }
 
 function onWindowResize() {
@@ -304,13 +334,41 @@ function animate() {
   }
 }
 
-// Add UI button to change color
-export function addColorButton(div) {
+// Add UI controls (color button and text input)
+export function addControls(div) {
+  // Create control panel container
+  const controlPanel = document.createElement('div');
+  controlPanel.style.position = 'absolute';
+  controlPanel.style.bottom = '10px';
+  controlPanel.style.right = '10px';
+  controlPanel.style.display = 'flex';
+  controlPanel.style.gap = '10px';
+  controlPanel.style.alignItems = 'center';
+  div.appendChild(controlPanel);
+
+  // Text input
+  const textInput = document.createElement('input');
+  textInput.type = 'text';
+  textInput.value = currentText;
+  textInput.placeholder = 'Logo text';
+  textInput.style.padding = '8px';
+  textInput.style.borderRadius = '4px';
+  textInput.style.border = 'none';
+  textInput.style.background = '#333';
+  textInput.style.color = 'white';
+  textInput.style.width = '150px';
+
+  // Update text when input changes
+  textInput.addEventListener('input', (e) => {
+    currentText = e.target.value;
+    updateTextCanvas(currentText);
+  });
+
+  controlPanel.appendChild(textInput);
+
+  // Color change button
   const button = document.createElement('button');
   button.textContent = 'Change Color';
-  button.style.position = 'absolute';
-  button.style.bottom = '10px';
-  button.style.right = '10px';
   button.style.padding = '8px 16px';
   button.style.background = '#555';
   button.style.color = 'white';
@@ -326,10 +384,8 @@ export function addColorButton(div) {
     }
   });
 
-  // Add button to the floating window container
-  div.appendChild(button);
+  controlPanel.appendChild(button);
 }
 
-// Don't start automatically anymore
-// Let the user call start() explicitly
+// Start automatically
 start();
