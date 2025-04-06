@@ -12,7 +12,7 @@ let floatingWindow;
 let animationFrameId;
 let textMesh, textCanvas, textContext, textTexture;
 // get text from url hash location
-let currentText = window.location.hash.slice(1) || 'demo';
+let currentText = window.location.hash.slice(1).split(':')[1] || 'demo';
 
 // Reflection rendering
 let reflectionRenderTarget, reflectionCamera;
