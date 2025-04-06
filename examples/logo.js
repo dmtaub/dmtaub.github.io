@@ -241,11 +241,11 @@ function createLogo() {
   scene.add(reflectiveSurface);
 
   // Add a white center dot
-  const dotGeometry = new THREE.CircleGeometry(0.1, 16);
-  const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-  dot.position.set(0, 0, 0.05);
-  scene.add(dot);
+  // const dotGeometry = new THREE.CircleGeometry(0.1, 16);
+  // const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  // const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+  // dot.position.set(0, 0, 0.05);
+  // scene.add(dot);
 
   // Create text canvas
   createTextCanvas();
@@ -278,9 +278,12 @@ function createTextCanvas() {
 function updateTextCanvas(text) {
   if (!textContext) return;
 
-  // Clear the canvas
-  textContext.fillStyle = 'black';
-  textContext.fillRect(0, 0, textCanvas.width, textCanvas.height);
+  // Clear the canvas with transparent background instead of black
+  textContext.clearRect(0, 0, textCanvas.width, textCanvas.height);
+
+  // Optional: For debugging, you can see the canvas area
+  // textContext.strokeStyle = 'rgba(255,0,0,0.2)';
+  // textContext.strokeRect(0, 0, textCanvas.width, textCanvas.height);
 
   // Draw the text
   textContext.font = 'bold 36px Arial';
@@ -288,6 +291,15 @@ function updateTextCanvas(text) {
   textContext.textAlign = 'left';
   textContext.textBaseline = 'middle';
   textContext.fillText(text || 'demo', 20, textCanvas.height / 2);
+
+  // Add a subtle glow effect for better visibility
+  textContext.shadowColor = 'rgba(255, 255, 255, 0.7)';
+  textContext.shadowBlur = 3;
+  textContext.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  textContext.fillText(text || 'demo', 20, textCanvas.height / 2);
+
+  // Reset shadow for future drawing
+  textContext.shadowBlur = 0;
 
   // Update the texture if it exists
   if (textTexture) {
