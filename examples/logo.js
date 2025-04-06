@@ -31,8 +31,10 @@ export function start() {
       onMinimize: (isMinimized) => {
         // Pause animation when minimized, resume when maximized
         if (isMinimized) {
+          console.log('Window minimized');
           cancelAnimationFrame(animationFrameId);
         } else {
+          console.log('Window opened');
           animate();
         }
       },
@@ -95,13 +97,13 @@ function init() {
  */
 function teardownScene() {
   console.log('Tearing down Three.js scene');
-  
+
   // Stop animation loop
   cancelAnimationFrame(animationFrameId);
-  
+
   // Remove event listeners
   window.removeEventListener('resize', onWindowResize);
-  
+
   // Dispose of Three.js resources
   if (logo) {
     if (logo.geometry) logo.geometry.dispose();
@@ -114,7 +116,7 @@ function teardownScene() {
     }
     scene.remove(logo);
   }
-  
+
   // Dispose of renderer
   if (renderer) {
     renderer.dispose();
@@ -122,13 +124,13 @@ function teardownScene() {
     renderer.domElement.remove();
     renderer = null;
   }
-  
+
   // Clear references
   scene = null;
   camera = null;
   controls = null;
   logo = null;
-  
+
   console.log('Three.js resources cleaned up');
 }
 
@@ -216,7 +218,7 @@ function onWindowResize() {
 function animate() {
   // Store the ID so we can cancel it later
   animationFrameId = requestAnimationFrame(animate);
-  
+
   // Rotate logo
   if (logo) {
     logo.rotation.y += 0.005;
@@ -260,7 +262,7 @@ export function addColorButton() {
 // Add a new button to manually close the window
 export function addCloseButton() {
   if (!floatingWindow) return;
-  
+
   const closeBtn = document.createElement('button');
   closeBtn.textContent = 'Close Window';
   closeBtn.style.position = 'absolute';
@@ -272,11 +274,11 @@ export function addCloseButton() {
   closeBtn.style.border = 'none';
   closeBtn.style.borderRadius = '4px';
   closeBtn.style.cursor = 'pointer';
-  
+
   closeBtn.addEventListener('click', () => {
     floatingWindow.close();
   });
-  
+
   container.appendChild(closeBtn);
 }
 
