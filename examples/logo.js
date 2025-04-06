@@ -3,33 +3,22 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { FloatingWindow } from 'floatingWindow';
 
 let scene, camera, renderer, controls;
 let logo;
 let container;
-let floatingWindow;
 
 export function start() {
-  // Create a floating window container instead of directly adding to body
-  const canvas = document.createElement('canvas');
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
-  
-  // Create a floating window with the canvas
-  floatingWindow = new FloatingWindow(
-    'C Logo',
-    canvas,
-    { width: 400, height: 400, top: 100, left: 100 }
-  );
-  
-  container = canvas;
+  // Create container
+  container = document.createElement('div');
+  container.className = 'interactive';
+  container.style.width = '100%';
+  container.style.height = '400px';
+  container.style.position = 'relative';
+  document.body.appendChild(container);
   
   init();
   animate();
-  
-  // Add color change button
-  addColorButton();
 }
 
 function init() {
@@ -38,15 +27,13 @@ function init() {
   scene.background = new THREE.Color(0x444444);
   
   // Camera setup
-  camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000); // Use 1:1 aspect ratio
+  camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
   camera.position.set(0, 0, 10);
   
   // Renderer setup
-  renderer = new THREE.WebGLRenderer({ 
-    canvas: container,
-    antialias: true 
-  });
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
   
   // Controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -65,12 +52,6 @@ function init() {
   
   // Handle window resize
   window.addEventListener('resize', onWindowResize);
-  
-  // Add observer to handle container resize
-  const resizeObserver = new ResizeObserver(() => {
-    onContainerResize();
-  });
-  resizeObserver.observe(container);
 }
 
 function createLogo() {
@@ -147,20 +128,9 @@ function createLogo() {
 }
 
 function onWindowResize() {
-  onContainerResize();
-}
-
-function onContainerResize() {
-  if (!container || !renderer) return;
-  
-  // Maintain the aspect ratio for the renderer and camera
-  const width = container.clientWidth;
-  const height = container.clientHeight;
-  
-  camera.aspect = width / height;
+  camera.aspect = container.clientWidth / container.clientHeight;
   camera.updateProjectionMatrix();
-  
-  renderer.setSize(width, height);
+  renderer.setSize(container.clientWidth, container.clientHeight);
 }
 
 function animate() {
@@ -198,13 +168,9 @@ export function addColorButton() {
     logo.material.color.set(color);
   });
   
-  // Add button to the floating window container instead of the canvas
-  if (floatingWindow && floatingWindow.container) {
-    floatingWindow.container.appendChild(button);
-  }
+  container.appendChild(button);
 }
 
-// Don't start automatically anymore
-// Let the user call start() explicitly
-// start();
-// addColorButton(); 
+// Start automatically
+start();
+addColorButton(); 
