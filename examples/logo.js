@@ -91,14 +91,15 @@ function init() {
   scene.add(pointLight);
 
   // Setup reflection render target
-  reflectionRenderTarget = new THREE.WebGLRenderTarget(256, 256, {
+  reflectionRenderTarget = new THREE.WebGLRenderTarget(512, 512, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
-    format: THREE.RGBAFormat
+    format: THREE.RGBAFormat,
+    encoding: THREE.sRGBEncoding
   });
   
   // Reflection camera
-  reflectionCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  reflectionCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
   reflectionCamera.position.set(0, 0, 5);
 
   createLogo();
@@ -244,29 +245,31 @@ function createLogo() {
   scene.add(logo);
 
   // Create a reflective surface in the middle of the "C"
-  const circleGeometry = new THREE.CircleGeometry(0.5, 32);
+  // Make it larger for a more dramatic effect
+  const circleGeometry = new THREE.CircleGeometry(0.75, 64);
   
   // Create material that will use our render target as a texture
   const reflectiveMaterial = new THREE.MeshPhongMaterial({
-    color: 0x333333,
+    color: 0x222222,  // Darker base color for more contrast
     specular: 0xffffff,
-    shininess: 100,
+    shininess: 200,   // Increased shininess
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 0.9,
-    map: reflectionRenderTarget.texture  // Use the render target texture
+    map: reflectionRenderTarget.texture,  // Use the render target texture
+    emissive: 0x444444,  // Add slight emissive to enhance brightness
+    emissiveMap: reflectionRenderTarget.texture  // Use same texture for emissive
   });
 
   reflectiveSurface = new THREE.Mesh(circleGeometry, reflectiveMaterial);
   reflectiveSurface.position.set(0, 0, 0);
   scene.add(reflectiveSurface);
-
-  // Add a white center dot
-  const dotGeometry = new THREE.CircleGeometry(0.1, 16);
-  const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-  dot.position.set(0, 0, 0.05);
-  scene.add(dot);
+  
+  // Add a back side reflective surface for double-sided effect
+  const backReflectiveSurface = new THREE.Mesh(circleGeometry, reflectiveMaterial.clone());
+  backReflectiveSurface.position.set(0, 0, -0.01);  // Slight offset to prevent z-fighting
+  backReflectiveSurface.rotation.x = Math.PI;  // Flip to show the back side
+  scene.add(backReflectiveSurface);
 
   // Create text canvas
   createTextCanvas();
@@ -351,8 +354,16 @@ function onContainerResize() {
 function updateReflectionCamera() {
   if (!reflectionCamera || !logo || !reflectiveSurface) return;
   
+  // Time-based oscillation to make the reflection more dynamic
+  const time = Date.now() * 0.001;
+  
   // Position the reflection camera to capture the logo from a good angle for reflection
-  const offset = new THREE.Vector3(0, 0, 3);
+  // Use a more dynamic offset that changes over time
+  const offset = new THREE.Vector3(
+    Math.sin(time * 0.2) * 0.5,
+    Math.cos(time * 0.3) * 0.5,
+    3 + Math.sin(time * 0.1) * 0.5
+  );
   
   // Calculate a position that's slightly offset from the reflective surface's position
   // This creates an angle that looks like a realistic reflection
@@ -364,14 +375,20 @@ function updateReflectionCamera() {
   // Update the reflection camera's rotation based on the logo's rotation
   // This creates the illusion that the reflection is following the logo's movement
   reflectionCamera.rotation.z = -logo.rotation.y * 0.5;
+  
+  // Slightly change the field of view for more dynamic reflections
+  reflectionCamera.fov = 75 + Math.sin(time * 0.5) * 5;
+  reflectionCamera.updateProjectionMatrix();
 }
 
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
 
-  // Rotate logo
+  // Rotate logo with varying speed for more natural movement
   if (logo) {
     logo.rotation.y += 0.005;
+    // Add slight wobble to the x rotation for more dynamics
+    logo.rotation.x = Math.sin(Date.now() * 0.001) * 0.05;
   }
 
   // Update reflection camera
@@ -382,11 +399,19 @@ function animate() {
     // Make sure text isn't in the reflection
     if (textMesh) textMesh.visible = false;
     
+    // Store original background
+    const originalBackground = scene.background;
+    
+    // Use a gradient background for reflection to increase contrast
+    const reflectionBackground = new THREE.Color(0x000000);
+    scene.background = reflectionBackground;
+    
     // Render to our reflection target
     renderer.setRenderTarget(reflectionRenderTarget);
     renderer.render(scene, reflectionCamera);
     
     // Reset for normal rendering
+    scene.background = originalBackground;
     if (textMesh) textMesh.visible = true;
     renderer.setRenderTarget(null);
   }
