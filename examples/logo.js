@@ -33,9 +33,9 @@ export function start() {
 
   // Create a floating window with the canvas
   floatingWindow = new FloatingWindow(
-    'C Logo',
+    currentText || 'C Logo',
     div,
-    { width: 400, height: 400, top: 100, left: 100 },
+    { width: 400, height: 500, top: 100, left: 100 },
     null, // No title change handler
     {
       // Callbacks
@@ -255,6 +255,7 @@ function createLogo() {
 
   // Add to scene
   scene.add(logo);
+  scene.position.set(0, 0.5, 0);
 
   // Create a morphing reflective surface
   createMorphingReflectiveSurface();
@@ -271,7 +272,7 @@ function createLogo() {
 
   const textGeometry = new THREE.PlaneGeometry(2, 0.5);
   textMesh = new THREE.Mesh(textGeometry, textMaterial);
-  textMesh.position.set(0.8, 0, 0.1);
+  textMesh.position.set(2.2, -2.2, 0.1);
   scene.add(textMesh);
 }
 
