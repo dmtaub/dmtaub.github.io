@@ -855,8 +855,8 @@
                             dropdown.style.display = 'none'; // Hide dropdown after selection
                         }
                         item.addEventListener('click', clickHandler);
-                        // auto-load example file if in hash
-                        if (file.includes(hash)) {
+                        // auto-load example file if in hash and hash is not empty
+                        if (hash && file.indexOf(hash) >= 0) {
                             clickHandler();
                             //run the code
                             setTimeout(() => {
