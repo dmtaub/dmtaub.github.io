@@ -44,6 +44,7 @@ export function start() {
         // Pause animation when minimized, resume when maximized
         if (isMinimized) {
           cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
         } else {
           animate();
         }
