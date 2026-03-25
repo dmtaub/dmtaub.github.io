@@ -17,6 +17,8 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
   const rippleScene = new THREE.Scene();
   const rippleCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
+  const N_RIPPLES = 4;
+
   // Basic uniform data
   const rippleUniforms = {
     u_time: { value: 0.0 },
@@ -25,11 +27,9 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
     u_resolution: { value: new THREE.Vector2(containerWidth, containerHeight) },
     u_frustumWidth: { value: frustumWidth },
     u_frustumHeight: { value: frustumHeight },
-    // Debug ripple flags
-    u_debugRipple: { value: false },
-    u_debugRipplePos: { value: new THREE.Vector2(0.5, 0.5) },
-    u_debugRippleStartTime: { value: 0.0 },
-    u_clickHue: { value: 0.0 }
+    u_ripplePositions: { value: Array.from({ length: N_RIPPLES }, () => new THREE.Vector2(0.5, 0.5)) },
+    u_rippleStartTimes: { value: new Array(N_RIPPLES).fill(-999.0) },
+    u_rippleHues: { value: new Array(N_RIPPLES).fill(0.0) },
   };
 
   const rippleMaterial = new THREE.ShaderMaterial({
@@ -51,10 +51,10 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
       uniform float u_frustumWidth;
       uniform float u_frustumHeight;
 
-      uniform bool u_debugRipple;
-      uniform vec2 u_debugRipplePos;
-      uniform float u_debugRippleStartTime;
-      uniform float u_clickHue;
+      #define N_RIPPLES 4
+      uniform vec2 u_ripplePositions[N_RIPPLES];
+      uniform float u_rippleStartTimes[N_RIPPLES];
+      uniform float u_rippleHues[N_RIPPLES];
 
       // Convert HSL to RGB
       vec3 hsl2rgb(vec3 hsl) {
@@ -112,18 +112,18 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
         vec3 baseColor = vec3(0.0, 0.0, 0.05);
         vec3 finalColor = baseColor + rippleColor * combinedWave;
 
-        // Debug ripple effect
-        if (u_debugRipple) {
-          float dt = u_time - u_debugRippleStartTime;
-          if (dt < 1.0) {
-            vec2 diff = vUv - u_debugRipplePos;
+        // Click ripple effects (up to N_RIPPLES simultaneous)
+        for (int i = 0; i < N_RIPPLES; i++) {
+          float dt = u_time - u_rippleStartTimes[i];
+          if (dt >= 0.0 && dt < 1.5) {
+            vec2 diff = vUv - u_ripplePositions[i];
             float d = length(diff);
             float rippleWave = cos(d * 20.0 - dt * 5.0);
             if (rippleWave > 0.0) {
               float rippleFadeDist = exp(-d * 5.0);
               float rippleTimeFade = exp(-dt * 3.0);
-              vec3 rippleColor2 = hsl2rgb(vec3(u_clickHue, 1.0, 0.5));
-              finalColor += rippleColor2 * rippleWave * rippleFadeDist * rippleTimeFade * 0.5;
+              vec3 clickColor = hsl2rgb(vec3(u_rippleHues[i], 1.0, 0.5));
+              finalColor += clickColor * rippleWave * rippleFadeDist * rippleTimeFade * 0.5;
             }
           }
         }
@@ -149,16 +149,15 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
  * Allows external code to update the ripple shader's uniforms cleanly.
  * Moves more logic here, so the main file can just pass relevant data.
  */
+const N_RIPPLES = 4;
+
 export function updateRippleShaderUniforms(rippleUniforms, {
   time,
   ballPosition,
   ballVelocityDir,
   frustumWidth,
   frustumHeight,
-  debugRipple,
-  debugRipplePos,
-  debugRippleStartTime,
-  clickHue
+  ripples
 }) {
   if (!rippleUniforms) return;
 
@@ -168,8 +167,13 @@ export function updateRippleShaderUniforms(rippleUniforms, {
   rippleUniforms.u_frustumWidth.value = frustumWidth;
   rippleUniforms.u_frustumHeight.value = frustumHeight;
 
-  rippleUniforms.u_debugRipple.value = debugRipple;
-  rippleUniforms.u_debugRipplePos.value.copy(debugRipplePos);
-  rippleUniforms.u_debugRippleStartTime.value = debugRippleStartTime;
-  rippleUniforms.u_clickHue.value = clickHue;
+  for (let i = 0; i < N_RIPPLES; i++) {
+    if (i < ripples.length) {
+      rippleUniforms.u_ripplePositions.value[i].copy(ripples[i].pos);
+      rippleUniforms.u_rippleStartTimes.value[i] = ripples[i].startTime;
+      rippleUniforms.u_rippleHues.value[i] = ripples[i].hue;
+    } else {
+      rippleUniforms.u_rippleStartTimes.value[i] = -999.0;
+    }
+  }
 }

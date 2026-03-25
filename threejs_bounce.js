@@ -42,16 +42,16 @@ const tolerance = 0.5;
 let timer = undefined;
 let slowFactor = 0.99999;
 
-// Debug ripple
-let debugRipple = false;
-let debugRipplePos = new THREE.Vector2(0.5, 0.5);
-let debugRippleStartTime = 0.0;
-const debugRippleDuration = 1.0;
+// Click ripples (circular buffer)
+const MAX_RIPPLES = 4;
+const ripples = [];
+let rippleSlot = 0;
 let clickHue = 0.0;
 
 // Ripple scene
 let rippleScene, rippleCamera, rippleUniforms, rippleMaterial;
 let rippleRenderTarget;
+let backgroundMesh;
 
 // Reflection / secondary camera
 let secondaryCamera;
@@ -220,6 +220,12 @@ function init() {
   rippleRenderTarget.texture.minFilter = THREE.LinearFilter;
   rippleRenderTarget.texture.magFilter = THREE.LinearFilter;
 
+  backgroundMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: rippleRenderTarget.texture })
+  );
+  backgroundMesh.position.z = -0.1;
+
   // Secondary camera setup
   createSecondaryCameraContainer(renderer.domElement);
   createSecondaryRenderer();
@@ -276,10 +282,7 @@ function animate() {
     ballVelocityDir: ballVelocity.clone().normalize(),
     frustumWidth: getFrustumWidth(),
     frustumHeight: getFrustumHeight(),
-    debugRipple: debugRipple,
-    debugRipplePos: debugRipplePos,
-    debugRippleStartTime: debugRippleStartTime,
-    clickHue: clickHue
+    ripples
   });
 
   // 1) Render the ripple to a texture
@@ -290,27 +293,29 @@ function animate() {
   // 2) Render main scene with the ripple as background
   renderer.setRenderTarget(null);
   renderer.clearColor();
-  const backgroundMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(getFrustumWidth(), getFrustumHeight()),
-    new THREE.MeshBasicMaterial({ map: rippleRenderTarget.texture })
-  );
-  backgroundMesh.position.z = -0.1;
+  backgroundMesh.scale.set(getFrustumWidth(), getFrustumHeight(), 1);
   scene.add(backgroundMesh);
 
   renderer.render(scene, camera);
   scene.remove(backgroundMesh);
 
-  // Disable debug ripple if time is up
-  if (debugRipple && (globalTime - debugRippleStartTime > debugRippleDuration)) {
-    debugRipple = false;
-  }
-
   // Move the ball
   ball.position.add(ballVelocity);
 
-  // Rotate attractors
+  // Rotate ball based on rolling direction
+  const speed = ballVelocity.length();
+  if (speed > 0.0001) {
+    const rollAxis = new THREE.Vector3(-ballVelocity.y, ballVelocity.x, 0).normalize();
+    ball.rotateOnWorldAxis(rollAxis, speed / ballRadius);
+  }
+
+  // Rotate attractors and pulse emissive intensity based on ball proximity
   for (const object of objects) {
     object.rotation.y += 0.01;
+    const dist = ball.position.distanceTo(object.position);
+    const combinedRadius = object.geometry.boundingSphere.radius + ballRadius;
+    const proximityFactor = Math.max(0, 1 - (dist - combinedRadius) / effectRadius);
+    object.material.emissiveIntensity = 0.1 + proximityFactor * 0.9 + Math.sin(globalTime * 8) * proximityFactor * 0.3;
   }
 
   // Reflection camera if enabled
@@ -327,26 +332,16 @@ function animate() {
     // Render reflection envMap
     secondaryRenderer.setRenderTarget(secondaryCameraRenderTarget);
     secondaryRenderer.clear();
-    const background2 = new THREE.Mesh(
-      new THREE.PlaneGeometry(getFrustumWidth(), getFrustumHeight()),
-      new THREE.MeshBasicMaterial({ map: rippleRenderTarget.texture })
-    );
-    background2.position.z = -0.1;
-    scene.add(background2);
+    scene.add(backgroundMesh);
     secondaryRenderer.render(scene, secondaryCamera);
-    scene.remove(background2);
+    scene.remove(backgroundMesh);
 
     // Render preview
     secondaryRenderer.setRenderTarget(null);
     secondaryRenderer.clear();
-    const background3 = new THREE.Mesh(
-      new THREE.PlaneGeometry(getFrustumWidth(), getFrustumHeight()),
-      new THREE.MeshBasicMaterial({ map: rippleRenderTarget.texture })
-    );
-    background3.position.z = -0.1;
-    scene.add(background3);
+    scene.add(backgroundMesh);
     secondaryRenderer.render(scene, secondaryCamera);
-    scene.remove(background3);
+    scene.remove(backgroundMesh);
   }
 }
 
@@ -418,9 +413,13 @@ function makeRipple(mousePos) {
   const x = (mousePos.x + frustumWidth / 2) / frustumWidth;
   const y = (mousePos.y + frustumHeight / 2) / frustumHeight;
 
-  debugRipplePos.set(x, y);
-  debugRippleStartTime = globalTime;
-  debugRipple = true;
+  const entry = { pos: new THREE.Vector2(x, y), startTime: globalTime, hue: clickHue };
+  if (ripples.length < MAX_RIPPLES) {
+    ripples.push(entry);
+  } else {
+    ripples[rippleSlot] = entry;
+    rippleSlot = (rippleSlot + 1) % MAX_RIPPLES;
+  }
 }
 
 /* -----------------------------
