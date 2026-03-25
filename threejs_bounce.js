@@ -53,6 +53,7 @@ let clickHue = 0.0;
 let rippleScene, rippleCamera, rippleUniforms, rippleMaterial;
 let rippleRenderTarget;
 let backgroundMesh;
+let particleField;
 
 // Reflection / secondary camera
 let secondaryCamera;
@@ -104,10 +105,12 @@ function toggleReflectionAndPreview() {
   if (secondaryCameraEnabled) {
     reflectionMaterial.envMap = secondaryCameraRenderTarget.texture;
     if (secondaryContainer) secondaryContainer.style.display = 'block';
+    if (particleField) particleField.visible = true;
   } else {
     reflectionMaterial.envMap = null;
     if (ball.material === reflectionMaterial) switchMaterial();
     if (secondaryContainer) secondaryContainer.style.display = 'none';
+    if (particleField) particleField.visible = false;
   }
 }
 
@@ -224,7 +227,8 @@ function init() {
   );
   backgroundMesh.position.z = -0.1;
 
-  createParticleField(scene, getFrustumWidth(), getFrustumHeight());
+  particleField = createParticleField(scene, getFrustumWidth(), getFrustumHeight());
+  particleField.visible = false;
 
   // Secondary camera setup
   createSecondaryCameraContainer(renderer.domElement);
