@@ -17,9 +17,19 @@
     <script src="threejs_bounce.js" type="module"></script>
 </head>
 <body data-default-section="introduction">
+    <div class="topbar-sticky">
     <header>
-        <h1 class="site-name">Daniel M Taub</h1>
-        <div class="header-links">
+        <img src="happy_robot.png" alt="" class="header-robot main-robot">
+        <div class="header-title">
+            <h1>Daniel M Taub</h1>
+            <h2 class="header-subtitle">
+                <span class='descriptive-text-container'>
+                    <span class='descriptive-text adj3 show'>Experienced</span>
+                    <span class='descriptive-text adj2'>Innovative</span>
+                    <span class='descriptive-text adj1'>Perceptive</span>
+                </span>
+                <span class="subtitle-text">Software Solutions</span>
+            </h2>
             <div class="social-links">
                 <a href="https://www.linkedin.com/in/dmtaub" target="_blank" aria-label="LinkedIn">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
@@ -30,18 +40,24 @@
                 <a href="#" id="resumeLink" aria-label="Resume">
                     <svg viewBox="0 0 420 512" xmlns="http://www.w3.org/2000/svg"><path d="M 70.322 0 C 31.535 0 0 28.7 0 64 L 0 448 C 0 483.3 31.535 512 70.322 512 L 351.609 512 C 390.396 512 421.931 483.3 421.931 448 L 421.931 160 L 281.287 160 C 261.839 160 246.126 145.7 246.126 128 L 246.126 0 L 70.322 0 Z M 281.287 0 L 281.287 128 L 421.931 128 L 281.287 0 Z M 152.863 188.482 L 231.975 188.482 C 268.345 188.482 297.902 215.382 297.902 248.482 C 297.902 273.982 280.431 295.682 255.819 304.382 L 282.177 338.428 C 303.315 361.62 267.91 385.779 249.544 365.628 L 199.232 311.082 C 198.243 310.282 197.474 309.382 196.704 308.482 L 174.839 308.482 L 174.839 352.482 C 174.839 363.482 164.95 372.482 152.863 372.482 C 140.777 372.482 130.888 363.482 130.888 352.482 L 130.888 288.482 L 130.888 208.482 C 130.888 197.482 140.777 188.482 152.863 188.482 Z M 231.975 268.482 C 244.062 268.482 253.951 259.482 253.951 248.482 C 253.951 237.482 244.062 228.482 231.975 228.482 L 174.839 228.482 L 174.839 268.482 L 231.975 268.482 Z"/></svg>
                 </a>
+                <a class="subtle right" href="pi.html">µ</a>
+                <a class="showy left" href="boxadon.html">☺</a>
             </div>
-            <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-                <span class="toggle-icon">☀</span> Light
-            </button>
         </div>
+        <img src="happy_robot.png" alt="" class="header-robot last-robot">
     </header>
 
     <nav>
-        <a href="#introduction">Introduction</a>
-        <a href="#projects">Projects</a>
-        <a href="#philosophy">Philosophy</a>
+        <div class="nav-links">
+            <a href="#introduction">Introduction</a>
+            <a href="#projects">Projects</a>
+            <a href="#philosophy">Philosophy</a>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+            <span class="toggle-icon">☀</span>
+        </button>
     </nav>
+    </div><!-- /.topbar-sticky -->
     <div class="container">
         <div class="section" id="introduction" style="display: none;">
             <h2>Introduction</h2>

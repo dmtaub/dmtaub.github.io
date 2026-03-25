@@ -54,37 +54,116 @@ h1, h2, h3 {
 }
 
 /* =====================
-   Header — compact sticky bar
+   Header
    ===================== */
-header {
-    background-color: var(--header-bg);
-    color: var(--header-text);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 28px;
-    height: 54px;
+
+/* Sticky wrapper — header + nav scroll together */
+.topbar-sticky {
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 1px 8px var(--shadow);
-    transition: background-color 0.5s ease, box-shadow 0.5s ease;
+    box-shadow: 0 2px 10px var(--shadow);
+    transition: box-shadow 0.5s ease;
 }
 
-.site-name {
-    margin: 0;
-    font-size: 1.1em;
-    font-weight: bold;
+header {
+    background-color: var(--header-bg);
     color: var(--header-text);
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-
-.header-links {
+    text-align: center;
     display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow: hidden;
+    isolation: isolate;
+    transition: background-color 0.5s ease;
 }
+
+/* Robots */
+header .header-robot {
+    width: 15%;
+    height: auto;
+    transition: opacity 0.4s ease, max-width 0.4s ease, margin 0.4s ease;
+    max-width: 15%;
+}
+header .main-robot { transform: scaleX(-1); margin: 10px auto 10px 30px; }
+header .last-robot  { margin: 10px 30px 10px auto; }
+
+body.scrolled header .header-robot,
+body.projects-section header .header-robot {
+    opacity: 0;
+    max-width: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Title block */
+.header-title {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+.header-title h1 {
+    margin: 0;
+    font-size: 1.75em;
+    color: var(--header-text);
+    transition: font-size 0.4s ease;
+}
+body.scrolled .header-title h1,
+body.projects-section .header-title h1 { font-size: 1.1em; }
+
+/* Subtitle / adjectives — hide on scroll */
+.header-subtitle {
+    margin: 0;
+    font-size: 1.25em;
+    font-style: italic;
+    color: var(--header-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 60px;
+    opacity: 1;
+    overflow: hidden;
+    transition: opacity 0.3s ease, max-height 0.4s ease, margin 0.4s ease;
+}
+body.scrolled .header-subtitle,
+body.projects-section .header-subtitle {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Easter egg links — absolutely placed at header edges */
+.header-title .subtle {
+    position: absolute;
+    right: 22px;
+    color: var(--header-bg); /* same as background = invisible until hover */
+    text-decoration: none;
+    font-size: 14px;
+    transition: opacity 0.3s ease, color 0.3s;
+}
+.header-title .subtle:hover { color: rgba(255,255,255,0.5); }
+.header-title .showy {
+    position: absolute;
+    left: 22px;
+    font-size: 22pt;
+    color: rgba(255,255,255,0.35);
+    text-decoration: none;
+    transition: opacity 0.3s ease, color 0.2s;
+}
+.header-title .showy:hover { color: rgba(255,255,255,0.7); }
+body.scrolled .header-title .subtle,
+body.scrolled .header-title .showy,
+body.projects-section .header-title .subtle,
+body.projects-section .header-title .showy {
+    opacity: 0;
+    pointer-events: none;
+}
+
 
 .social-links {
     display: flex;
@@ -115,42 +194,44 @@ body.dark .social-links svg:hover {
 /* Theme toggle button */
 .theme-toggle {
     background: none;
-    border: 1px solid rgba(255,255,255,0.3);
+    border: 1px solid var(--accent);
     border-radius: 20px;
-    padding: 4px 10px;
+    min-width: 60px;
+    height: 28px;
+    padding: 0 10px;
     cursor: pointer;
-    font-size: 14px;
-    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    color: var(--accent);
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 5px;
     transition: border-color 0.2s, color 0.2s;
-    white-space: nowrap;
+    flex-shrink: 0;
 }
 .theme-toggle:hover {
-    border-color: rgba(255,255,255,0.7);
-    color: #fff;
+    border-color: var(--text);
+    color: var(--text);
 }
-body.dark .theme-toggle {
-    border-color: rgba(155,139,187,0.35);
-    color: rgba(196,184,216,0.85);
-}
-body.dark .theme-toggle:hover {
-    border-color: #9b8bbb;
-    color: #e8e4f0;
-}
-.theme-toggle .toggle-icon { font-size: 13px; }
 
 /* =====================
    Nav
    ===================== */
 nav {
-    margin: 16px 0;
-    text-align: center;
-    background: transparent;
+    background-color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.5s ease, padding 0.4s ease, font-size 0.4s ease;
+}
+.nav-links {
+    display: flex;
+    gap: 24px;
 }
 nav a {
-    margin: 0 12px;
     text-decoration: none;
     color: var(--nav-text);
     font-size: 0.95em;
@@ -159,6 +240,19 @@ nav a {
 nav a:hover {
     color: var(--nav-hover);
 }
+body.projects-section nav {
+    padding: 5px 20px;
+    font-size: 0.8em;
+}
+
+/* Toggle lives in nav, pinned to far right */
+nav .theme-toggle {
+    position: absolute;
+    right: 20px;
+}
+body.projects-section nav .theme-toggle {
+    display: none;
+}
 
 /* =====================
    Container & sections
@@ -166,6 +260,9 @@ nav a:hover {
 .container {
     width: 80%;
     margin: 20px auto;
+}
+body.projects-section .container {
+    display: none;
 }
 
 .section {
@@ -178,7 +275,7 @@ nav a:hover {
 
 .interactive {
     width: 100%;
-    height: 400px;
+    min-height: 400px;
     background-color: #0d0c18;
     text-align: center;
     line-height: 400px;
