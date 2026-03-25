@@ -1,119 +1,179 @@
 /* =====================
-   Base / Dark Mode
+   Theme variables
+   ===================== */
+:root {
+    --bg:           #F4F0F4;
+    --surface:      #ffffff;
+    --text:         #333333;
+    --text-muted:   #666666;
+    --accent:       #8A7B9F;
+    --accent-soft:  #b0a0c4;
+    --header-bg:    #8A7B9F;
+    --header-text:  #ffffff;
+    --border:       rgba(0,0,0,0.1);
+    --shadow:       rgba(0,0,0,0.12);
+    --nav-text:     #555555;
+    --nav-hover:    #8A7B9F;
+}
+
+body.dark {
+    --bg:           #100f1a;
+    --surface:      #1c1b2a;
+    --text:         #e8e4f0;
+    --text-muted:   #9b96ae;
+    --accent:       #9b8bbb;
+    --accent-soft:  #7b6e9a;
+    --header-bg:    #1e1b2e;
+    --header-text:  #e8e4f0;
+    --border:       rgba(155,139,187,0.2);
+    --shadow:       rgba(0,0,0,0.4);
+    --nav-text:     #9b96ae;
+    --nav-hover:    #c4b8d8;
+}
+
+/* =====================
+   Global transitions
+   ===================== */
+body, header, nav, .section, footer {
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+}
+
+/* =====================
+   Base
    ===================== */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #100f1a;
-    color: #e8e4f0;
+    background-color: var(--bg);
+    color: var(--text);
 }
 
+h1, h2, h3 {
+    color: var(--text);
+}
+
+/* =====================
+   Header — compact sticky bar
+   ===================== */
 header {
-    background-color: #1e1b2e;
-    color: #e8e4f0;
-    text-align: center;
+    background-color: var(--header-bg);
+    color: var(--header-text);
     display: flex;
     align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    height: auto;
-    border-bottom: 1px solid rgba(155, 139, 187, 0.2);
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 54px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 8px var(--shadow);
+    transition: background-color 0.5s ease, box-shadow 0.5s ease;
 }
 
-header img.header-robot {
-    width: 15%;
-    height: auto;
-}
-
-header img.main-robot {
-    transform: scaleX(-1);
-    margin: 10px auto 10px 30px;
-}
-
-header img.last-robot {
-    margin: 10px 30px 10px auto;
-}
-
-.header-title {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100px;
-    margin-top: auto;
-    padding: 10px;
-}
-.header-title h1 {
+.site-name {
     margin: 0;
-    font-size: 1.75em;
-    color: #e8e4f0;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--header-text);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
-.header-title h2 {
-    margin: 0;
-    font-size: 1.25em;
-    font-style: italic;
-    color: #c4b8d8;
+
+.header-links {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 16px;
 }
-.header-title .subtle {
-    color: #3a3450;
-    user-select: none;
+
+.social-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-.header-title .subtle:hover {
-    color: #5a4f70;
+.social-links a {
     text-decoration: none;
+    display: flex;
+    align-items: center;
 }
-.header-title .right {
-    position: absolute;
-    right: 22px;
+.social-links svg {
+    height: 22px;
+    width: auto;
+    fill: rgba(255,255,255,0.8);
+    transition: fill 0.2s;
 }
-.header-title .showy {
-    top: 22px;
-    font-size: 22pt;
-    color: #9b8bbb;
+.social-links svg:hover {
+    fill: #ffffff;
 }
-.header-title .showy:hover {
-    font-size: 22pt;
-    color: #c4b8d8;
+body.dark .social-links svg {
+    fill: rgba(196,184,216,0.7);
 }
-.header-title .left {
-    position: absolute;
-    left: 22px;
+body.dark .social-links svg:hover {
+    fill: #e8e4f0;
 }
 
+/* Theme toggle button */
+.theme-toggle {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+.theme-toggle:hover {
+    border-color: rgba(255,255,255,0.7);
+    color: #fff;
+}
+body.dark .theme-toggle {
+    border-color: rgba(155,139,187,0.35);
+    color: rgba(196,184,216,0.85);
+}
+body.dark .theme-toggle:hover {
+    border-color: #9b8bbb;
+    color: #e8e4f0;
+}
+.theme-toggle .toggle-icon { font-size: 13px; }
+
+/* =====================
+   Nav
+   ===================== */
+nav {
+    margin: 16px 0;
+    text-align: center;
+    background: transparent;
+}
+nav a {
+    margin: 0 12px;
+    text-decoration: none;
+    color: var(--nav-text);
+    font-size: 0.95em;
+    transition: color 0.3s;
+}
+nav a:hover {
+    color: var(--nav-hover);
+}
+
+/* =====================
+   Container & sections
+   ===================== */
 .container {
     width: 80%;
     margin: 20px auto;
 }
 
-h1, h2 {
-    color: #e8e4f0;
-}
-
 .section {
-    background: #1c1b2a;
+    background: var(--surface);
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
-}
-
-footer {
-    text-align: center;
-    position: fixed;
-    width: 100%;
-    bottom: 0;
-    pointer-events: none;
-}
-footer p {
-    color: #9b96ae;
-    padding: 0;
-    margin: 1px;
-    text-align: right;
-    opacity: 0.3;
+    box-shadow: 0 0 10px var(--shadow);
+    transition: background-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 .interactive {
@@ -127,40 +187,26 @@ footer p {
     margin-top: 20px;
 }
 
-nav {
-    margin: 20px 0;
+/* =====================
+   Footer
+   ===================== */
+footer {
     text-align: center;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    pointer-events: none;
 }
-nav a {
-    margin: 0 10px;
-    text-decoration: none;
-    color: #9b96ae;
-}
-nav a:hover {
-    color: #c4b8d8;
-}
-
-.social-links {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    align-items: center;
-    margin-top: 10px;
-}
-.social-links a {
-    text-decoration: none;
-}
-.social-links svg {
-    height: 30px;
-    width: auto;
-    fill: #c4b8d8;
-}
-.social-links svg:hover {
-    fill: #fff;
+footer p {
+    color: var(--text-muted);
+    padding: 0;
+    margin: 1px;
+    text-align: right;
+    opacity: 0.35;
 }
 
 /* =====================
-   Animated subtitle
+   Animated subtitle (unused in compact header but kept for fallback)
    ===================== */
 .descriptive-text-container {
     position: relative;
@@ -175,19 +221,12 @@ nav a:hover {
 }
 .descriptive-text {
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     width: 100%;
     transition: opacity 2s ease-in-out;
     opacity: 0;
 }
-h2 {
-    letter-spacing: 0;
-    transition: letter-spacing 2s ease-out;
-}
-h2.spaced {
-    letter-spacing: 0.05em;
-}
+h2.spaced { letter-spacing: 0.05em; }
 .adj1, .adj2, .adj3 { display: inline; }
 .adj1.show, .adj2.show, .adj3.show { opacity: 1; }
 
@@ -203,7 +242,6 @@ h2.spaced {
 
 .projects-outer {
     position: relative;
-    /* height set by JS to (N cards) * 100vh */
 }
 
 .projects-sticky {
@@ -211,30 +249,24 @@ h2.spaced {
     top: 0;
     height: 100vh;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
 }
 
 .projects-topbar {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     z-index: 10;
-    padding: 20px 40px;
+    padding: 18px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(to bottom, rgba(10,9,18,0.85) 0%, transparent 100%);
+    background: linear-gradient(to bottom, rgba(10,9,18,0.8) 0%, transparent 100%);
 }
-
 .projects-topbar-label {
-    font-size: 0.75em;
+    font-size: 0.7em;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: #9b96ae;
 }
-
 .projects-counter {
     font-size: 0.8em;
     color: #9b96ae;
@@ -254,14 +286,13 @@ h2.spaced {
     display: flex;
 }
 
-/* Visual (left side) */
+/* Visual — left half */
 .project-card-visual {
     width: 55%;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
 }
-
 .project-card-visual::after {
     content: '';
     position: absolute;
@@ -277,17 +308,17 @@ h2.spaced {
         radial-gradient(ellipse at 70% 30%, rgba(0,80,140,0.4) 0%, transparent 55%),
         linear-gradient(135deg, #030f18 0%, #061e1a 100%);
 }
-.project-card[data-card="scantelope"] .project-card-visual {
-    background:
-        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,180,160,0.06) 39px, rgba(0,180,160,0.06) 40px),
-        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,180,160,0.06) 39px, rgba(0,180,160,0.06) 40px),
-        radial-gradient(ellipse at 50% 50%, #072530 0%, #030f18 100%);
-}
 .project-card[data-card="bopen"] .project-card-visual {
     background:
         radial-gradient(ellipse at 60% 40%, rgba(100,40,200,0.5) 0%, transparent 50%),
         radial-gradient(ellipse at 30% 70%, rgba(40,10,100,0.4) 0%, transparent 45%),
         linear-gradient(135deg, #060310 0%, #0d0520 100%);
+}
+.project-card[data-card="scantelope"] .project-card-visual {
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,180,160,0.06) 39px, rgba(0,180,160,0.06) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,180,160,0.06) 39px, rgba(0,180,160,0.06) 40px),
+        radial-gradient(ellipse at 50% 50%, #072530 0%, #030f18 100%);
 }
 .project-card[data-card="saikoled"] .project-card-visual {
     background:
@@ -300,7 +331,6 @@ h2.spaced {
     background:
         repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(255,200,0,0.03) 3px, rgba(255,200,0,0.03) 4px),
         radial-gradient(ellipse at 50% 70%, rgba(180,120,0,0.5) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 30%, rgba(10,10,40,0.8) 0%, transparent 60%),
         linear-gradient(180deg, #05050f 0%, #0f0a00 60%, #05050f 100%);
 }
 .project-card[data-card="esb"] .project-card-visual {
@@ -311,7 +341,7 @@ h2.spaced {
 }
 .project-card[data-card="fabrication"] .project-card-visual {
     background:
-        repeating-linear-gradient(45deg, transparent, transparent 18px, rgba(120,120,150,0.04) 18px, rgba(120,120,150,0.04) 19px),
+        repeating-linear-gradient(45deg,  transparent, transparent 18px, rgba(120,120,150,0.04) 18px, rgba(120,120,150,0.04) 19px),
         repeating-linear-gradient(-45deg, transparent, transparent 18px, rgba(120,120,150,0.04) 18px, rgba(120,120,150,0.04) 19px),
         linear-gradient(135deg, #0d0d14 0%, #181820 50%, #0d0d14 100%);
 }
@@ -322,7 +352,7 @@ h2.spaced {
         linear-gradient(135deg, #020210 0%, #08081e 100%);
 }
 
-/* Info (right side) */
+/* Info — right half */
 .project-card-info {
     flex: 1;
     padding: 0 60px;
@@ -332,26 +362,22 @@ h2.spaced {
     background: #0a0914;
     gap: 14px;
 }
-
 .project-card-category {
     font-size: 0.7em;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: #9b8bbb;
 }
-
 .project-card-info h3 {
     font-size: 1.7em;
     margin: 0;
     color: #e8e4f0;
     line-height: 1.2;
 }
-
 .project-card-year {
     font-size: 0.85em;
     color: #6b6480;
 }
-
 .project-card-info p {
     font-size: 0.95em;
     line-height: 1.7;
@@ -359,7 +385,6 @@ h2.spaced {
     margin: 0;
     max-width: 420px;
 }
-
 .project-card-info ul {
     margin: 0;
     padding-left: 18px;
@@ -368,24 +393,21 @@ h2.spaced {
     color: #9b96ae;
     max-width: 420px;
 }
-
 .project-card-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 4px;
 }
-
 .project-card-tags span {
     font-size: 0.7em;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     padding: 4px 10px;
-    border: 1px solid rgba(155, 139, 187, 0.25);
+    border: 1px solid rgba(155,139,187,0.25);
     border-radius: 2px;
     color: #7b708e;
 }
-
 .project-card-link {
     font-size: 0.8em;
     color: #9b8bbb;
@@ -393,16 +415,13 @@ h2.spaced {
     letter-spacing: 0.05em;
     align-self: flex-start;
 }
-.project-card-link:hover {
-    color: #e8e4f0;
-}
+.project-card-link:hover { color: #e8e4f0; }
 
 /* Nav dots */
 .projects-nav-dots {
     position: absolute;
     bottom: 28px;
-    left: 0;
-    right: 0;
+    left: 0; right: 0;
     display: flex;
     justify-content: center;
     gap: 8px;
@@ -412,7 +431,7 @@ h2.spaced {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: rgba(155, 139, 187, 0.25);
+    background: rgba(155,139,187,0.25);
     transition: background 0.3s, transform 0.3s;
     cursor: pointer;
 }
@@ -424,8 +443,7 @@ h2.spaced {
 /* Progress bar */
 .projects-progress-bar {
     position: absolute;
-    bottom: 0;
-    left: 0;
+    bottom: 0; left: 0;
     height: 2px;
     background: #9b8bbb;
     transition: width 0.1s linear;
@@ -438,54 +456,41 @@ h2.spaced {
 .popup-overlay {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    inset: 0;
+    background-color: rgba(0,0,0,0.65);
     justify-content: center;
     align-items: center;
     z-index: 1000;
 }
 .popup-content {
-    background-color: #1c1b2a;
+    background-color: var(--surface);
     padding: 30px 30px 24px 24px;
     border-radius: 5px;
     width: 80%;
     height: 80%;
     overflow: auto;
     position: relative;
-    border: 1px solid rgba(155,139,187,0.2);
+    border: 1px solid var(--border);
+    transition: background-color 0.5s ease;
 }
-.popup-content iframe {
-    border: 1px solid #333;
-}
+.popup-content iframe { border: 1px solid var(--border); }
 .popup-close {
     position: absolute;
-    top: 5px;
-    right: 10px;
+    top: 5px; right: 10px;
     cursor: pointer;
     font-size: 20px;
     font-weight: bold;
-    color: #9b96ae;
+    color: var(--text-muted);
 }
-.popup-close:hover {
-    color: #e8e4f0;
-}
+.popup-close:hover { color: var(--text); }
 
 /* =====================
    Responsive
    ===================== */
-@media (max-width: 600px) {
-    header { flex-direction: column; }
-    header img.header-robot { width: 40%; margin: 10px 0; }
-    .header-title h1 { font-size: 1.75em; }
-    .header-title h2 { font-size: 1.25em; }
-    header img.header-robot.last-robot { display: none; }
-    .social-links { justify-content: center; margin-top: 10px; }
-
+@media (max-width: 700px) {
     .project-card { flex-direction: column; }
     .project-card-visual { width: 100%; height: 40vh; }
     .project-card-info { padding: 24px; }
     .project-card-info h3 { font-size: 1.2em; }
+    .site-name { font-size: 0.95em; }
 }

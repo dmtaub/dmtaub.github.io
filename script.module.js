@@ -28,46 +28,19 @@ export function init(){
     });
 }
 
-const adjectives = document.querySelectorAll('.descriptive-text');
-const parentDesc = adjectives[0].parentElement.parentElement; //h2
-let index = 0;
-function fade() {
-    function showNextAdjective() {
-        // Hide all adjectives
-        adjectives.forEach(adjective => adjective.classList.remove('show'));
 
-        // Show the next adjective
-        adjectives[index].classList.add('show');
-
-        // add class to parent of 0 index 'spaced' if index is not 3, otherwise remove it
-        if (index !== 0) {
-                setTimeout(() => {
-                    parentDesc.classList.add('spaced');
-                }, 1000);
-            } else {
-                parentDesc.classList.remove('spaced');
-            }
-        // Update the index for the next adjective
-        index = (index + 1) % adjectives.length;
-
-        // Call this function again after a delay
-        setTimeout(showNextAdjective, 5000); // Change adjectives every 3 seconds
-    }
-
-    // Start the cycle
-    showNextAdjective();
-}
 
 // create bindings when first loaded
 document.addEventListener('DOMContentLoaded', () => {
     init();
+    initTheme();
     // get current hash
     const sectionId = location.hash.substring(1);
     // if showing the introduction section, start the animation
     if (!sectionId || sectionId === 'introduction') {
         start()
     }
-    fade();
+
 });
 
 // JavaScript to handle the popup
@@ -86,6 +59,43 @@ document.getElementById('popupOverlay').addEventListener('click', function (e) {
         this.style.display = 'none';
     }
 });
+
+// ── Theme toggle + auto-dark on Projects ────────────────────────────────────
+function initTheme() {
+    const btn = document.getElementById('themeToggle');
+    let manualOverride = false;
+
+    function setDark(dark) {
+        document.body.classList.toggle('dark', dark);
+        if (btn) {
+            btn.innerHTML = dark
+                ? '<span class="toggle-icon">🌙</span> Dark'
+                : '<span class="toggle-icon">☀</span> Light';
+        }
+    }
+
+    // Start in light mode
+    setDark(false);
+
+    // Manual toggle — locks theme until user navigates away from projects
+    if (btn) {
+        btn.addEventListener('click', () => {
+            manualOverride = true;
+            setDark(!document.body.classList.contains('dark'));
+        });
+    }
+
+    // Auto-switch when projects section enters/leaves viewport
+    const projectsEl = document.getElementById('projects');
+    if (projectsEl) {
+        new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (!manualOverride) setDark(e.isIntersecting);
+                if (!e.isIntersecting) manualOverride = false; // reset on exit
+            });
+        }, { threshold: 0.05 }).observe(projectsEl);
+    }
+}
 
 // ── Projects horizontal scroll ──────────────────────────────────────────────
 function initProjectsScroll() {
