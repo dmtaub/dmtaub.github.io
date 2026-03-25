@@ -84,7 +84,7 @@ function setupUIStyle() {
       const button = document.createElement('div');
       button.classList.add('ui-button');
       button.innerText = label;
-      button.addEventListener('click', callback);
+      button.addEventListener('click', () => callback(button));
       rowDiv.appendChild(button);
     }
   }

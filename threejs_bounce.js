@@ -32,7 +32,7 @@ let startMousePos = null;
 window.objects = [];
 let proximalToObject = 0;
 let lastProximalToObject = 0;
-const max_attractors = 1;
+const max_attractors = 3;
 let attractorCount = 0;
 const attractionStrength = 0.0005;
 
@@ -96,31 +96,29 @@ function switchMaterial() {
 }
 
 /**
- * Toggles reflection usage on/off for the secondary camera.
+ * Toggles reflection and the secondary camera preview window together.
  */
-function toggleReflection() {
+function toggleReflectionAndPreview() {
   secondaryCameraEnabled = !secondaryCameraEnabled;
   if (secondaryCameraEnabled) {
     reflectionMaterial.envMap = secondaryCameraRenderTarget.texture;
+    if (secondaryContainer) secondaryContainer.style.display = 'block';
   } else {
     reflectionMaterial.envMap = null;
-    if (ball.material === reflectionMaterial) {
-      switchMaterial();
-    }
+    if (ball.material === reflectionMaterial) switchMaterial();
+    if (secondaryContainer) secondaryContainer.style.display = 'none';
   }
 }
 
 /**
- * Show the floating container that holds the secondary camera's preview.
+ * Removes all attractors from the scene and resets the counter.
  */
-function showSecondaryPreview() {
-  if (secondaryContainer) {
-    if (secondaryContainer.style.display !== 'block') {
-      secondaryContainer.style.display = 'block';
-    } else {
-      secondaryContainer.style.display = 'none';
-    }
+function clearAttractors() {
+  for (const object of objects) {
+    scene.remove(object);
   }
+  objects.length = 0;
+  attractorCount = 0;
 }
 
 /* -----------------------------
@@ -150,17 +148,16 @@ export function resume() {
   currentFrame = requestAnimationFrame(animate);
 }
 
-/**
- * Creates the UI with 4 buttons: Switch Material, Add Attractor, Toggle Reflection, Show Preview.
- */
 function addBounceUI() {
   const buttonDefs = [
     ['Switch Material', switchMaterial],
     ['Add Attractor', () => addAttractor()],
-    ['Toggle Reflection', () => toggleReflection()],
-    ['Show Preview', () => showSecondaryPreview()]
+    ['Clear Attractors', clearAttractors],
+    ['Show Preview', (btn) => {
+      toggleReflectionAndPreview();
+      btn.innerText = secondaryCameraEnabled ? 'Hide Preview' : 'Show Preview';
+    }],
   ];
-  // Attach these buttons to our main container
   addUI(container, buttonDefs);
 }
 
