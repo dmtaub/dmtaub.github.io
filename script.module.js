@@ -86,3 +86,49 @@ document.getElementById('popupOverlay').addEventListener('click', function (e) {
         this.style.display = 'none';
     }
 });
+
+// ── Projects horizontal scroll ──────────────────────────────────────────────
+function initProjectsScroll() {
+    const outer  = document.getElementById('projects-outer');
+    const track  = document.getElementById('projects-track');
+    const dots   = document.querySelectorAll('#projects-nav-dots .dot');
+    const counter = document.getElementById('projects-counter');
+    const bar    = document.getElementById('projects-progress-bar');
+    const cards  = track ? track.querySelectorAll('.project-card') : [];
+    const N = cards.length;
+    if (!outer || !N) return;
+
+    // Make the outer div tall enough: N screens of vertical scroll space
+    outer.style.height = (N * 100) + 'vh';
+
+    function update() {
+        const rect = outer.getBoundingClientRect();
+        const scrolled  = -rect.top;
+        const maxScroll = outer.offsetHeight - window.innerHeight;
+        const progress  = Math.max(0, Math.min(1, scrolled / maxScroll));
+
+        // Shift track horizontally
+        const maxTranslate = (N - 1) * window.innerWidth;
+        track.style.transform = `translateX(${-progress * maxTranslate}px)`;
+
+        // Active card index (snap to nearest)
+        const activeIndex = Math.min(N - 1, Math.round(progress * (N - 1)));
+        dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
+        if (counter) counter.textContent = `${activeIndex + 1} / ${N}`;
+        if (bar) bar.style.width = (progress * 100) + '%';
+    }
+
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+
+    // Dot click → scroll to that card
+    dots.forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+            const target = outer.offsetTop + (i / (N - 1)) * (outer.offsetHeight - window.innerHeight);
+            window.scrollTo({ top: target, behavior: 'smooth' });
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initProjectsScroll);
