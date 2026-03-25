@@ -65,7 +65,28 @@
             -moz-columns: 1;
             column-gap: 40px;
         }
+        body.dark {
+            background: #1c1b2a;
+            color: #e8e4f0;
+        }
+        body.dark hr,
+        body.dark .section-header {
+            border-color: rgba(155,139,187,0.3);
+        }
+        body.dark .company-location,
+        body.dark .date {
+            color: #9b96ae;
+        }
+        body.dark a {
+            color: #c4b8d8;
+        }
     </style>
+    <script>
+        window.addEventListener('message', e => {
+            if (e.data === 'dark') document.body.classList.add('dark');
+            else if (e.data === 'light') document.body.classList.remove('dark');
+        });
+    </script>
 </head>
 <body>
     <div class="header">

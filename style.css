@@ -8,8 +8,9 @@
     --text-muted:   #666666;
     --accent:       #8A7B9F;
     --accent-soft:  #b0a0c4;
-    --header-bg:    #8A7B9F;
-    --header-text:  #ffffff;
+    --header-bg:    #e4dff0;
+    --header-text:  #3d2f55;
+    --header-icon:  rgba(61, 47, 85, 0.75);
     --border:       rgba(0,0,0,0.1);
     --shadow:       rgba(0,0,0,0.12);
     --nav-text:     #555555;
@@ -25,6 +26,7 @@ body.dark {
     --accent-soft:  #7b6e9a;
     --header-bg:    #1e1b2e;
     --header-text:  #e8e4f0;
+    --header-icon:  rgba(200, 185, 230, 0.8);
     --border:       rgba(155,139,187,0.2);
     --shadow:       rgba(0,0,0,0.4);
     --nav-text:     #9b96ae;
@@ -81,10 +83,10 @@ header {
 
 /* Robots */
 header .header-robot {
-    width: 15%;
+    width: 20%;
     height: auto;
-    transition: opacity 0.4s ease, max-width 0.4s ease, margin 0.4s ease;
-    max-width: 15%;
+    transition: opacity 0.4s ease, max-width 0.5s ease, margin 0.5s ease, width 0.5s ease;
+    max-width: 20%;
 }
 header .main-robot { transform: scaleX(-1); margin: 10px auto 10px 30px; }
 header .last-robot  { margin: 10px 30px 10px auto; }
@@ -108,17 +110,17 @@ body.projects-section header .header-robot {
 }
 .header-title h1 {
     margin: 0;
-    font-size: 1.75em;
+    font-size: 2.2em;
     color: var(--header-text);
-    transition: font-size 0.4s ease;
+    transition: font-size 0.5s ease, color 0.5s ease;
 }
 body.scrolled .header-title h1,
-body.projects-section .header-title h1 { font-size: 1.1em; }
+body.projects-section .header-title h1 { font-size: 1.2em; }
 
 /* Subtitle / adjectives — hide on scroll */
 .header-subtitle {
     margin: 0;
-    font-size: 1.25em;
+    font-size: 1.4em;
     font-style: italic;
     color: var(--header-text);
     display: flex;
@@ -146,7 +148,7 @@ body.projects-section .header-subtitle {
     font-size: 14px;
     transition: opacity 0.3s ease, color 0.3s;
 }
-.header-title .subtle:hover { color: rgba(255,255,255,0.5); }
+.header-title .subtle:hover { color: var(--header-text); opacity: 0.5; }
 .header-title .showy {
     position: absolute;
     left: 22px;
@@ -176,19 +178,13 @@ body.projects-section .header-title .showy {
     align-items: center;
 }
 .social-links svg {
-    height: 22px;
+    height: 28px;
     width: auto;
-    fill: rgba(255,255,255,0.8);
-    transition: fill 0.2s;
+    fill: var(--header-icon);
+    transition: fill 0.3s;
 }
 .social-links svg:hover {
-    fill: #ffffff;
-}
-body.dark .social-links svg {
-    fill: rgba(196,184,216,0.7);
-}
-body.dark .social-links svg:hover {
-    fill: #e8e4f0;
+    fill: var(--header-text);
 }
 
 /* Theme toggle button */

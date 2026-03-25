@@ -84,10 +84,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+function syncResumeTheme() {
+    const iframe = document.querySelector('#popupOverlay iframe');
+    if (!iframe) return;
+    const dark = document.body.classList.contains('dark');
+    iframe.contentWindow?.postMessage(dark ? 'dark' : 'light', '*');
+}
+
 // JavaScript to handle the popup
 document.getElementById('resumeLink').addEventListener('click', function (e) {
     e.preventDefault();
     document.getElementById('popupOverlay').style.display = 'flex';
+    const iframe = document.querySelector('#popupOverlay iframe');
+    if (iframe) iframe.addEventListener('load', syncResumeTheme, { once: false });
+    syncResumeTheme();
 });
 
 document.getElementById('popupClose').addEventListener('click', function () {
@@ -120,6 +130,7 @@ function initTheme() {
     if (btn) {
         btn.addEventListener('click', () => {
             setDark(!document.body.classList.contains('dark'));
+            syncResumeTheme();
         });
     }
 
