@@ -7,6 +7,7 @@ import {
   createRippleScene,
   updateRippleShaderUniforms
 } from './bounce_shaders.js';
+import { createParticleField, updateParticleField } from './bounce_particles.js';
 
 /* -----------------------------
  * Globals & initial setup
@@ -223,6 +224,8 @@ function init() {
   );
   backgroundMesh.position.z = -0.1;
 
+  createParticleField(scene, getFrustumWidth(), getFrustumHeight());
+
   // Secondary camera setup
   createSecondaryCameraContainer(renderer.domElement);
   createSecondaryRenderer();
@@ -271,6 +274,8 @@ function animate() {
   handleTargets();
   applyGravity();
   handleWallBounce();
+
+  updateParticleField(ball.position, ballVelocity, globalTime);
 
   // Update the ripple shader's uniforms from bounce_shaders
   updateRippleShaderUniforms(rippleUniforms, {
@@ -326,19 +331,20 @@ function animate() {
       secondaryCamera.lookAt(new THREE.Vector3(0, 0, 0));
     }
 
+    // Use ripple texture as a scene background so it shows regardless of camera angle
+    scene.background = rippleRenderTarget.texture;
+
     // Render reflection envMap
     secondaryRenderer.setRenderTarget(secondaryCameraRenderTarget);
     secondaryRenderer.clear();
-    scene.add(backgroundMesh);
     secondaryRenderer.render(scene, secondaryCamera);
-    scene.remove(backgroundMesh);
 
     // Render preview
     secondaryRenderer.setRenderTarget(null);
     secondaryRenderer.clear();
-    scene.add(backgroundMesh);
     secondaryRenderer.render(scene, secondaryCamera);
-    scene.remove(backgroundMesh);
+
+    scene.background = null;
   }
 }
 
