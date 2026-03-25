@@ -285,7 +285,7 @@ function animate() {
   updateRippleShaderUniforms(rippleUniforms, {
     time: globalTime,
     ballPosition: ball.position,
-    ballVelocityDir: ballVelocity.clone().normalize(),
+    ballVelocityDir: ballVelocity.length() > 0.0001 ? ballVelocity.clone().normalize() : new THREE.Vector3(1, 0, 0),
     frustumWidth: getFrustumWidth(),
     frustumHeight: getFrustumHeight(),
     ripples
