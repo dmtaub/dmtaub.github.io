@@ -211,6 +211,54 @@ h2.spaced {
 }
 
 
+/* Project section */
+.project-group {
+    margin-bottom: 28px;
+}
+.project-group-title {
+    font-size: 1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8A7B9F;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+}
+.project-entry {
+    margin-bottom: 16px;
+    padding-left: 12px;
+    border-left: 3px solid #e0dbe6;
+}
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+.project-title {
+    font-weight: bold;
+    color: #333;
+}
+.project-date {
+    font-style: italic;
+    color: #888;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+.project-entry p, .project-entry ul {
+    margin: 4px 0 0;
+    color: #555;
+    font-size: 0.95em;
+}
+.project-entry ul {
+    padding-left: 20px;
+}
+.project-entry li {
+    margin-bottom: 4px;
+}
+
 /* Popup styles */
 .popup-overlay {
     display: none;
