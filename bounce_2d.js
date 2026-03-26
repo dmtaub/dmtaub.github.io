@@ -11,26 +11,29 @@ function setupUIStyle() {
       /* General UI styles */
       .ui-row {
         display: flex;
-        justify-content: left;
+        justify-content: center;
         margin-top: 10px;
         gap: 10px;
       }
       .ui-button {
         width: 175px;
         height: 45px;
-        background-color: rgba(255, 255, 255, 0.8);
+        background-color: var(--surface, rgba(255,255,255,0.8));
+        color: var(--text, #333);
         display: flex;
         justify-content: center;
         align-items: center;
         cursor: pointer;
-        border: 2px solid #ccc;
+        border: 2px solid var(--border, #ccc);
         line-height: 1;
         border-radius: 5px;
         user-select: none;
         font-family: sans-serif;
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
       }
       .ui-button:hover {
-        border-color: #888;
+        border-color: var(--accent, #888);
+        color: var(--accent, #888);
       }
   
       /* Floating container for secondary camera */
