@@ -384,6 +384,7 @@ h2.spaced { letter-spacing: 0.05em; }
 .projects-entries {
     position: relative;
     z-index: 2;
+    padding-bottom: 50vh; /* scroll room for last entry to reach center */
 }
 
 .project-entry {
@@ -606,10 +607,87 @@ h2.spaced { letter-spacing: 0.05em; }
     .theme-toggle .toggle-text { display: none; }
 }
 
+/* Mobile thumbnails */
+.mobile-thumb {
+    display: none;
+    position: absolute;
+    bottom: 28px;
+    right: 20px;
+    width: 110px;
+    height: 85px;
+    border-radius: 10px;
+    overflow: hidden;
+    transform-origin: bottom right;
+    will-change: transform, opacity;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    background-size: cover;
+    background-position: center;
+}
+.mobile-thumb[data-card="escort"]      { background: url('files/TalkingLights.png') center/cover no-repeat; }
+.mobile-thumb[data-card="bopen"]       { background: url('files/annotated_bo.png')  center/cover no-repeat; }
+.mobile-thumb[data-card="scantelope"]  { background: url('files/ginkgo.jpg')        center/cover no-repeat; }
+.mobile-thumb[data-card="saikoled"]    { background: url('files/myki.png')          center/cover no-repeat; }
+.mobile-thumb[data-card="lightbridge"] { background: url('files/lighting.jpg')      center/cover no-repeat; }
+.mobile-thumb[data-card="esb"]         { background: url('files/esb.jpg')           center/cover no-repeat; }
+.mobile-thumb[data-card="fabrication"] { background: url('files/printer.jpg')       center/cover no-repeat; }
+.mobile-thumb[data-card="matterport"]  { background: url('files/plugin.jpg')        center/cover no-repeat; }
+
+/* Thumb lightbox */
+.thumb-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: lbFadeIn 0.2s ease;
+}
+@keyframes lbFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.thumb-lightbox-img {
+    width: 88vw;
+    height: 66vw;
+    max-height: 72vh;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+}
+.thumb-lightbox-img[data-card="escort"]      { background-image: url('files/TalkingLights.png'); }
+.thumb-lightbox-img[data-card="bopen"]       { background-image: url('files/annotated_bo.png'); }
+.thumb-lightbox-img[data-card="scantelope"]  { background-image: url('files/ginkgo.jpg'); }
+.thumb-lightbox-img[data-card="saikoled"]    { background-image: url('files/myki.png'); }
+.thumb-lightbox-img[data-card="lightbridge"] { background-image: url('files/lighting.jpg'); }
+.thumb-lightbox-img[data-card="esb"]         { background-image: url('files/esb.jpg'); }
+.thumb-lightbox-img[data-card="fabrication"] { background-image: url('files/printer.jpg'); }
+.thumb-lightbox-img[data-card="matterport"]  { background-image: url('files/plugin.jpg'); }
+.thumb-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: #fff;
+    font-size: 1.4em;
+    line-height: 1;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 @media (max-width: 700px) {
     .projects-images { display: none; }
-    .project-entry { background: #0a0914 !important; min-height: auto; }
-    .entry-content { width: 100%; padding: 60px 24px; opacity: 1; transform: none; }
+    .projects-entries { padding-bottom: 0; }
+    .project-entry { background: #0a0914 !important; min-height: auto; position: relative; }
+    .entry-content { width: 100%; padding: 60px 24px 130px; opacity: 1; transform: none; }
     .project-entry h3 { font-size: 1.2em; }
     .site-name { font-size: 0.95em; }
+    .mobile-thumb { display: block; cursor: pointer; }
 }

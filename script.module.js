@@ -146,6 +146,32 @@ function initProjectsScroll() {
     const imageMap = {};
     images.forEach(img => { imageMap[img.dataset.card] = img; });
 
+    // Create mobile thumbnails
+    const thumbMap = {};
+    entries.forEach(entry => {
+        const thumb = document.createElement('div');
+        thumb.className = 'mobile-thumb';
+        thumb.dataset.card = entry.dataset.card;
+        entry.appendChild(thumb);
+        thumbMap[entry.dataset.card] = thumb;
+
+        thumb.addEventListener('click', () => {
+            const overlay = document.createElement('div');
+            overlay.className = 'thumb-lightbox';
+            const img = document.createElement('div');
+            img.className = 'thumb-lightbox-img';
+            img.dataset.card = entry.dataset.card;
+            const btn = document.createElement('button');
+            btn.className = 'thumb-lightbox-close';
+            btn.setAttribute('aria-label', 'Close');
+            btn.textContent = '✕';
+            btn.addEventListener('click', () => overlay.remove());
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            overlay.append(img, btn);
+            document.body.appendChild(overlay);
+        });
+    });
+
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
     function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
@@ -154,8 +180,22 @@ function initProjectsScroll() {
     function update() {
         if (!section || section.style.display === 'none') return;
         const vh = window.innerHeight;
+        const isMobile = window.innerWidth <= 700;
 
-        // Find entry whose center is closest to viewport center
+        if (isMobile) {
+            entries.forEach(entry => {
+                const thumb = thumbMap[entry.dataset.card];
+                if (!thumb) return;
+                const r = entry.getBoundingClientRect();
+                // Grows in as the entry scrolls up into view from the bottom
+                const t = easeOut(clamp((vh - r.top) / (vh * 0.75), 0, 1));
+                thumb.style.opacity = (t * 0.92).toFixed(3);
+                thumb.style.transform = `scale(${(0.72 + 0.28 * t).toFixed(3)})`;
+            });
+            return;
+        }
+
+        // Desktop: find entry whose center is closest to viewport center
         let best = null, bestDist = Infinity;
         entries.forEach(entry => {
             const r = entry.getBoundingClientRect();
@@ -178,7 +218,6 @@ function initProjectsScroll() {
                 return;
             }
 
-            // Progress: 1.0 when centered, 0.0 when at edge of viewport
             const r = entry.getBoundingClientRect();
             const entryCenter = r.top + r.height / 2;
             const distFromCenter = Math.abs(entryCenter - vh / 2);
@@ -187,10 +226,8 @@ function initProjectsScroll() {
             img.style.opacity = t.toFixed(3);
             const tx = (side === 'left' ? -1 : 1) * (55 * (1 - t));
             const scale = 0.88 + 0.12 * t;
-            // Y parallax: image drifts slightly as you scroll through a tall entry
             const ty = ((entryCenter - vh / 2) / vh) * 28;
             img.style.transform = `translateX(${tx.toFixed(1)}px) translateY(${ty.toFixed(1)}px) scale(${scale.toFixed(3)})`;
-            // Subtle background parallax
             img.style.backgroundPositionY = `calc(50% + ${(ty * 0.6).toFixed(1)}px)`;
 
             if (entry !== activeEntry) {
