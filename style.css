@@ -2,6 +2,8 @@
    Theme variables
    ===================== */
 :root {
+    --card-img-size: 60%;
+    --card-img-dim:  0; /* 0 = fully visible, 1 = fully hidden */
     --bg:           #F4F0F4;
     --surface:      #ffffff;
     --text:         #333333;
@@ -402,59 +404,67 @@ h2.spaced { letter-spacing: 0.05em; }
 /* Per-card gradient art */
 .project-card[data-card="escort"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/TalkingLights.png') center/var(--card-img-size) no-repeat,
         radial-gradient(ellipse at 30% 60%, rgba(0,120,110,0.5) 0%, transparent 60%),
         radial-gradient(ellipse at 70% 30%, rgba(0,80,140,0.4) 0%, transparent 55%),
-        url('files/TalkingLights.png') center/60% no-repeat,
         linear-gradient(135deg, #030f18 0%, #061e1a 100%);
 }
 .project-card[data-card="bopen"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/annotated_bo.png') center/var(--card-img-size) no-repeat,
         radial-gradient(ellipse at 60% 40%, rgba(100,40,200,0.5) 0%, transparent 50%),
         radial-gradient(ellipse at 30% 70%, rgba(40,10,100,0.4) 0%, transparent 45%),
-        url('files/annotated_bo.png') center/60% no-repeat,
         linear-gradient(135deg, #060310 0%, #0d0520 100%);
 }
 .project-card[data-card="scantelope"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/ginkgo.jpg') center/var(--card-img-size) no-repeat,
         repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,180,160,0.06) 39px, rgba(0,180,160,0.06) 40px),
         repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,180,160,0.06) 39px, rgba(0,180,160,0.06) 40px),
-        url('files/ginkgo.jpg') center/60% no-repeat,
         radial-gradient(ellipse at 50% 50%, #072530 0%, #030f18 100%);
 }
 .project-card[data-card="saikoled"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/myki.png') center/var(--card-img-size) no-repeat,
         radial-gradient(ellipse at 50% 50%, rgba(200,80,0,0.5) 0%, transparent 40%),
         radial-gradient(ellipse at 20% 70%, rgba(120,0,180,0.3) 0%, transparent 40%),
         radial-gradient(ellipse at 80% 30%, rgba(0,120,200,0.3) 0%, transparent 40%),
-        url('files/myki.png') center/60% no-repeat,
         linear-gradient(135deg, #0f0500 0%, #1a0800 100%);
 }
 .project-card[data-card="lightbridge"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/lighting.jpg') center/var(--card-img-size) no-repeat,
         repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(255,200,0,0.03) 3px, rgba(255,200,0,0.03) 4px),
         radial-gradient(ellipse at 50% 70%, rgba(180,120,0,0.5) 0%, transparent 50%),
-        url('files/lighting.jpg') center/60% no-repeat,
         linear-gradient(180deg, #05050f 0%, #0f0a00 60%, #05050f 100%);
 }
 .project-card[data-card="esb"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/esb.jpg') center/var(--card-img-size) no-repeat,
         radial-gradient(ellipse at 50% 90%, rgba(220,160,0,0.4) 0%, transparent 40%),
         radial-gradient(ellipse at 30% 40%, rgba(60,40,0,0.2) 0%, transparent 50%),
-        url('files/esb.jpg') center/60% no-repeat,
         linear-gradient(180deg, #030308 0%, #100a00 70%, #030308 100%);
 }
 .project-card[data-card="fabrication"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/printer.jpg') center/var(--card-img-size) no-repeat,
         repeating-linear-gradient(45deg,  transparent, transparent 18px, rgba(120,120,150,0.04) 18px, rgba(120,120,150,0.04) 19px),
         repeating-linear-gradient(-45deg, transparent, transparent 18px, rgba(120,120,150,0.04) 18px, rgba(120,120,150,0.04) 19px),
-        url('files/printer.jpg') center/60% no-repeat,
         linear-gradient(135deg, #0d0d14 0%, #181820 50%, #0d0d14 100%);
 }
 .project-card[data-card="matterport"] .project-card-visual {
     background:
+        linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
+        url('files/plugin.jpg') center/var(--card-img-size) no-repeat,
         radial-gradient(ellipse at 40% 40%, rgba(60,80,220,0.5) 0%, transparent 50%),
         radial-gradient(ellipse at 70% 70%, rgba(120,40,200,0.3) 0%, transparent 45%),
-        url('files/plugin.jpg') center/60% no-repeat,
         linear-gradient(135deg, #020210 0%, #08081e 100%);
 }
 
