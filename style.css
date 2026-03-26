@@ -603,6 +603,15 @@ h2.spaced { letter-spacing: 0.05em; }
     }
     .header-title h1 { font-size: 1.3em; }
     .header-subtitle { font-size: 1em; }
+    .theme-toggle {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        padding: 0;
+        margin-right: 10px;
+    }
+    .theme-toggle .toggle-text { display: none; }
 }
 
 @media (max-width: 700px) {

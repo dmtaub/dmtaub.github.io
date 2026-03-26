@@ -119,8 +119,8 @@ function initTheme() {
         document.body.classList.toggle('dark', dark);
         if (btn) {
             btn.innerHTML = dark
-                ? '<span class="toggle-icon">🌙</span> Dark'
-                : '<span class="toggle-icon">☀</span> Light';
+                ? '<span class="toggle-icon">🌙</span><span class="toggle-text"> Dark</span>'
+                : '<span class="toggle-icon">☀</span><span class="toggle-text"> Light</span>';
         }
     }
 
