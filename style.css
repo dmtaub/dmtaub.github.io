@@ -385,6 +385,7 @@ h2.spaced { letter-spacing: 0.05em; }
     position: relative;
     z-index: 2;
     padding-bottom: 50vh; /* scroll room for last entry to reach center */
+    pointer-events: none; /* pass clicks through transparent areas to image panel */
 }
 
 .project-entry {
@@ -406,6 +407,7 @@ h2.spaced { letter-spacing: 0.05em; }
 }
 
 .entry-content {
+    pointer-events: auto;
     width: 44%;
     padding: 80px 48px;
     display: flex;
@@ -541,6 +543,24 @@ h2.spaced { letter-spacing: 0.05em; }
     align-self: flex-start;
 }
 .project-card-link:hover { color: #e8e4f0; }
+
+.project-image-caption {
+    position: absolute;
+    bottom: 38px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.65em;
+    color: #9b8bbb;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 2;
+    padding: 0 24px;
+}
+.project-image-caption:hover { color: #e8e4f0; }
+
 
 
 /* =====================
