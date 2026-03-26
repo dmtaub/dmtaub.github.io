@@ -136,26 +136,74 @@ function initTheme() {
 
 }
 
-// ── Projects scroll spy ──────────────────────────────────────────────────────
-function initProjectsScrollSpy() {
-    const images  = document.querySelectorAll('.project-image');
+// ── Projects scroll-driven animation ────────────────────────────────────────
+function initProjectsScroll() {
+    const section = document.getElementById('projects');
     const entries = document.querySelectorAll('.project-entry');
+    const images  = document.querySelectorAll('.project-image');
     if (!entries.length || !images.length) return;
 
     const imageMap = {};
     images.forEach(img => { imageMap[img.dataset.card] = img; });
 
-    function setActive(card) {
-        images.forEach(img => img.classList.toggle('active', img.dataset.card === card));
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+    let activeEntry = null;
+
+    function update() {
+        if (!section || section.style.display === 'none') return;
+        const vh = window.innerHeight;
+
+        // Find entry whose center is closest to viewport center
+        let best = null, bestDist = Infinity;
+        entries.forEach(entry => {
+            const r = entry.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > vh) return;
+            const dist = Math.abs(r.top + r.height / 2 - vh / 2);
+            if (dist < bestDist) { bestDist = dist; best = entry; }
+        });
+
+        entries.forEach(entry => {
+            const img = imageMap[entry.dataset.card];
+            if (!img) return;
+            const side = entry.dataset.side;
+
+            if (entry !== best) {
+                img.style.opacity = '0';
+                img.style.transform = side === 'left'
+                    ? 'translateX(-55px) scale(0.88)'
+                    : 'translateX(55px) scale(0.88)';
+                if (entry.classList.contains('active')) entry.classList.remove('active');
+                return;
+            }
+
+            // Progress: 1.0 when centered, 0.0 when at edge of viewport
+            const r = entry.getBoundingClientRect();
+            const entryCenter = r.top + r.height / 2;
+            const distFromCenter = Math.abs(entryCenter - vh / 2);
+            const t = easeOut(clamp(1 - distFromCenter / (vh * 0.65), 0, 1));
+
+            img.style.opacity = t.toFixed(3);
+            const tx = (side === 'left' ? -1 : 1) * (55 * (1 - t));
+            const scale = 0.88 + 0.12 * t;
+            // Y parallax: image drifts slightly as you scroll through a tall entry
+            const ty = ((entryCenter - vh / 2) / vh) * 28;
+            img.style.transform = `translateX(${tx.toFixed(1)}px) translateY(${ty.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+            // Subtle background parallax
+            img.style.backgroundPositionY = `calc(50% + ${(ty * 0.6).toFixed(1)}px)`;
+
+            if (entry !== activeEntry) {
+                if (activeEntry) activeEntry.classList.remove('active');
+                entry.classList.add('active');
+                activeEntry = entry;
+            }
+        });
     }
 
-    const observer = new IntersectionObserver(observed => {
-        observed.forEach(entry => {
-            if (entry.isIntersecting) setActive(entry.target.dataset.card);
-        });
-    }, { rootMargin: '-40% 0px -40% 0px', threshold: 0 });
-
-    entries.forEach(entry => observer.observe(entry));
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
 }
 
-document.addEventListener('DOMContentLoaded', initProjectsScrollSpy);
+document.addEventListener('DOMContentLoaded', initProjectsScroll);
