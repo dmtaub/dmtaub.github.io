@@ -77,157 +77,120 @@
 
     </div>
 
-    <!-- Projects — full-screen horizontal scroll, outside .container -->
+    <!-- Projects — sticky image + vertical scroll -->
     <div class="section" id="projects" style="display: none;">
-        <div class="projects-outer" id="projects-outer">
-            <div class="projects-sticky">
-                <div class="projects-topbar">
-                    <span class="projects-topbar-label">Projects</span>
-                    <span class="projects-counter" id="projects-counter">1 / 8</span>
+        <div class="projects-scroll">
+
+            <div class="projects-images" id="projects-images">
+                <div class="project-image active" data-card="escort"></div>
+                <div class="project-image" data-card="bopen"></div>
+                <div class="project-image" data-card="scantelope"></div>
+                <div class="project-image" data-card="saikoled"></div>
+                <div class="project-image" data-card="lightbridge"></div>
+                <div class="project-image" data-card="esb"></div>
+                <div class="project-image" data-card="fabrication"></div>
+                <div class="project-image" data-card="matterport"></div>
+            </div>
+
+            <div class="projects-entries">
+
+                <div class="project-entry" data-card="escort">
+                    <span class="project-card-category">Research</span>
+                    <h3>Nurse's Aid for Alzheimer's Care</h3>
+                    <span class="project-card-year">2007–2010</span>
+                    <p>Context-aware location and guidance system for people living with Alzheimer's disease. Embedded caregiver locator hardware, a server backend, and a patient-facing nightlight interface. Published in <em>IEEE Pervasive Computing</em>.</p>
+                    <div class="project-card-tags">
+                        <span>Embedded Systems</span><span>Healthcare</span><span>IEEE Published</span>
+                    </div>
+                    <p><a class="project-card-link" href="https://emsg.mit.edu/wp-content/uploads/2024/05/37_The-Escort-System-A-Safety-Monitor-for-People-Living-with-Alzheimers-Disease.pdf" target="_blank">Read Paper ↗</a></p>
                 </div>
-                <div class="projects-track" id="projects-track">
 
-                    <!-- 1. Escort System -->
-                    <div class="project-card" data-card="escort">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Research</span>
-                            <h3>Nurse's Aid for Alzheimer's Care</h3>
-                            <span class="project-card-year">2007–2010</span>
-                            <p>Context-aware location and guidance system for people living with Alzheimer's disease. Embedded caregiver locator hardware, a server backend, and a patient-facing nightlight interface. Published in <em>IEEE Pervasive Computing</em>.</p>
-                            <div class="project-card-tags">
-                                <span>Embedded Systems</span><span>Healthcare</span><span>IEEE Published</span>
-                            </div>
-                            <p><a class="project-card-link" href="https://emsg.mit.edu/wp-content/uploads/2024/05/37_The-Escort-System-A-Safety-Monitor-for-People-Living-with-Alzheimers-Disease.pdf" target="_blank">Read Paper ↗</a>
-                        </div>
+                <div class="project-entry" data-card="bopen">
+                    <span class="project-card-category">Research</span>
+                    <h3>BoPen — 6-DOF Optical Pen</h3>
+                    <span class="project-card-year">2009</span>
+                    <p>MIT MEng thesis in collaboration with Microsoft Research Cambridge. Extended the Bokode retro-reflective tag into a pen tracked in six degrees of freedom using computer vision — enabling precise, contactless interaction with projected displays.</p>
+                    <div class="project-card-tags">
+                        <span>Computer Vision</span><span>Optics</span><span>MIT Thesis</span><span>Microsoft Research</span>
                     </div>
-
-                    <!-- 2. BoPen -->
-                    <div class="project-card" data-card="bopen">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Research</span>
-                            <h3>BoPen — 6-DOF Optical Pen</h3>
-                            <span class="project-card-year">2009</span>
-                            <p>MIT MEng thesis in collaboration with Microsoft Research Cambridge. Extended the Bokode retro-reflective tag into a pen tracked in six degrees of freedom using computer vision — enabling precise, contactless interaction with projected displays.</p>
-                            <div class="project-card-tags">
-                                <span>Computer Vision</span><span>Optics</span><span>MIT Thesis</span><span>Microsoft Research</span>
-                            </div>
-                            <p><a class="project-card-link" href="http://dspace.mit.edu/bitstream/handle/1721.1/61297/702645337.pdf" target="_blank">Read Thesis ↗</a>
-                        </div>
-                    </div>
-
-                    <!-- 3. Scantelope -->
-                    <div class="project-card" data-card="scantelope">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Research</span>
-                            <h3>Scantelope</h3>
-                            <span class="project-card-year">2011–2012</span>
-                            <p>Open-source matrix tube scanner built while automating biological workflows at Ginkgo Bioworks. Used computer vision to decode 2D barcodes on lab tube racks, bridging physical sample tracking with digital inventory systems.</p>
-                            <div class="project-card-tags">
-                                <span>Computer Vision</span><span>Open Source</span><span>Biotech</span>
-                            </div>
-                            <p><a class="project-card-link" href="https://www.ginkgo.bio/" target="_blank">Learn about the company ↗</a>
-                        </div>
-                    </div>
-
-                    <!-- 4. SaikoLED -->
-                    <div class="project-card" data-card="saikoled">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Lighting</span>
-                            <h3>SaikoLED</h3>
-                            <span class="project-card-year">2010–2014</span>
-                            <p>Co-founded a company producing open-source, audio-responsive wireless RGB+White LED fixtures with 16-bit color resolution. Ran a successful Kickstarter and served as VP of Interaction Design — from firmware to mobile app.</p>
-                            <div class="project-card-tags">
-                                <span>Embedded</span><span>Open Source</span><span>Kickstarter</span><span>Wireless</span>
-                            </div>
-                            <p><a class="project-card-link" href="https://blog.saikoled.com/" target="_blank">Read the blog ↗</a>
-                        </div>
-                    </div>
-
-                    <!-- 5. LightBridge -->
-                    <div class="project-card" data-card="lightbridge">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Lighting</span>
-                            <h3>LightBridge</h3>
-                            <span class="project-card-year">2011</span>
-                            <p>Interactive public installation of 10,000 LEDs spanning the Charles River to connect Boston and Cambridge. Designed for live audience participation with coordinated real-time color response across the full installation.  Part of Festival of Arts and Sciences for MIT's 150th anniversary celebration!</p>
-                            <div class="project-card-tags">
-                                <span>Installation</span><span>Interactive</span><span>Public Art</span>
-                            </div>
-                            <p><a class="project-card-link" href="https://www.media.mit.edu/videos/labcast-56-lightbridge/" target="_blank">Learn more ↗</a>
-                        </div>
-                    </div>
-
-                    <!-- 6. Empire State Building -->
-                    <div class="project-card" data-card="esb">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Lighting</span>
-                            <h3>Empire State Building Lighting</h3>
-                            <span class="project-card-year">2012–2013</span>
-                            <p>Contracted by Philips Color Kinetics to build the web-based frontend for scripting and controlling the LED light show when it was first installed on the Empire State Building. Stack: Rails, CoffeeScript, ZeroMQ, Protocol Buffers, PostgreSQL.</p>
-                            <div class="project-card-tags">
-                                <span>Rails</span><span>ZeroMQ</span><span>Real-Time</span>
-                            </div>
-                            <p><a class="project-card-link" href="https://www.esbnyc.com/about/tower-lights" target="_blank">Learn more ↗</a>
-                        </div>
-                    </div>
-
-                    <!-- 7. 3D Design & Fabrication -->
-                    <div class="project-card" data-card="fabrication">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">3D Design &amp; Fabrication</span>
-                            <h3>CAD for Digital Manufacturing</h3>
-                            <span class="project-card-year">2014–2022</span>
-                            <p>A sustained thread of browser-based 3D design, pipeline, and printing tools across multiple companies.
-                            <ul>
-                                <li><strong>Autodesk / Voxel8</strong><br> <a class="project-card-link" href="https://www.karlddwillis.com/project-wire/" target="_blank">Project Wire ↗</a> a design tool for hybrid electro-mechanical parts </li>
-                                <li><strong>Markforged</strong><br><a class="project-card-link" href="https://markforged.com/software" target="_blank">Eiger ↗</a> a web app for industrial composite printing</li>
-                                <li><strong>LightForce</strong><br><a class="project-card-link" href="https://lf.co/sp/technology/lightforce-software" target="_blank">Web-based CAD ↗</a> for fully custom orthodontic treatment planning</li>
-                            </ul>
-                            <div class="project-card-tags">
-                                <span>WebGL</span><span>C++</span><span>CAD</span><span>3D Printing</span>
-                            </div>
-                            <p><a href="#hobbies" class="project-card-link">Still a hobby! ↗</a></p>
-                        </div>
-                    </div>
-
-                    <!-- 8. Matterport -->
-                    <div class="project-card" data-card="matterport">
-                        <div class="project-card-visual"></div>
-                        <div class="project-card-info">
-                            <span class="project-card-category">Spatial Computing</span>
-                            <h3>Matterport SDK &amp; Plugin System</h3>
-                            <span class="project-card-year">2022–Present</span>
-                            <p>Built the developer-facing SDK and architectued the plugin system to enable external developers to build custom interactive experiences on top of Matterport's virtual tour platform.</p>
-                            <div class="project-card-tags">
-                                <span>SDK</span><span>3D</span><span>Developer Platform</span><span>TypeScript</span>
-                            </div>
-                            <p><a href="https://matterport.github.io/showcase-sdk/" class="project-card-link" target="_blank">SDK Documentation ↗</a>
-                            <a href="https://www.homes.com/product-release/" class="project-card-link" target="_blank"> Enables Homes AI ↗</a></p>
-                        </div>
-                    </div>
-
-                </div><!-- /projects-track -->
-
-                <div class="projects-nav-dots" id="projects-nav-dots">
-                    <span class="dot active"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
+                    <p><a class="project-card-link" href="http://dspace.mit.edu/bitstream/handle/1721.1/61297/702645337.pdf" target="_blank">Read Thesis ↗</a></p>
                 </div>
-                <div class="projects-progress-bar" id="projects-progress-bar"></div>
-            </div><!-- /projects-sticky -->
-        </div><!-- /projects-outer -->
+
+                <div class="project-entry" data-card="scantelope">
+                    <span class="project-card-category">Research</span>
+                    <h3>Scantelope</h3>
+                    <span class="project-card-year">2011–2012</span>
+                    <p>Open-source matrix tube scanner built while automating biological workflows at Ginkgo Bioworks. Used computer vision to decode 2D barcodes on lab tube racks, bridging physical sample tracking with digital inventory systems.</p>
+                    <div class="project-card-tags">
+                        <span>Computer Vision</span><span>Open Source</span><span>Biotech</span>
+                    </div>
+                    <p><a class="project-card-link" href="https://www.ginkgo.bio/" target="_blank">Learn about the company ↗</a></p>
+                </div>
+
+                <div class="project-entry" data-card="saikoled">
+                    <span class="project-card-category">Lighting</span>
+                    <h3>SaikoLED</h3>
+                    <span class="project-card-year">2010–2014</span>
+                    <p>Co-founded a company producing open-source, audio-responsive wireless RGB+White LED fixtures with 16-bit color resolution. Ran a successful Kickstarter and served as VP of Interaction Design — from firmware to mobile app.</p>
+                    <div class="project-card-tags">
+                        <span>Embedded</span><span>Open Source</span><span>Kickstarter</span><span>Wireless</span>
+                    </div>
+                    <p><a class="project-card-link" href="https://blog.saikoled.com/" target="_blank">Read the blog ↗</a></p>
+                </div>
+
+                <div class="project-entry" data-card="lightbridge">
+                    <span class="project-card-category">Lighting</span>
+                    <h3>LightBridge</h3>
+                    <span class="project-card-year">2011</span>
+                    <p>Interactive public installation of 10,000 LEDs spanning the Charles River to connect Boston and Cambridge. Designed for live audience participation with coordinated real-time color response across the full installation. Part of the Festival of Arts and Sciences for MIT's 150th anniversary celebration!</p>
+                    <div class="project-card-tags">
+                        <span>Installation</span><span>Interactive</span><span>Public Art</span>
+                    </div>
+                    <p><a class="project-card-link" href="https://www.media.mit.edu/videos/labcast-56-lightbridge/" target="_blank">Learn more ↗</a></p>
+                </div>
+
+                <div class="project-entry" data-card="esb">
+                    <span class="project-card-category">Lighting</span>
+                    <h3>Empire State Building Lighting</h3>
+                    <span class="project-card-year">2012–2013</span>
+                    <p>Contracted by Philips Color Kinetics to build the web-based frontend for scripting and controlling the LED light show when it was first installed on the Empire State Building. Stack: Rails, CoffeeScript, ZeroMQ, Protocol Buffers, PostgreSQL.</p>
+                    <div class="project-card-tags">
+                        <span>Rails</span><span>ZeroMQ</span><span>Real-Time</span>
+                    </div>
+                    <p><a class="project-card-link" href="https://www.esbnyc.com/about/tower-lights" target="_blank">Learn more ↗</a></p>
+                </div>
+
+                <div class="project-entry" data-card="fabrication">
+                    <span class="project-card-category">3D Design &amp; Fabrication</span>
+                    <h3>CAD for Digital Manufacturing</h3>
+                    <span class="project-card-year">2014–2022</span>
+                    <p>A sustained thread of browser-based 3D design, pipeline, and printing tools across multiple companies.</p>
+                    <ul>
+                        <li><strong>Autodesk / Voxel8</strong><br><a class="project-card-link" href="https://www.karlddwillis.com/project-wire/" target="_blank">Project Wire ↗</a> — a design tool for hybrid electro-mechanical parts</li>
+                        <li><strong>Markforged</strong><br><a class="project-card-link" href="https://markforged.com/software" target="_blank">Eiger ↗</a> — a web app for industrial composite printing</li>
+                        <li><strong>LightForce</strong><br><a class="project-card-link" href="https://lf.co/sp/technology/lightforce-software" target="_blank">Web-based CAD ↗</a> — fully custom orthodontic treatment planning</li>
+                    </ul>
+                    <div class="project-card-tags">
+                        <span>WebGL</span><span>C++</span><span>CAD</span><span>3D Printing</span>
+                    </div>
+                </div>
+
+                <div class="project-entry" data-card="matterport">
+                    <span class="project-card-category">Spatial Computing</span>
+                    <h3>Matterport SDK &amp; Plugin System</h3>
+                    <span class="project-card-year">2022–Present</span>
+                    <p>Built the developer-facing SDK and architected the plugin system to enable external developers to build custom interactive experiences on top of Matterport's virtual tour platform.</p>
+                    <div class="project-card-tags">
+                        <span>SDK</span><span>3D</span><span>Developer Platform</span><span>TypeScript</span>
+                    </div>
+                    <p>
+                        <a href="https://matterport.github.io/showcase-sdk/" class="project-card-link" target="_blank">SDK Documentation ↗</a>
+                        <a href="https://www.homes.com/product-release/" class="project-card-link" target="_blank">Enables Homes AI ↗</a>
+                    </p>
+                </div>
+
+            </div><!-- /projects-entries -->
+        </div><!-- /projects-scroll -->
     </div><!-- /#projects -->
 
     <footer>
