@@ -169,7 +169,8 @@ function initProjectsScroll() {
             btn.textContent = '✕';
             btn.addEventListener('click', () => overlay.remove());
             overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-            overlay.append(img, btn);
+            const caption = imageMap[entry.dataset.card]?.querySelector('.project-image-caption');
+            overlay.append(img, ...(caption ? [caption.cloneNode(true)] : []), btn);
             document.body.appendChild(overlay);
         });
     });
