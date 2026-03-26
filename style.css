@@ -115,8 +115,6 @@ body.projects-section header .header-robot {
     color: var(--header-text);
     transition: font-size 0.5s ease, color 0.5s ease;
 }
-body.scrolled .header-title h1,
-body.projects-section .header-title h1 { font-size: 1.1em; }
 
 /* Subtitle / adjectives — hide on scroll */
 .header-subtitle {
