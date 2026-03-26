@@ -47,8 +47,8 @@ export function showSection(sectionId) {
         document.body.classList.toggle('dark', _savedDark);
         const btn = document.getElementById('themeToggle');
         if (btn) btn.innerHTML = _savedDark
-            ? '<span class="toggle-icon">🌙</span> Dark'
-            : '<span class="toggle-icon">☀</span> Light';
+            ? '<span class="toggle-icon">🌙</span><span class="toggle-text"> Dark</span>'
+            : '<span class="toggle-icon">☀</span><span class="toggle-text"> Light</span>';
     }
     updateScrolled();
 }
