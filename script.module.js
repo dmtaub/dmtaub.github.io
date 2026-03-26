@@ -26,6 +26,7 @@ function initScrollShrink() {
 }
 
 let _savedDark = false;
+let _updateProjects = null;
 
 export function showSection(sectionId) {
     const wasInProjects = document.body.classList.contains('projects-section');
@@ -41,6 +42,7 @@ export function showSection(sectionId) {
     if (sectionId === 'projects') {
         _savedDark = document.body.classList.contains('dark');
         document.body.classList.add('dark');
+        requestAnimationFrame(() => { if (_updateProjects) _updateProjects(); });
     } else if (wasInProjects) {
         document.body.classList.toggle('dark', _savedDark);
         const btn = document.getElementById('themeToggle');
@@ -238,6 +240,7 @@ function initProjectsScroll() {
         });
     }
 
+    _updateProjects = update;
     window.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update, { passive: true });
     update();
