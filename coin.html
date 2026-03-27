@@ -119,6 +119,12 @@
         camera.position.set(0, 7.8, 5.8);
         camera.lookAt(0, 0.4, 0);
 
+        const CAM_HOME     = new THREE.Vector3(0, 0.4, 0);    // default look-at
+        const CAM_BASE_OFF = new THREE.Vector3(0, 7.4, 5.8); // camera offset from look-at at zoom=1
+        const camTarget    = CAM_HOME.clone();                // current look-at (tracked)
+        let camZoom = 1, camZoomTarget = 1;
+        const _coinNDC = new THREE.Vector3();
+
         // ── Lighting ─────────────────────────────────────────────────────────────
         scene.add(new THREE.AmbientLight(0xffffff, dark ? 0.5 : 0.7));
 
@@ -221,6 +227,7 @@
             if (state !== 'idle') return;
             state = 'flipping';
             settleTimer = 0;
+            camZoomTarget = 1;
             flipBtn.disabled = true;
             resultEl.classList.remove('show');
 
@@ -373,7 +380,26 @@
                 } else {
                     settleTimer = 0;
                 }
+
+                // Follow coin — full X/Z, damped Y so steep launches don't flip the view
+                const followY = 0.4 + Math.max(0, pos.y - 1) * 0.35;
+                camTarget.lerp({ x: pos.x, y: followY, z: pos.z }, Math.min(dt * 5, 1));
+
+                // Zoom out if coin leaves frame
+                _coinNDC.set(pos.x, pos.y, pos.z).project(camera);
+                const extent = Math.max(Math.abs(_coinNDC.x), Math.abs(_coinNDC.y));
+                const needed = Math.max(1, extent / 0.82);
+                if (needed > camZoomTarget) camZoomTarget = needed;
+            } else {
+                // Settled — ease look-at and zoom back home
+                camTarget.lerp(CAM_HOME, Math.min(dt * 2, 1));
+                camZoomTarget += (1 - camZoomTarget) * Math.min(dt * 0.8, 1);
             }
+
+            // Smooth camera zoom by scaling offset from look-at point
+            camZoom += (camZoomTarget - camZoom) * Math.min(dt * 4, 1);
+            camera.position.copy(camTarget).addScaledVector(CAM_BASE_OFF, camZoom);
+            camera.lookAt(camTarget);
 
             renderer.render(scene, camera);
         })();
