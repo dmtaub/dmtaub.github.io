@@ -228,8 +228,10 @@
             coinBody.enableCcd(true);
             coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
 
+            const p = COIN_FLIP_PARAMS;
+
             // Random initial tilt so no two flips look identical at launch
-            const tilt = (Math.random() - 0.5) * 0.4;
+            const tilt = (Math.random() - 0.5) * p.tiltMax;
             const tiltYaw = Math.random() * Math.PI * 2;
             coinBody.setRotation({
                 x: Math.sin(tilt) * Math.cos(tiltYaw),
@@ -238,20 +240,19 @@
                 w: Math.cos(tilt),
             }, true);
 
-            // More hang time: higher Y velocity (gravity is -18, so ~1.3s air time)
             coinBody.setLinvel({
-                x: (Math.random() - 0.5) * 1.5,
-                y: 12 + Math.random() * 4,
-                z: (Math.random() - 0.5) * 1.5,
+                x: (Math.random() - 0.5) * p.launchDriftXZ,
+                y: p.launchYMin + Math.random() * p.launchYRange,
+                z: (Math.random() - 0.5) * p.launchDriftXZ,
             }, true);
 
             // Spin axis is a random direction in the XZ plane — varies the tumble angle
             const dir = Math.random() < 0.5 ? 1 : -1;
             const spinYaw = Math.random() * Math.PI * 2;
-            const spinSpeed = 22 + Math.random() * 14;
+            const spinSpeed = p.spinMin + Math.random() * p.spinRange;
             coinBody.setAngvel({
                 x: dir * spinSpeed * Math.cos(spinYaw),
-                y: (Math.random() - 0.5) * 3,
+                y: (Math.random() - 0.5) * p.spinYawSpread,
                 z: dir * spinSpeed * Math.sin(spinYaw),
             }, true);
         });
@@ -288,13 +289,14 @@
                 const pos = coinBody.translation();
                 const lv  = coinBody.linvel();
                 const av  = coinBody.angvel();
-                const settled = pos.y < HH + 0.08
-                    && Math.hypot(lv.x, lv.y, lv.z) < 0.5
-                    && Math.hypot(av.x, av.y, av.z) < 1.0;
+                const { settleLinvel, settleAngvel, settleYClear, settleDelay } = COIN_FLIP_PARAMS;
+                const settled = pos.y < HH + settleYClear
+                    && Math.hypot(lv.x, lv.y, lv.z) < settleLinvel
+                    && Math.hypot(av.x, av.y, av.z) < settleAngvel;
 
                 if (settled) {
                     settleTimer += dt;
-                    if (settleTimer > 0.5) {
+                    if (settleTimer > settleDelay) {
                         state = 'idle';
                         coinBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
                         resultEl.textContent = getResult();
