@@ -72,7 +72,7 @@
         import * as RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js';
 
         await RAPIER.init();
-
+        const MAX_FLIP_TIME = 10;
         // ── Tunable parameters ────────────────────────────────────────────────────
         const COIN_FLIP_PARAMS = {
             // Coin geometry
@@ -222,11 +222,23 @@
         // ── Flip ──────────────────────────────────────────────────────────────────
         let state = 'idle';
         let settleTimer = 0;
+        let flipTimer = 0;
+
+        function resetCoin() {
+            state = 'idle';
+            coinBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
+            coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
+            coinBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+            syncMesh();
+            flipBtn.disabled = false;
+            flipBtn.textContent = 'Flip again';
+        }
 
         function doFlip(gestureVelX = 0, gestureVelY = 0, launchX = 0, launchZ = 0) {
             if (state !== 'idle') return;
             state = 'flipping';
             settleTimer = 0;
+            flipTimer = 0;
             camZoomTarget = 1;
             flipBtn.disabled = true;
             resultEl.classList.remove('show');
@@ -358,6 +370,14 @@
             if (state === 'flipping') {
                 world.step();
                 syncMesh();
+
+                flipTimer += dt;
+                if (flipTimer > MAX_FLIP_TIME) {
+                    resetCoin();
+                    resultEl.textContent = 'FAULT';
+                    resultEl.classList.add('show');
+                    return;
+                }
 
                 const pos = coinBody.translation();
                 const lv  = coinBody.linvel();
