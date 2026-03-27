@@ -72,75 +72,150 @@
         import * as RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js';
 
         await RAPIER.init();
-        const MAX_FLIP_TIME = 10;
-        // ── Tunable parameters ────────────────────────────────────────────────────
-        const COIN_FLIP_PARAMS = {
-            // Coin geometry
-            radius:        0.48,
-            halfHeight:    0.038,
-            // Physics world
-            gravity:       -18,
-            restitution:   0.25,
-            friction:      0.8,
-            // Launch — linear velocity
-            launchYMin:    12,
-            launchYRange:  4,
-            launchDriftXZ: 1.5,
-            // Launch — angular velocity
-            spinMin:       22,
-            spinRange:     14,
-            spinYawSpread: 3,    // random Y (top-spin) magnitude
-            // Settle detection thresholds
-            settleLinvel:  0.5,
-            settleAngvel:  1.0,
-            settleYClear:  0.08, // how far above ground counts as "landed"
-            settleDelay:   0.5,  // seconds before declaring result
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Configuration — all magic numbers live here
+        // ─────────────────────────────────────────────────────────────────────────
+        const C = {
+            // ── Coin geometry (shared by visual mesh and physics collider) ────────
+            coinRadius:     0.48,   // world units
+            coinHalfHeight: 0.038,  // half the coin's thickness
+
+            // ── Physics world ─────────────────────────────────────────────────────
+            gravity:     -18,   // downward acceleration (negative = down)
+            restitution:  0.25, // bounciness: 0 = dead stop, 1 = perfectly elastic
+            friction:     0.8,  // surface drag
+
+            // ── Launch: linear (translational) velocity ───────────────────────────
+            launchYMin:    12,  // minimum upward speed at launch
+            launchYRange:   4,  // extra random upward speed (uniform distribution)
+            launchDriftXZ:  1.5, // random sideways scatter magnitude
+
+            // ── Launch: angular (spin) velocity ───────────────────────────────────
+            // The coin tumbles around a horizontal axis in the XZ plane.
+            // spinYawSpread adds a little wobble around the vertical Y axis.
+            spinMin:       22,  // minimum spin speed (rad/s)
+            spinRange:     14,  // extra random spin speed
+            spinYawSpread:  3,  // random top-spin (Y-axis) magnitude
+
+            // ── Gesture: swipe-to-flip boosts ─────────────────────────────────────
+            // A fast upward swipe adds launch height and spin on top of the base values.
+            swipeYScale:    8,  // (px/ms upward velocity) × this = extra launch height
+            swipeYMax:     12,  // cap on extra launch height
+            swipeSpinScale: 12, // (px/ms upward velocity) × this = extra spin (rad/s)
+            swipeSpinMax:  18,  // cap on extra spin
+            swipeDriftXScale: 0.5, // (px/ms horizontal velocity) × this = extra X drift
+            swipeDriftXMax:   3,   // cap on extra X drift
+
+            // ── Gesture: drag preview ─────────────────────────────────────────────
+            // While holding the canvas, dragging moves the coin before launch.
+            dragScale:   0.005, // screen px → world units for X/Z slide
+            maxOffset:   1.2,   // world-unit clamp for X/Z sliding
+            liftPx:      250,   // px of upward drag that produces full lift height
+            maxLift:     2.5,   // maximum lift height (world units) during preview
+
+            // ── Settle detection ──────────────────────────────────────────────────
+            // The coin is considered "settled" when it is slow, still, and near the ground.
+            settleLinvel:  0.5,  // linear speed (world units/s) below which = still
+            settleAngvel:  1.0,  // angular speed (rad/s) below which = still
+            settleYClear:  0.08, // must be within this many units of the ground surface
+            settleDelay:   0.5,  // seconds to remain settled before declaring the result
+
+            // ── Fault conditions ──────────────────────────────────────────────────
+            faultTime:  10, // seconds without settling → FAULT
+            faultFallY: -2, // coin Y below this (fallen off table) → immediate FAULT
+
+            // ── Camera ────────────────────────────────────────────────────────────
+            // A perspective camera mimics a real lens: objects farther away appear smaller.
+            // FOV is the vertical angle of the view cone; near/far are the clipping planes.
+            camFov:    42,             // vertical field of view in degrees
+            camNear:   0.01,           // closest visible distance
+            camFar:    50,             // farthest visible distance
+            camPos:    [0, 7.8, 5.8],  // world-space position at zoom = 1
+            camLookAt: [0, 0.4, 0],    // point the camera always faces
+
+            // ── Camera follow & zoom ──────────────────────────────────────────────
+            // During a flip the camera pans to follow the coin and zooms out if it
+            // leaves the frame, then smoothly returns to the home position after landing.
+            camFollowSpeed:    5,    // lerp rate for look-at tracking the coin
+            camReturnSpeed:    2,    // lerp rate for look-at easing back to home
+            camZoomSpeed:      4,    // lerp rate for the zoom factor
+            camZoomReturnRate: 0.8,  // zoom ease-back rate after settling
+            camFrustumMargin:  0.82, // NDC threshold at which zoom expands (1.0 = screen edge)
+            camFollowYBase:    0.4,  // look-at Y while coin is on the ground
+            camFollowYDamp:    0.35, // fraction of coin height above 1 that shifts look-at up
         };
 
-        const dark = document.body.classList.contains('dark');
-        const canvas = document.getElementById('canvas');
+        // ─────────────────────────────────────────────────────────────────────────
+        // DOM references
+        // ─────────────────────────────────────────────────────────────────────────
+        const dark    = document.body.classList.contains('dark');
+        const canvas  = document.getElementById('canvas');
         const flipBtn = document.getElementById('flip-btn');
         const resultEl = document.getElementById('result');
 
-        // ── Renderer ─────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Renderer
+        // ─────────────────────────────────────────────────────────────────────────
+        // WebGLRenderer draws the Three.js scene to the <canvas> element each frame.
+        // PCFSoftShadowMap gives soft shadow edges; SRGBColorSpace ensures colours
+        // match what the asset was authored in.
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); // cap at 2× for performance
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        // ── Scene + camera ────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Scene & camera
+        // ─────────────────────────────────────────────────────────────────────────
+        // The scene is the container for all 3D objects, lights, and the background.
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(dark ? '#100f1a' : '#F4F0F4');
 
-        const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 50);
-        camera.position.set(0, 7.8, 5.8);
-        camera.lookAt(0, 0.4, 0);
+        // The camera starts at camPos and looks toward camLookAt.
+        // During a flip the look-at point tracks the coin; camTarget holds the
+        // current (interpolated) look-at, and camBaseOffset is the fixed camera-to-
+        // look-at offset that gets scaled by camZoom to pull the camera back.
+        const CAM_HOME      = new THREE.Vector3(...C.camLookAt);
+        const camBaseOffset = new THREE.Vector3(...C.camPos).sub(CAM_HOME);
+        const camTarget     = CAM_HOME.clone(); // current look-at, changes during flip
+        let   camZoom = 1, camZoomTarget = 1;   // 1 = normal, >1 = zoomed out
+        const _coinNDC = new THREE.Vector3();   // scratch vector for frustum check
 
-        const CAM_HOME     = new THREE.Vector3(0, 0.4, 0);    // default look-at
-        const CAM_BASE_OFF = new THREE.Vector3(0, 7.4, 5.8); // camera offset from look-at at zoom=1
-        const camTarget    = CAM_HOME.clone();                // current look-at (tracked)
-        let camZoom = 1, camZoomTarget = 1;
-        const _coinNDC = new THREE.Vector3();
+        const camera = new THREE.PerspectiveCamera(C.camFov, 1, C.camNear, C.camFar);
+        camera.position.copy(CAM_HOME).addScaledVector(camBaseOffset, camZoom);
+        camera.lookAt(CAM_HOME);
 
-        // ── Lighting ─────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Lighting
+        // ─────────────────────────────────────────────────────────────────────────
+        // Ambient light fills all surfaces equally — prevents pure black shadows.
         scene.add(new THREE.AmbientLight(0xffffff, dark ? 0.5 : 0.7));
 
+        // The "sun" directional light casts shadows. Its shadow camera is an
+        // orthographic frustum; left/right/top/bottom define its coverage area.
         const sun = new THREE.DirectionalLight(0xffffff, dark ? 1.5 : 1.2);
         sun.position.set(4, 10, 5);
         sun.castShadow = true;
-        sun.shadow.mapSize.set(2048, 2048);
-        sun.shadow.camera.near = 1;
-        sun.shadow.camera.far = 40;
-        sun.shadow.camera.left = sun.shadow.camera.bottom = -4;
-        sun.shadow.camera.right = sun.shadow.camera.top = 4;
+        sun.shadow.mapSize.set(2048, 2048);  // higher = sharper shadows
+        sun.shadow.camera.near   = 1;
+        sun.shadow.camera.far    = 40;
+        sun.shadow.camera.left   = sun.shadow.camera.bottom = -4;
+        sun.shadow.camera.right  = sun.shadow.camera.top    =  4;
         scene.add(sun);
 
+        // A dim fill light from the opposite side softens harsh shadows.
         const fill = new THREE.DirectionalLight(dark ? 0x9b8bbb : 0xfff0e8, 0.4);
         fill.position.set(-4, 2, -3);
         scene.add(fill);
 
-        // ── Ground ────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Ground — visual mesh + physics collider
+        // ─────────────────────────────────────────────────────────────────────────
+        // CircleGeometry lies flat in XZ by default; rotating by -90° around X
+        // makes it horizontal.  The physics collider is a box shifted down so its
+        // top surface is exactly at y = 0.
         const floor = new THREE.Mesh(
             new THREE.CircleGeometry(10, 72),
             new THREE.MeshStandardMaterial({ color: dark ? 0x1c1b2a : 0xe8e4f0, roughness: 0.9 })
@@ -149,16 +224,20 @@
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // ── Physics ───────────────────────────────────────────────────────────────
-        const world = new RAPIER.World({ x: 0, y: COIN_FLIP_PARAMS.gravity, z: 0 });
-        // Ground body shifted down so top surface sits at y=0; thick enough to prevent tunneling
+        const world = new RAPIER.World({ x: 0, y: C.gravity, z: 0 });
+        // Shifted down by 0.5 so the top face of the 1-unit-tall box is at y = 0.
+        // Made thick (±10 in XZ) to prevent a fast-moving coin from tunnelling through.
         const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
         world.createCollider(RAPIER.ColliderDesc.cuboid(10, 0.5, 10), groundBody);
 
-        const { radius: R, halfHeight: HH } = COIN_FLIP_PARAMS;
+        // ─────────────────────────────────────────────────────────────────────────
+        // Coin — visual model + physics body
+        // ─────────────────────────────────────────────────────────────────────────
+        const R  = C.coinRadius;
+        const HH = C.coinHalfHeight;
 
-        // ── Fallback procedural coin ──────────────────────────────────────────────
-        function makeFallback() {
+        // Fallback procedural coin used when the USDZ file fails to load.
+        function makeFallbackCoin() {
             const g = new THREE.Group();
             g.add(new THREE.Mesh(
                 new THREE.CylinderGeometry(R, R, HH * 2, 64),
@@ -173,130 +252,177 @@
             return g;
         }
 
-        // ── Load USDZ ─────────────────────────────────────────────────────────────
         let coinModel;
         try {
             coinModel = await new USDZLoader().loadAsync('files/US_quarter.usdz');
-            const box = new THREE.Box3().setFromObject(coinModel);
+            // Normalise size: scale so the widest XZ extent equals the target diameter.
+            const box  = new THREE.Box3().setFromObject(coinModel);
             const size = box.getSize(new THREE.Vector3());
-            // Scale so the widest XZ dimension = diameter
             coinModel.scale.setScalar((R * 2) / Math.max(size.x, size.z));
-            // Center at origin
+            // Re-compute bounds after scaling and centre the model at the origin.
             box.setFromObject(coinModel);
             coinModel.position.sub(box.getCenter(new THREE.Vector3()));
         } catch (e) {
-            console.warn('USDZLoader failed, using fallback coin:', e);
-            coinModel = makeFallback();
+            console.warn('USDZ load failed, using fallback coin:', e);
+            coinModel = makeFallbackCoin();
         }
         coinModel.traverse(o => { if (o.isMesh) o.castShadow = true; });
 
-        // Pivot — physics body position/rotation drives this group
+        // The pivot is a Three.js Group that acts as the coin's transform in the scene.
+        // Each frame, syncMesh() copies the physics body's position and rotation into
+        // it, keeping the visual and physics representations in sync.
         const pivot = new THREE.Group();
         pivot.add(coinModel);
         scene.add(pivot);
 
-        // ── Coin physics body (starts fixed, goes dynamic on flip) ────────────────
+        // The coin physics body starts as "fixed" (immovable) so it sits still on
+        // the table. It switches to "dynamic" (affected by gravity/forces) on launch,
+        // then back to fixed once it settles.
+        // CCD (continuous collision detection) prevents fast-moving bodies from
+        // tunnelling through thin surfaces like the ground plane.
         const coinBody = world.createRigidBody(
             RAPIER.RigidBodyDesc.fixed().setTranslation(0, HH, 0)
         );
         world.createCollider(
             RAPIER.ColliderDesc.cylinder(HH, R)
-                .setRestitution(COIN_FLIP_PARAMS.restitution)
-                .setFriction(COIN_FLIP_PARAMS.friction),
+                .setRestitution(C.restitution)
+                .setFriction(C.friction),
             coinBody
         );
 
+        // Copy the physics body's position and orientation into the Three.js pivot.
         function syncMesh() {
             const t = coinBody.translation();
-            const r = coinBody.rotation();
+            const r = coinBody.rotation(); // quaternion {x,y,z,w}
             pivot.position.set(t.x, t.y, t.z);
             pivot.quaternion.set(r.x, r.y, r.z, r.w);
         }
         syncMesh();
 
         flipBtn.textContent = 'Flip';
-        flipBtn.disabled = false;
+        flipBtn.disabled    = false;
 
-        // ── Flip ──────────────────────────────────────────────────────────────────
-        let state = 'idle';
+        // ─────────────────────────────────────────────────────────────────────────
+        // Flip state machine
+        // ─────────────────────────────────────────────────────────────────────────
+        // state:       'idle' while resting, 'flipping' while airborne/settling
+        // settleTimer: counts how long the coin has been continuously still
+        // flipTimer:   counts total time since launch (for fault detection)
+        let state       = 'idle';
         let settleTimer = 0;
-        let flipTimer = 0;
+        let flipTimer   = 0;
 
+        // Snap the coin back to the default resting position and re-enable the button.
         function resetCoin() {
             state = 'idle';
             coinBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
             coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
             coinBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
             syncMesh();
-            flipBtn.disabled = false;
+            flipBtn.disabled    = false;
             flipBtn.textContent = 'Flip again';
         }
 
+        // Launch the coin.  All gesture parameters are optional; the button click
+        // uses the defaults (random launch with no swipe influence).
+        //
+        // gestureVelX/Y  pointer velocity in px/ms at release (Y < 0 = swiping up)
+        // launchX/Z      world-space XZ position to launch from (from drag preview)
+        // flipAxis       horizontal world-space unit vector for the primary spin axis;
+        //                derived from the coin's settled orientation so the spin feels
+        //                continuous with the pre-launch preview
         function doFlip(gestureVelX = 0, gestureVelY = 0, launchX = 0, launchZ = 0, flipAxis = null) {
             if (state !== 'idle') return;
-            state = 'flipping';
+            state       = 'flipping';
             settleTimer = 0;
-            flipTimer = 0;
+            flipTimer   = 0;
             camZoomTarget = 1;
             flipBtn.disabled = true;
             resultEl.classList.remove('show');
 
+            // Switch body to dynamic so gravity and forces apply.
             coinBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
             coinBody.enableCcd(true);
             coinBody.setTranslation({ x: launchX, y: HH, z: launchZ }, true);
+            // Rotation is intentionally NOT reset — the coin carries its settled
+            // orientation into the next flip for visual continuity.
 
-            const p = COIN_FLIP_PARAMS;
-
-            // Swipe-derived boosts (gestureVelY < 0 = swiped up)
-            const upward  = Math.max(0, -gestureVelY);          // px/ms, positive = up
-            const extraY  = Math.min(upward * 8,  12);          // up to +12 launch height
-            const spinBoost = Math.min(upward * 12, 18);        // up to +18 rad/s spin
-            const driftX  = Math.max(-3, Math.min(3, gestureVelX * 0.5));
+            // Swipe boosts: an upward swipe adds launch height and spin on top of
+            // the base random values.  gestureVelY is negative when swiping up.
+            const upward    = Math.max(0, -gestureVelY);
+            const extraY    = Math.min(upward * C.swipeYScale,    C.swipeYMax);
+            const spinBoost = Math.min(upward * C.swipeSpinScale, C.swipeSpinMax);
+            const driftX    = Math.max(-C.swipeDriftXMax, Math.min(C.swipeDriftXMax, gestureVelX * C.swipeDriftXScale));
 
             coinBody.setLinvel({
-                x: (Math.random() - 0.5) * p.launchDriftXZ + driftX,
-                y: p.launchYMin + Math.random() * p.launchYRange + extraY,
-                z: (Math.random() - 0.5) * p.launchDriftXZ,
+                x: (Math.random() - 0.5) * C.launchDriftXZ + driftX,
+                y: C.launchYMin + Math.random() * C.launchYRange + extraY,
+                z: (Math.random() - 0.5) * C.launchDriftXZ,
             }, true);
 
-            const dir = Math.random() < 0.5 ? 1 : -1;
-            const spinSpeed = p.spinMin + Math.random() * p.spinRange + spinBoost;
-            const axis = flipAxis
-                ? flipAxis
-                : (() => { const a = Math.random() * Math.PI * 2; return { x: Math.cos(a), z: Math.sin(a) }; })();
+            // The primary spin axis is a horizontal XZ vector (a diameter of the coin).
+            // Using the same axis as the drag preview makes the launch feel like a
+            // continuation of what the user was doing.  Without a drag axis, pick one randomly.
+            const dir  = Math.random() < 0.5 ? 1 : -1;
+            const spinSpeed = C.spinMin + Math.random() * C.spinRange + spinBoost;
+            const axis = flipAxis ?? (() => {
+                const a = Math.random() * Math.PI * 2;
+                return { x: Math.cos(a), z: Math.sin(a) };
+            })();
             coinBody.setAngvel({
                 x: dir * spinSpeed * axis.x,
-                y: (Math.random() - 0.5) * p.spinYawSpread,
+                y: (Math.random() - 0.5) * C.spinYawSpread,
                 z: dir * spinSpeed * axis.z,
             }, true);
         }
 
-        // ── Button: simple click = default flip ───────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Input — button click & canvas drag gesture
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // Simple click on the button: launch with default random parameters.
         flipBtn.addEventListener('click', () => doFlip());
 
-        // ── Canvas swipe gesture ──────────────────────────────────────────────────
-        const drag = { active: false, startX: 0, startY: 0, history: [], settledQuat: new THREE.Quaternion(), flipAxis: new THREE.Vector3(1, 0, 0) };
-        const DRAG_SCALE  = 0.005;  // screen px → world units
-        const MAX_OFFSET  = 1.2;   // world units clamp
-        const LIFT_PX     = 250;   // px of upward drag = full lift
-        const MAX_LIFT    = 2.5;   // world units of lift
-        const _flipQuat   = new THREE.Quaternion();
+        // Drag state: tracks pointer history for velocity estimation on release,
+        // plus the coin's orientation at the moment of grab so the preview and
+        // launch axis are consistent with how the coin was settled.
+        const drag = {
+            active:      false,
+            startX:      0,
+            startY:      0,
+            history:     [],                    // recent {x,y,t} samples for velocity
+            settledQuat: new THREE.Quaternion(), // coin orientation at grab time
+            flipAxis:    new THREE.Vector3(1, 0, 0), // horizontal tumble axis at grab time
+        };
+        const _previewQuat = new THREE.Quaternion(); // scratch quaternion for preview math
 
-        function setCoinPreview(dx, dy) {
+        // Update the coin's visual position/rotation to reflect the current drag state.
+        //
+        // dx, dy  pointer offset from the drag start in screen pixels (Y < 0 = up)
+        //
+        // Dragging UP lifts the coin and rotates it along the flip axis (0→180°),
+        // showing a preview of the upcoming flip.  Once the pointer returns to or
+        // below the start position the coin sits flat and slides in X/Z.
+        function updateDragPreview(dx, dy) {
             const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-            const wx = clamp(dx * DRAG_SCALE, -MAX_OFFSET, MAX_OFFSET);
+            const wx = clamp(dx * C.dragScale, -C.maxOffset, C.maxOffset);
+
             if (dy < 0) {
-                // Dragging up — lift and preview flip rotation composed onto settled orientation
-                const frac  = Math.min(-dy / LIFT_PX, 1);
-                const liftY = HH + frac * MAX_LIFT;
-                _flipQuat.setFromAxisAngle(drag.flipAxis, frac * Math.PI);
-                pivot.quaternion.copy(drag.settledQuat).multiply(_flipQuat);
+                // ── Lifted: preview flip rotation ────────────────────────────────
+                // frac 0→1 maps the upward drag distance to the rotation 0→180°.
+                // The rotation is composed on top of the settled quaternion so the
+                // preview always starts from the coin's actual resting face.
+                const frac  = Math.min(-dy / C.liftPx, 1);
+                const liftY = HH + frac * C.maxLift;
+                _previewQuat.setFromAxisAngle(drag.flipAxis, frac * Math.PI);
+                pivot.quaternion.copy(drag.settledQuat).multiply(_previewQuat);
                 pivot.position.set(wx, liftY, 0);
                 coinBody.setTranslation({ x: wx, y: liftY, z: 0 }, true);
                 coinBody.setRotation(pivot.quaternion, true);
             } else {
-                // On table — slide X/Z, keep settled orientation
-                const wz = clamp(dy * DRAG_SCALE, -MAX_OFFSET, MAX_OFFSET);
+                // ── On table: slide in X/Z ────────────────────────────────────────
+                // Keep the settled orientation so regrabbing never pops the rotation.
+                const wz = clamp(dy * C.dragScale, -C.maxOffset, C.maxOffset);
                 pivot.position.set(wx, HH, wz);
                 pivot.quaternion.copy(drag.settledQuat);
                 coinBody.setTranslation({ x: wx, y: HH, z: wz }, true);
@@ -307,12 +433,15 @@
         canvas.addEventListener('pointerdown', (e) => {
             if (state !== 'idle') return;
             canvas.setPointerCapture(e.pointerId);
-            drag.active      = true;
-            drag.startX      = e.clientX;
-            drag.startY      = e.clientY;
-            drag.history     = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+            drag.active  = true;
+            drag.startX  = e.clientX;
+            drag.startY  = e.clientY;
+            drag.history = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+            // Snapshot the coin's current orientation for use in the preview and launch.
             drag.settledQuat.copy(pivot.quaternion);
-            // Coin's local X axis in world space = a natural tumble diameter
+            // The natural tumble axis is the coin's local X axis projected into the
+            // horizontal plane.  This means the preview rotation and the physics spin
+            // both match the direction the coin happens to be facing when grabbed.
             drag.flipAxis.set(1, 0, 0).applyQuaternion(pivot.quaternion).setY(0).normalize();
         });
 
@@ -320,10 +449,13 @@
             if (!drag.active) return;
             const now = performance.now();
             drag.history.push({ x: e.clientX, y: e.clientY, t: now });
+            // Keep only the last 80 ms of samples for a clean velocity estimate.
             while (drag.history.length > 1 && now - drag.history[0].t > 80) drag.history.shift();
-            setCoinPreview(e.clientX - drag.startX, e.clientY - drag.startY);
+            updateDragPreview(e.clientX - drag.startX, e.clientY - drag.startY);
         });
 
+        // On release, estimate pointer velocity from the recent history and decide
+        // whether to launch (any upward motion or meaningful movement) or reset.
         function onRelease(clientX, clientY) {
             if (!drag.active) return;
             drag.active = false;
@@ -331,22 +463,24 @@
             let velX = 0, velY = 0;
             const h = drag.history;
             if (h.length >= 2) {
-                const dt = h[h.length - 1].t - h[0].t;
-                if (dt > 0) {
-                    velX = (h[h.length - 1].x - h[0].x) / dt;
-                    velY = (h[h.length - 1].y - h[0].y) / dt;
+                const elapsed = h[h.length - 1].t - h[0].t;
+                if (elapsed > 0) {
+                    velX = (h[h.length - 1].x - h[0].x) / elapsed;
+                    velY = (h[h.length - 1].y - h[0].y) / elapsed;
                 }
             }
 
-            const wasLifted = (clientY - drag.startY) < -10;
-            const upward    = -velY;
+            const wasLifted = (clientY - drag.startY) < -10; // coin was in preview mode
+            const upward    = -velY; // positive = pointer moved up the screen
             const moved     = Math.hypot(clientX - drag.startX, clientY - drag.startY);
 
             if (upward > 0.1 || moved > 10 || wasLifted) {
-                // If coin was lifted but dropped slowly, still launch with minimum velocity
+                // If the coin was lifted but the pointer stopped before release,
+                // still launch with a small minimum upward velocity.
                 const effectiveVelY = wasLifted ? Math.min(velY, -0.3) : velY;
                 doFlip(velX, effectiveVelY, pivot.position.x, pivot.position.z, drag.flipAxis);
             } else {
+                // No meaningful gesture — slide coin back to centre.
                 pivot.position.set(0, HH, 0);
                 pivot.quaternion.copy(drag.settledQuat);
                 coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
@@ -355,22 +489,31 @@
         }
 
         canvas.addEventListener('pointerup',     (e) => onRelease(e.clientX, e.clientY));
-        canvas.addEventListener('pointercancel', (e) => {
-            // Browser stole the touch — reset coin without launching
+        canvas.addEventListener('pointercancel', () => {
+            // The OS or browser stole the touch (notification, edge swipe, etc.).
+            // Reset the drag state without launching.
             drag.active = false;
             pivot.position.set(0, HH, 0);
+            pivot.quaternion.copy(drag.settledQuat);
             coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
+            coinBody.setRotation(drag.settledQuat, true);
         });
 
-        // ── Result detection ──────────────────────────────────────────────────────
-        // Coin's local +Y axis in world space; if pointing world-up → heads face up.
-        // Swap 'Heads'/'Tails' here if the model's orientation is reversed.
+        // ─────────────────────────────────────────────────────────────────────────
+        // Result detection
+        // ─────────────────────────────────────────────────────────────────────────
+        // A quaternion describes the coin's 3D rotation.  Multiplying the coin's
+        // local +Y axis by its quaternion gives that axis in world space.  If it
+        // points upward (world Y > 0) then heads is face-up; otherwise tails.
+        // Swap the labels here if the model's Z-up orientation is reversed.
         function getResult() {
             const localUp = new THREE.Vector3(0, 1, 0).applyQuaternion(pivot.quaternion);
             return localUp.y > 0 ? 'Heads' : 'Tails';
         }
 
-        // ── Resize ────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Resize handler
+        // ─────────────────────────────────────────────────────────────────────────
         function onResize() {
             const w = canvas.clientWidth, h = canvas.clientHeight;
             renderer.setSize(w, h, false);
@@ -380,46 +523,55 @@
         window.addEventListener('resize', onResize);
         onResize();
 
-        // ── Loop ──────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        // Animation loop
+        // ─────────────────────────────────────────────────────────────────────────
         const clock = new THREE.Clock();
 
         (function animate() {
             requestAnimationFrame(animate);
-            const dt = Math.min(clock.getDelta(), 1 / 30);
+            const dt = Math.min(clock.getDelta(), 1 / 30); // cap at 30 fps equivalent
 
             if (state === 'flipping') {
-                world.step();
-                syncMesh();
+                world.step(); // advance the physics simulation by one fixed timestep
+                syncMesh();   // mirror the physics body's new pose onto the Three.js pivot
 
                 flipTimer += dt;
 
                 const pos = coinBody.translation();
-                if (pos.y < -2) {
+
+                // ── Fault: coin fell off the table ────────────────────────────────
+                if (pos.y < C.faultFallY) {
                     resetCoin();
                     resultEl.textContent = 'FAULT';
                     resultEl.classList.add('show');
                     return;
                 }
-                const lv  = coinBody.linvel();
-                const av  = coinBody.angvel();
-                const { settleLinvel, settleAngvel, settleYClear, settleDelay } = COIN_FLIP_PARAMS;
-                const settled = pos.y < HH + settleYClear
-                    && Math.hypot(lv.x, lv.y, lv.z) < settleLinvel
-                    && Math.hypot(av.x, av.y, av.z) < settleAngvel;
+
+                // ── Settle detection ──────────────────────────────────────────────
+                // All three conditions must be true simultaneously for settleDelay
+                // seconds before the result is declared.
+                const lv = coinBody.linvel();
+                const av = coinBody.angvel();
+                const settled =
+                    pos.y < HH + C.settleYClear &&
+                    Math.hypot(lv.x, lv.y, lv.z) < C.settleLinvel &&
+                    Math.hypot(av.x, av.y, av.z) < C.settleAngvel;
 
                 if (settled) {
                     settleTimer += dt;
-                    if (settleTimer > settleDelay) {
+                    if (settleTimer > C.settleDelay) {
                         state = 'idle';
                         coinBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
                         resultEl.textContent = getResult();
                         resultEl.classList.add('show');
-                        flipBtn.disabled = false;
+                        flipBtn.disabled    = false;
                         flipBtn.textContent = 'Flip again';
                     }
                 } else {
                     settleTimer = 0;
-                    if (flipTimer > MAX_FLIP_TIME) {
+                    // ── Fault: coin has been airborne/bouncing too long ────────────
+                    if (flipTimer > C.faultTime) {
                         resetCoin();
                         resultEl.textContent = 'FAULT';
                         resultEl.classList.add('show');
@@ -427,27 +579,36 @@
                     }
                 }
 
-                // Follow coin — full X/Z, damped Y so steep launches don't flip the view
-                const followY = 0.4 + Math.max(0, pos.y - 1) * 0.35;
-                camTarget.lerp({ x: pos.x, y: followY, z: pos.z }, Math.min(dt * 5, 1));
+                // ── Camera follow ─────────────────────────────────────────────────
+                // Lerp the look-at toward the coin's position.  Y is damped so a
+                // steep launch doesn't push the camera uncomfortably far upward.
+                const followY = C.camFollowYBase + Math.max(0, pos.y - 1) * C.camFollowYDamp;
+                camTarget.lerp({ x: pos.x, y: followY, z: pos.z }, Math.min(dt * C.camFollowSpeed, 1));
 
-                // Zoom out if coin leaves frame
+                // ── Camera zoom ───────────────────────────────────────────────────
+                // Project the coin's world position into NDC (Normalised Device
+                // Coordinates): a cube where ±1 maps to the screen edges.  If the
+                // coin's NDC extent exceeds the margin threshold, expand the zoom
+                // target enough to bring it back inside.
                 _coinNDC.set(pos.x, pos.y, pos.z).project(camera);
                 const extent = Math.max(Math.abs(_coinNDC.x), Math.abs(_coinNDC.y));
-                const needed = Math.max(1, extent / 0.82);
+                const needed = Math.max(1, extent / C.camFrustumMargin);
                 if (needed > camZoomTarget) camZoomTarget = needed;
+
             } else {
-                // Settled — ease coin, look-at, and zoom back home at the same rate
-                const t = Math.min(dt * 2, 1);
+                // ── Idle: ease everything back to the home position ───────────────
+                const t = Math.min(dt * C.camReturnSpeed, 1);
                 pivot.position.x += (0 - pivot.position.x) * t;
                 pivot.position.z += (0 - pivot.position.z) * t;
                 camTarget.lerp(CAM_HOME, t);
-                camZoomTarget += (1 - camZoomTarget) * Math.min(dt * 0.8, 1);
+                camZoomTarget += (1 - camZoomTarget) * Math.min(dt * C.camZoomReturnRate, 1);
             }
 
-            // Smooth camera zoom by scaling offset from look-at point
-            camZoom += (camZoomTarget - camZoom) * Math.min(dt * 4, 1);
-            camera.position.copy(camTarget).addScaledVector(CAM_BASE_OFF, camZoom);
+            // ── Apply camera zoom & look-at ───────────────────────────────────────
+            // The camera always keeps the same angle; zooming is achieved by scaling
+            // its offset vector from the look-at point.  This avoids FOV distortion.
+            camZoom += (camZoomTarget - camZoom) * Math.min(dt * C.camZoomSpeed, 1);
+            camera.position.copy(camTarget).addScaledVector(camBaseOffset, camZoom);
             camera.lookAt(camTarget);
 
             renderer.render(scene, camera);
