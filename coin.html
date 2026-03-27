@@ -68,7 +68,7 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { USDZLoader } from 'three/addons/loaders/USDZLoader.js';
+        import { USDLoader } from 'three/addons/loaders/USDLoader.js';
         import * as RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js';
 
         await RAPIER.init();
@@ -163,7 +163,7 @@
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); // cap at 2× for performance
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.PCFSoftShadow;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // ─────────────────────────────────────────────────────────────────────────
@@ -196,7 +196,7 @@
         // The "sun" directional light casts shadows. Its shadow camera is an
         // orthographic frustum; left/right/top/bottom define its coverage area.
         const sun = new THREE.DirectionalLight(0xffffff, dark ? 1.5 : 1.2);
-        sun.position.set(4, 10, 5);
+        sun.position.set(4, 20, 5);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);  // higher = sharper shadows
         sun.shadow.camera.near   = 1;
@@ -254,7 +254,7 @@
 
         let coinModel;
         try {
-            coinModel = await new USDZLoader().loadAsync('files/US_quarter.usdz');
+            coinModel = await new USDLoader().loadAsync('files/US_quarter.usdz');
             // Normalise size: scale so the widest XZ extent equals the target diameter.
             const box  = new THREE.Box3().setFromObject(coinModel);
             const size = box.getSize(new THREE.Vector3());
@@ -526,11 +526,12 @@
         // ─────────────────────────────────────────────────────────────────────────
         // Animation loop
         // ─────────────────────────────────────────────────────────────────────────
-        const clock = new THREE.Clock();
+        const timer = new THREE.Timer();
 
-        (function animate() {
+        (function animate(timestamp) {
             requestAnimationFrame(animate);
-            const dt = Math.min(clock.getDelta(), 1 / 30); // cap at 30 fps equivalent
+            timer.update(timestamp);
+            const dt = Math.min(timer.getDelta(), 1 / 30); // cap at 30 fps equivalent
 
             if (state === 'flipping') {
                 world.step(); // advance the physics simulation by one fixed timestep
