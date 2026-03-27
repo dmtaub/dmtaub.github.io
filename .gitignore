@@ -1,4 +1,6 @@
 .DS_Store
+apps/melody-spark/node_modules/
+apps/melody-spark/dist/
 media_proofs/*
 notes/*
 lib/phaser.js
