@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utils — Daniel M. Taub</title>
+    <link type="text/css" rel="stylesheet" href="style.css">
+    <style>
+        .utils-page {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+
+        .utils-page h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.4rem;
+            color: var(--text);
+        }
+
+        .utils-page .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+        }
+
+        .utils-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .util-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: var(--text);
+            box-shadow: 0 2px 8px var(--shadow);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            display: block;
+        }
+
+        .util-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px var(--shadow);
+            border-color: var(--accent-soft);
+        }
+
+        .util-card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            line-height: 1;
+        }
+
+        .util-card h2 {
+            font-size: 1.1rem;
+            margin: 0 0 0.4rem;
+            color: var(--accent);
+        }
+
+        .util-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .utils-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            min-width: 60px;
+            height: 28px;
+            padding: 0 10px;
+            cursor: pointer;
+            color: var(--nav-text);
+            font-size: 0.8rem;
+            transition: border-color 0.3s, color 0.3s;
+        }
+        .theme-toggle:hover { border-color: var(--accent-soft); }
+    </style>
+</head>
+<body><script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
+    <div class="utils-page">
+        <div class="utils-topbar">
+            <a class="back-link" style="margin-bottom:0" href="/">← Back</a>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☀</button>
+        </div>
+        <h1>Utils</h1>
+        <p class="subtitle">Small tools and experiments.</p>
+
+        <div class="utils-grid">
+            <a class="util-card" href="apps/melody-spark/">
+                <div class="util-card-icon">🎵</div>
+                <h2>Melody Spark</h2>
+                <p>Browser-based music composition tool built with React and Tone.js.</p>
+            </a>
+
+            <a class="util-card" href="coin.html">
+                <div class="util-card-icon">🪙</div>
+                <h2>Coin Flipper</h2>
+                <p>Flip a US quarter with realistic 3D physics using Three.js and Rapier.</p>
+            </a>
+        </div>
+    </div>
+    <script>
+        const btn = document.getElementById('themeToggle');
+        function setDark(dark, save) {
+            document.body.classList.toggle('dark', dark);
+            if (save) localStorage.setItem('theme', dark ? 'dark' : 'light');
+            btn.textContent = dark ? '🌙' : '☀';
+        }
+        setDark(document.body.classList.contains('dark'));
+        btn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
+    </script>
+</body>
+</html>

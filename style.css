@@ -167,6 +167,28 @@ body.projects-section .header-title .showy {
     pointer-events: none;
 }
 
+/* Gear button — far left of nav bar, mirrors theme toggle on the right */
+nav .nav-gear {
+    position: absolute;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 13px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, color 0.2s;
+}
+nav .nav-gear:hover {
+    border-color: var(--text);
+    color: var(--text);
+}
+
 
 .social-links {
     display: flex;
@@ -252,7 +274,8 @@ nav .theme-toggle {
     position: absolute;
     right: 20px;
 }
-body.projects-section nav .theme-toggle {
+body.projects-section nav .theme-toggle,
+body.projects-section nav .nav-gear {
     display: none;
 }
 
@@ -631,6 +654,13 @@ h2.spaced { letter-spacing: 0.05em; }
         margin-right: 10px;
     }
     .theme-toggle .toggle-text { display: none; }
+    .nav-gear-text { display: none; }
+    nav .nav-gear {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        justify-content: center;
+    }
 }
 
 /* Mobile thumbnails */

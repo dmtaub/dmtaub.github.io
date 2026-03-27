@@ -117,8 +117,9 @@ document.getElementById('popupOverlay').addEventListener('click', function (e) {
 function initTheme() {
     const btn = document.getElementById('themeToggle');
 
-    function setDark(dark) {
+    function setDark(dark, save = false) {
         document.body.classList.toggle('dark', dark);
+        if (save) localStorage.setItem('theme', dark ? 'dark' : 'light');
         if (btn) {
             btn.innerHTML = dark
                 ? '<span class="toggle-icon">🌙</span><span class="toggle-text"> Dark</span>'
@@ -126,12 +127,14 @@ function initTheme() {
         }
     }
 
-    // Sync button text with current dark state (may already be set by showSection)
-    setDark(document.body.classList.contains('dark'));
+    const saved = localStorage.getItem('theme');
+    const prefersDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Sync button text with current dark state (may already be set by showSection or inline script)
+    setDark(document.body.classList.contains('dark') || prefersDark);
 
     if (btn) {
         btn.addEventListener('click', () => {
-            setDark(!document.body.classList.contains('dark'));
+            setDark(!document.body.classList.contains('dark'), true);
             syncResumeTheme();
         });
     }
