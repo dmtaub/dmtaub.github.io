@@ -84,7 +84,7 @@
             // ── Physics world ─────────────────────────────────────────────────────
             gravity:     -18,   // downward acceleration (negative = down)
             restitution:  0.25, // bounciness: 0 = dead stop, 1 = perfectly elastic
-            friction:     0.8,  // surface drag
+            friction:     0.9,  // surface drag
 
             // ── Launch: linear (translational) velocity ───────────────────────────
             launchYMin:    12,  // minimum upward speed at launch
@@ -122,7 +122,7 @@
             settleDelay:   0.5,  // seconds to remain settled before declaring the result
 
             // ── Fault conditions ──────────────────────────────────────────────────
-            faultTime:  10, // seconds without settling → FAULT
+            faultTime:  22, // seconds without settling → FAULT
             faultFallY: -2, // coin Y below this (fallen off table) → immediate FAULT
 
             // ── Camera ────────────────────────────────────────────────────────────
@@ -201,8 +201,8 @@
         sun.shadow.mapSize.set(2048, 2048);  // higher = sharper shadows
         sun.shadow.camera.near   = 1;
         sun.shadow.camera.far    = 40;
-        sun.shadow.camera.left   = sun.shadow.camera.bottom = -4;
-        sun.shadow.camera.right  = sun.shadow.camera.top    =  4;
+        sun.shadow.camera.left   = sun.shadow.camera.bottom = -10;
+        sun.shadow.camera.right  = sun.shadow.camera.top    =  10;
         scene.add(sun);
 
         // A dim fill light from the opposite side softens harsh shadows.
