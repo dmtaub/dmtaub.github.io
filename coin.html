@@ -144,7 +144,7 @@
 
         // ── Ground ────────────────────────────────────────────────────────────────
         const floor = new THREE.Mesh(
-            new THREE.CircleGeometry(5, 72),
+            new THREE.CircleGeometry(10, 72),
             new THREE.MeshStandardMaterial({ color: dark ? 0x1c1b2a : 0xe8e4f0, roughness: 0.9 })
         );
         floor.rotation.x = -Math.PI / 2;
@@ -411,8 +411,11 @@
                 const needed = Math.max(1, extent / 0.82);
                 if (needed > camZoomTarget) camZoomTarget = needed;
             } else {
-                // Settled — ease look-at and zoom back home
-                camTarget.lerp(CAM_HOME, Math.min(dt * 2, 1));
+                // Settled — ease coin, look-at, and zoom back home at the same rate
+                const t = Math.min(dt * 2, 1);
+                pivot.position.x += (0 - pivot.position.x) * t;
+                pivot.position.z += (0 - pivot.position.z) * t;
+                camTarget.lerp(CAM_HOME, t);
                 camZoomTarget += (1 - camZoomTarget) * Math.min(dt * 0.8, 1);
             }
 
