@@ -153,6 +153,7 @@ body.projects-section .header-subtitle {
 .header-title .showy {
     position: absolute;
     left: 22px;
+    bottom: 60px;
     font-size: 22pt;
     color: rgba(255,255,255,0.35);
     text-decoration: none;
