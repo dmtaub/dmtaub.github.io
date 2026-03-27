@@ -20,7 +20,7 @@
             overflow: hidden;
             font-family: Arial, sans-serif;
         }
-        #canvas { display: block; width: 100%; height: 100%; }
+        #canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
         #ui {
             position: fixed; inset: 0; pointer-events: none;
@@ -217,7 +217,7 @@
         let state = 'idle';
         let settleTimer = 0;
 
-        flipBtn.addEventListener('click', () => {
+        function doFlip(gestureVelX = 0, gestureVelY = 0, launchX = 0, launchZ = 0) {
             if (state !== 'idle') return;
             state = 'flipping';
             settleTimer = 0;
@@ -226,11 +226,16 @@
 
             coinBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
             coinBody.enableCcd(true);
-            coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
+            coinBody.setTranslation({ x: launchX, y: HH, z: launchZ }, true);
 
             const p = COIN_FLIP_PARAMS;
 
-            // Random initial tilt so no two flips look identical at launch
+            // Swipe-derived boosts (gestureVelY < 0 = swiped up)
+            const upward  = Math.max(0, -gestureVelY);          // px/ms, positive = up
+            const extraY  = Math.min(upward * 8,  12);          // up to +12 launch height
+            const spinBoost = Math.min(upward * 12, 18);        // up to +18 rad/s spin
+            const driftX  = Math.max(-3, Math.min(3, gestureVelX * 0.5));
+
             const tilt = (Math.random() - 0.5) * p.tiltMax;
             const tiltYaw = Math.random() * Math.PI * 2;
             coinBody.setRotation({
@@ -241,20 +246,81 @@
             }, true);
 
             coinBody.setLinvel({
-                x: (Math.random() - 0.5) * p.launchDriftXZ,
-                y: p.launchYMin + Math.random() * p.launchYRange,
+                x: (Math.random() - 0.5) * p.launchDriftXZ + driftX,
+                y: p.launchYMin + Math.random() * p.launchYRange + extraY,
                 z: (Math.random() - 0.5) * p.launchDriftXZ,
             }, true);
 
-            // Spin axis is a random direction in the XZ plane — varies the tumble angle
             const dir = Math.random() < 0.5 ? 1 : -1;
             const spinYaw = Math.random() * Math.PI * 2;
-            const spinSpeed = p.spinMin + Math.random() * p.spinRange;
+            const spinSpeed = p.spinMin + Math.random() * p.spinRange + spinBoost;
             coinBody.setAngvel({
                 x: dir * spinSpeed * Math.cos(spinYaw),
                 y: (Math.random() - 0.5) * p.spinYawSpread,
                 z: dir * spinSpeed * Math.sin(spinYaw),
             }, true);
+        }
+
+        // ── Button: simple click = default flip ───────────────────────────────────
+        flipBtn.addEventListener('click', () => doFlip());
+
+        // ── Canvas swipe gesture ──────────────────────────────────────────────────
+        const drag = { active: false, startX: 0, startY: 0, history: [] };
+        const DRAG_SCALE = 0.005;  // screen px → world units
+        const MAX_OFFSET = 1.2;   // world units clamp
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (state !== 'idle') return;
+            canvas.setPointerCapture(e.pointerId);
+            drag.active  = true;
+            drag.startX  = e.clientX;
+            drag.startY  = e.clientY;
+            drag.history = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drag.active) return;
+            const now = performance.now();
+            drag.history.push({ x: e.clientX, y: e.clientY, t: now });
+            while (drag.history.length > 1 && now - drag.history[0].t > 80) drag.history.shift();
+
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+            const wx = clamp((e.clientX - drag.startX) * DRAG_SCALE, -MAX_OFFSET, MAX_OFFSET);
+            const wz = clamp((e.clientY - drag.startY) * DRAG_SCALE, -MAX_OFFSET, MAX_OFFSET);
+            pivot.position.set(wx, HH, wz);
+            coinBody.setTranslation({ x: wx, y: HH, z: wz }, true);
+        });
+
+        function onRelease(clientX, clientY) {
+            if (!drag.active) return;
+            drag.active = false;
+
+            let velX = 0, velY = 0;
+            const h = drag.history;
+            if (h.length >= 2) {
+                const dt = h[h.length - 1].t - h[0].t;
+                if (dt > 0) {
+                    velX = (h[h.length - 1].x - h[0].x) / dt;
+                    velY = (h[h.length - 1].y - h[0].y) / dt;
+                }
+            }
+
+            const upward = -velY;
+            const moved  = Math.hypot(clientX - drag.startX, clientY - drag.startY);
+            if (upward > 0.1 || moved > 10) {
+                doFlip(velX, velY, pivot.position.x, pivot.position.z);
+            } else {
+                pivot.position.set(0, HH, 0);
+                coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
+            }
+        }
+
+        canvas.addEventListener('pointerup',     (e) => onRelease(e.clientX, e.clientY));
+        canvas.addEventListener('pointercancel', (e) => {
+            // Browser stole the touch — reset coin without launching
+            drag.active = false;
+            pivot.position.set(0, HH, 0);
+            coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
         });
 
         // ── Result detection ──────────────────────────────────────────────────────
