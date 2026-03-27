@@ -394,6 +394,12 @@
                 flipTimer += dt;
 
                 const pos = coinBody.translation();
+                if (pos.y < -2) {
+                    resetCoin();
+                    resultEl.textContent = 'FAULT';
+                    resultEl.classList.add('show');
+                    return;
+                }
                 const lv  = coinBody.linvel();
                 const av  = coinBody.angvel();
                 const { settleLinvel, settleAngvel, settleYClear, settleDelay } = COIN_FLIP_PARAMS;
