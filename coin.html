@@ -73,6 +73,32 @@
 
         await RAPIER.init();
 
+        // ── Tunable parameters ────────────────────────────────────────────────────
+        const COIN_FLIP_PARAMS = {
+            // Coin geometry
+            radius:        0.48,
+            halfHeight:    0.038,
+            // Physics world
+            gravity:       -18,
+            restitution:   0.25,
+            friction:      0.8,
+            // Launch — linear velocity
+            launchYMin:    12,
+            launchYRange:  4,
+            launchDriftXZ: 1.5,
+            // Launch — angular velocity
+            spinMin:       22,
+            spinRange:     14,
+            spinYawSpread: 3,    // random Y (top-spin) magnitude
+            // Initial tilt randomness (radians)
+            tiltMax:       0.4,
+            // Settle detection thresholds
+            settleLinvel:  0.5,
+            settleAngvel:  1.0,
+            settleYClear:  0.08, // how far above ground counts as "landed"
+            settleDelay:   0.5,  // seconds before declaring result
+        };
+
         const dark = document.body.classList.contains('dark');
         const canvas = document.getElementById('canvas');
         const flipBtn = document.getElementById('flip-btn');
@@ -90,7 +116,7 @@
         scene.background = new THREE.Color(dark ? '#100f1a' : '#F4F0F4');
 
         const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 50);
-        camera.position.set(0, 2.8, 5.8);
+        camera.position.set(0, 7.8, 5.8);
         camera.lookAt(0, 0.4, 0);
 
         // ── Lighting ─────────────────────────────────────────────────────────────
@@ -120,13 +146,12 @@
         scene.add(floor);
 
         // ── Physics ───────────────────────────────────────────────────────────────
-        const world = new RAPIER.World({ x: 0, y: -18, z: 0 });
-        const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-        world.createCollider(RAPIER.ColliderDesc.cuboid(10, 0.01, 10), groundBody);
+        const world = new RAPIER.World({ x: 0, y: COIN_FLIP_PARAMS.gravity, z: 0 });
+        // Ground body shifted down so top surface sits at y=0; thick enough to prevent tunneling
+        const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
+        world.createCollider(RAPIER.ColliderDesc.cuboid(10, 0.5, 10), groundBody);
 
-        // ── Coin constants ────────────────────────────────────────────────────────
-        const R  = 0.48;   // radius
-        const HH = 0.038;  // half-height (US quarter is ~14:1 diameter:thickness)
+        const { radius: R, halfHeight: HH } = COIN_FLIP_PARAMS;
 
         // ── Fallback procedural coin ──────────────────────────────────────────────
         function makeFallback() {
@@ -171,7 +196,9 @@
             RAPIER.RigidBodyDesc.fixed().setTranslation(0, HH, 0)
         );
         world.createCollider(
-            RAPIER.ColliderDesc.cylinder(HH, R).setRestitution(0.25).setFriction(0.8),
+            RAPIER.ColliderDesc.cylinder(HH, R)
+                .setRestitution(COIN_FLIP_PARAMS.restitution)
+                .setFriction(COIN_FLIP_PARAMS.friction),
             coinBody
         );
 
@@ -198,19 +225,34 @@
             resultEl.classList.remove('show');
 
             coinBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
+            coinBody.enableCcd(true);
             coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
-            coinBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
 
-            const dir = Math.random() < 0.5 ? 1 : -1;
-            coinBody.setLinvel({
-                x: (Math.random() - 0.5) * 0.5,
-                y: 7 + Math.random() * 2.5,
-                z: (Math.random() - 0.5) * 0.5,
+            // Random initial tilt so no two flips look identical at launch
+            const tilt = (Math.random() - 0.5) * 0.4;
+            const tiltYaw = Math.random() * Math.PI * 2;
+            coinBody.setRotation({
+                x: Math.sin(tilt) * Math.cos(tiltYaw),
+                y: 0,
+                z: Math.sin(tilt) * Math.sin(tiltYaw),
+                w: Math.cos(tilt),
             }, true);
-            coinBody.setAngvel({
-                x: dir * (18 + Math.random() * 10),
-                y: (Math.random() - 0.5) * 2,
+
+            // More hang time: higher Y velocity (gravity is -18, so ~1.3s air time)
+            coinBody.setLinvel({
+                x: (Math.random() - 0.5) * 1.5,
+                y: 12 + Math.random() * 4,
                 z: (Math.random() - 0.5) * 1.5,
+            }, true);
+
+            // Spin axis is a random direction in the XZ plane — varies the tumble angle
+            const dir = Math.random() < 0.5 ? 1 : -1;
+            const spinYaw = Math.random() * Math.PI * 2;
+            const spinSpeed = 22 + Math.random() * 14;
+            coinBody.setAngvel({
+                x: dir * spinSpeed * Math.cos(spinYaw),
+                y: (Math.random() - 0.5) * 3,
+                z: dir * spinSpeed * Math.sin(spinYaw),
             }, true);
         });
 
