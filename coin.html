@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Flipper</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #canvas { display: block; width: 100%; height: 100%; }
+
+        #ui {
+            position: fixed; inset: 0; pointer-events: none;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end;
+            padding: 0 1rem 2.5rem; gap: 1rem;
+        }
+        #result {
+            font-size: 2.5rem; font-weight: bold;
+            color: var(--accent); letter-spacing: 0.05em;
+            opacity: 0; transform: translateY(8px);
+            transition: opacity 0.4s, transform 0.4s;
+            min-height: 3rem;
+        }
+        #result.show { opacity: 1; transform: none; }
+
+        #flip-btn {
+            pointer-events: all; background: none;
+            border: 1px solid var(--accent); border-radius: 20px;
+            padding: 0.6rem 2.5rem; font-size: 1rem;
+            color: var(--accent); cursor: pointer; font-family: inherit;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        #flip-btn:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
+        #flip-btn:disabled { opacity: 0.4; cursor: default; }
+
+        .back-link {
+            position: fixed; top: 1rem; left: 1rem; pointer-events: all;
+            color: var(--accent); text-decoration: none; font-size: 0.9rem;
+            background: var(--surface); padding: 0.35rem 0.9rem;
+            border-radius: 20px; border: 1px solid var(--border);
+            font-family: inherit; transition: color 0.2s, border-color 0.2s;
+        }
+        .back-link:hover { color: var(--text); border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
+    <canvas id="canvas"></canvas>
+    <div id="ui">
+        <div id="result"></div>
+        <button id="flip-btn" disabled>Loading…</button>
+    </div>
+    <a class="back-link" href="utils.html">← Utils</a>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { USDZLoader } from 'three/addons/loaders/USDZLoader.js';
+        import * as RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js';
+
+        await RAPIER.init();
+
+        const dark = document.body.classList.contains('dark');
+        const canvas = document.getElementById('canvas');
+        const flipBtn = document.getElementById('flip-btn');
+        const resultEl = document.getElementById('result');
+
+        // ── Renderer ─────────────────────────────────────────────────────────────
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // ── Scene + camera ────────────────────────────────────────────────────────
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(dark ? '#100f1a' : '#F4F0F4');
+
+        const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 50);
+        camera.position.set(0, 2.8, 5.8);
+        camera.lookAt(0, 0.4, 0);
+
+        // ── Lighting ─────────────────────────────────────────────────────────────
+        scene.add(new THREE.AmbientLight(0xffffff, dark ? 0.5 : 0.7));
+
+        const sun = new THREE.DirectionalLight(0xffffff, dark ? 1.5 : 1.2);
+        sun.position.set(4, 10, 5);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.near = 1;
+        sun.shadow.camera.far = 40;
+        sun.shadow.camera.left = sun.shadow.camera.bottom = -4;
+        sun.shadow.camera.right = sun.shadow.camera.top = 4;
+        scene.add(sun);
+
+        const fill = new THREE.DirectionalLight(dark ? 0x9b8bbb : 0xfff0e8, 0.4);
+        fill.position.set(-4, 2, -3);
+        scene.add(fill);
+
+        // ── Ground ────────────────────────────────────────────────────────────────
+        const floor = new THREE.Mesh(
+            new THREE.CircleGeometry(5, 72),
+            new THREE.MeshStandardMaterial({ color: dark ? 0x1c1b2a : 0xe8e4f0, roughness: 0.9 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // ── Physics ───────────────────────────────────────────────────────────────
+        const world = new RAPIER.World({ x: 0, y: -18, z: 0 });
+        const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+        world.createCollider(RAPIER.ColliderDesc.cuboid(10, 0.01, 10), groundBody);
+
+        // ── Coin constants ────────────────────────────────────────────────────────
+        const R  = 0.48;   // radius
+        const HH = 0.038;  // half-height (US quarter is ~14:1 diameter:thickness)
+
+        // ── Fallback procedural coin ──────────────────────────────────────────────
+        function makeFallback() {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(
+                new THREE.CylinderGeometry(R, R, HH * 2, 64),
+                new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 })
+            ));
+            const rim = new THREE.Mesh(
+                new THREE.TorusGeometry(R, HH * 0.85, 8, 64),
+                new THREE.MeshStandardMaterial({ color: 0xb89010, metalness: 0.9, roughness: 0.3 })
+            );
+            rim.rotation.x = Math.PI / 2;
+            g.add(rim);
+            return g;
+        }
+
+        // ── Load USDZ ─────────────────────────────────────────────────────────────
+        let coinModel;
+        try {
+            coinModel = await new USDZLoader().loadAsync('files/US_quarter.usdz');
+            const box = new THREE.Box3().setFromObject(coinModel);
+            const size = box.getSize(new THREE.Vector3());
+            // Scale so the widest XZ dimension = diameter
+            coinModel.scale.setScalar((R * 2) / Math.max(size.x, size.z));
+            // Center at origin
+            box.setFromObject(coinModel);
+            coinModel.position.sub(box.getCenter(new THREE.Vector3()));
+        } catch (e) {
+            console.warn('USDZLoader failed, using fallback coin:', e);
+            coinModel = makeFallback();
+        }
+        coinModel.traverse(o => { if (o.isMesh) o.castShadow = true; });
+
+        // Pivot — physics body position/rotation drives this group
+        const pivot = new THREE.Group();
+        pivot.add(coinModel);
+        scene.add(pivot);
+
+        // ── Coin physics body (starts fixed, goes dynamic on flip) ────────────────
+        const coinBody = world.createRigidBody(
+            RAPIER.RigidBodyDesc.fixed().setTranslation(0, HH, 0)
+        );
+        world.createCollider(
+            RAPIER.ColliderDesc.cylinder(HH, R).setRestitution(0.25).setFriction(0.8),
+            coinBody
+        );
+
+        function syncMesh() {
+            const t = coinBody.translation();
+            const r = coinBody.rotation();
+            pivot.position.set(t.x, t.y, t.z);
+            pivot.quaternion.set(r.x, r.y, r.z, r.w);
+        }
+        syncMesh();
+
+        flipBtn.textContent = 'Flip';
+        flipBtn.disabled = false;
+
+        // ── Flip ──────────────────────────────────────────────────────────────────
+        let state = 'idle';
+        let settleTimer = 0;
+
+        flipBtn.addEventListener('click', () => {
+            if (state !== 'idle') return;
+            state = 'flipping';
+            settleTimer = 0;
+            flipBtn.disabled = true;
+            resultEl.classList.remove('show');
+
+            coinBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
+            coinBody.setTranslation({ x: 0, y: HH, z: 0 }, true);
+            coinBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+
+            const dir = Math.random() < 0.5 ? 1 : -1;
+            coinBody.setLinvel({
+                x: (Math.random() - 0.5) * 0.5,
+                y: 7 + Math.random() * 2.5,
+                z: (Math.random() - 0.5) * 0.5,
+            }, true);
+            coinBody.setAngvel({
+                x: dir * (18 + Math.random() * 10),
+                y: (Math.random() - 0.5) * 2,
+                z: (Math.random() - 0.5) * 1.5,
+            }, true);
+        });
+
+        // ── Result detection ──────────────────────────────────────────────────────
+        // Coin's local +Y axis in world space; if pointing world-up → heads face up.
+        // Swap 'Heads'/'Tails' here if the model's orientation is reversed.
+        function getResult() {
+            const localUp = new THREE.Vector3(0, 1, 0).applyQuaternion(pivot.quaternion);
+            return localUp.y > 0 ? 'Heads' : 'Tails';
+        }
+
+        // ── Resize ────────────────────────────────────────────────────────────────
+        function onResize() {
+            const w = canvas.clientWidth, h = canvas.clientHeight;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        window.addEventListener('resize', onResize);
+        onResize();
+
+        // ── Loop ──────────────────────────────────────────────────────────────────
+        const clock = new THREE.Clock();
+
+        (function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 1 / 30);
+
+            if (state === 'flipping') {
+                world.step();
+                syncMesh();
+
+                const pos = coinBody.translation();
+                const lv  = coinBody.linvel();
+                const av  = coinBody.angvel();
+                const settled = pos.y < HH + 0.08
+                    && Math.hypot(lv.x, lv.y, lv.z) < 0.5
+                    && Math.hypot(av.x, av.y, av.z) < 1.0;
+
+                if (settled) {
+                    settleTimer += dt;
+                    if (settleTimer > 0.5) {
+                        state = 'idle';
+                        coinBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
+                        resultEl.textContent = getResult();
+                        resultEl.classList.add('show');
+                        flipBtn.disabled = false;
+                        flipBtn.textContent = 'Flip again';
+                    }
+                } else {
+                    settleTimer = 0;
+                }
+            }
+
+            renderer.render(scene, camera);
+        })();
+    </script>
+</body>
+</html>
