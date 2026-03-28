@@ -133,7 +133,8 @@ function initTheme() {
     setDark(document.body.classList.contains('dark') || prefersDark);
 
     if (btn) {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
             setDark(!document.body.classList.contains('dark'), true);
             syncResumeTheme();
         });

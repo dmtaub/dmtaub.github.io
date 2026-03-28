@@ -2,6 +2,7 @@
    Theme variables
    ===================== */
 :root {
+    --nav-edge: 20px;
     --card-img-size: 85%;
     --card-img-dim:  0; /* 0 = fully visible, 1 = fully hidden */
     --bg:           #F4F0F4;
@@ -168,10 +169,8 @@ body.projects-section .header-title .showy {
     pointer-events: none;
 }
 
-/* Gear button — far left of nav bar, mirrors theme toggle on the right */
-nav .nav-gear {
-    position: absolute;
-    left: 20px;
+/* Shared pill — nav-gear (left) and theme-toggle (right) */
+.nav-pill {
     display: flex;
     align-items: center;
     gap: 5px;
@@ -180,14 +179,24 @@ nav .nav-gear {
     border: 1px solid var(--accent);
     border-radius: 20px;
     color: var(--accent);
-    text-decoration: none;
     font-size: 13px;
     box-sizing: border-box;
     transition: border-color 0.2s, color 0.2s;
 }
-nav .nav-gear:hover {
+.nav-pill:hover {
     border-color: var(--text);
     color: var(--text);
+}
+nav .nav-pill.left-side {
+    position: absolute;
+    left: var(--nav-edge);
+    text-decoration: none;
+}
+nav .nav-pill.right-side {
+    position: absolute;
+    right: var(--nav-edge);
+    justify-content: center;
+    text-decoration: none;
 }
 
 
@@ -216,28 +225,6 @@ body.dark .social-links svg:hover {
     fill: #e8e4f0;
 }
 
-/* Theme toggle button */
-.theme-toggle {
-    background: none;
-    border: 1px solid var(--accent);
-    border-radius: 20px;
-    min-width: 60px;
-    height: 28px;
-    padding: 0 10px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    transition: border-color 0.2s, color 0.2s;
-    flex-shrink: 0;
-}
-.theme-toggle:hover {
-    border-color: var(--text);
-    color: var(--text);
-}
 
 /* =====================
    Nav
@@ -270,13 +257,7 @@ body.projects-section nav {
     font-size: 0.8em;
 }
 
-/* Toggle lives in nav, pinned to far right */
-nav .theme-toggle {
-    position: absolute;
-    right: 20px;
-}
-body.projects-section nav .theme-toggle,
-body.projects-section nav .nav-gear {
+body.projects-section nav .nav-pill {
     display: none;
 }
 
@@ -631,6 +612,7 @@ h2.spaced { letter-spacing: 0.05em; }
    Responsive
    ===================== */
 @media (max-width: 600px) {
+    :root { --nav-edge: 10px; }
     header {
         flex-direction: column;
     }
@@ -646,22 +628,15 @@ h2.spaced { letter-spacing: 0.05em; }
     }
     .header-title h1 { font-size: 1.3em; }
     .header-subtitle { font-size: 1em; }
-    .theme-toggle {
+    nav .nav-pill {
+        width: 32px;
+        height: 32px;
         min-width: 32px;
-        width: 32px;
-        height: 32px;
         border-radius: 50%;
-        padding: 0;
-        margin-right: 10px;
-    }
-    .theme-toggle .toggle-text { display: none; }
-    .nav-gear-text { display: none; }
-    nav .nav-gear {
-        width: 32px;
-        height: 32px;
         padding: 0;
         justify-content: center;
     }
+    .toggle-text, .nav-gear-text { display: none; }
 }
 
 /* Mobile thumbnails */
