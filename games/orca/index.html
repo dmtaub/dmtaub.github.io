@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orca Underwater</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #000; height: 100%; }
+    #game { width: 100%; height: 100%; display:flex; align-items:center; justify-content:center; }
+    canvas { image-rendering: pixelated; }
+    .hint {
+      position: fixed; left: 12px; bottom: 10px;
+      color: rgba(255,255,255,0.7); font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      user-select: none; pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+  </style>
+</head>
+<body data-game="orca">
+  <div id="game"></div>
+  <div class="hint">Arrows/WASD: swim • Space: dash • Esc: pause</div>
+
+  <!-- Phaser 3 -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <script type="module" src="./loader.js"></script>
+</body>
+</html>
