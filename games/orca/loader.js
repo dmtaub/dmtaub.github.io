@@ -33,6 +33,7 @@
         const result = await tryUnlock(gameName, stored);
         if (result.ok) {
             window.__assetPackMode = result.packMode === true;
+            window.__secureMode = true;
             startGame(gameName);
             return;
         }
@@ -46,6 +47,7 @@
         if (result.ok) {
             localStorage.setItem(STORAGE_KEY, password);
             window.__assetPackMode = result.packMode === true;
+            window.__secureMode = true;
             hidePasswordPrompt();
             startGame(gameName);
         } else {
