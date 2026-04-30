@@ -466,7 +466,7 @@ const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
 
 // Non-image extensions that Phaser loads at runtime and need transparent .enc rewriting.
 const PHASER_ASSET_EXTENSIONS = new Set([
-    'dat', 'biome', 'legend', 'json',
+    'dat', 'biome', 'legend', 'json', 'js',
 ]);
 
 // Paths that must NOT be rewritten even if they match an asset extension.
@@ -683,6 +683,8 @@ self.addEventListener('fetch', (event) => {
     if (!sessionReady) return;
 
     const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin) return;
+
     const path = url.pathname;
 
     // Direct .enc fetch (game bundle and other non-image assets)
