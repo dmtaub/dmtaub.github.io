@@ -20,14 +20,6 @@
   <div id="game"></div>
   <div class="hint">Arrows/WASD: swim • Space: dash • Esc: pause</div>
 
-  <!-- Remove any leftover service worker from a dev-secure session -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        if (regs.length > 0) Promise.all(regs.map(r => r.unregister())).then(() => location.reload());
-      });
-    }
-  </script>
 
   <!-- Phaser 3 -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
