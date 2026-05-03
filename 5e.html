@@ -43,29 +43,22 @@
         .search-input:focus { outline:none; border-color:var(--accent-soft); }
         .search-input::placeholder { color:var(--text-muted); }
 
-        /* ── Stat blocks ── */
-        .stat-controls-bar { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
-        .stat-controls-bar .search-row { flex:1; min-width:180px; margin-bottom:0; }
-        .card-mode-row { display:flex; align-items:center; gap:0.35rem; flex-shrink:0; }
-        .card-mode-label { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; }
-        .mode-btn { background:none; border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.6rem; font-size:0.82rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
-        .mode-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-        .mode-btn:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
 
-        .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
-        .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); position:relative; transition:transform 0.15s ease; }
-        .stat-block.homebrew { border-color:var(--accent-soft); }
-        .stat-block.flip-mode { cursor:pointer; }
-        .stat-block.flip-mode:hover { border-color:var(--accent-soft); }
-        .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; }
-        .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin:0 0 0.55rem; }
-        .stat-row { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.82rem; margin-bottom:0.4rem; }
-        .stat-pill { background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.45rem; white-space:nowrap; }
-        .stat-pill strong { color:var(--accent); }
-        .ability-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:0.2rem; text-align:center; font-size:0.78rem; margin:0.45rem 0; }
-        .ability-grid .ab-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; }
-        .ability-grid .ab-val { font-weight:700; color:var(--text); font-size:0.8rem; }
-        .stat-empty { color:var(--text-muted); font-size:0.9rem; padding:1rem 0; }
+        /* ── Saved lists panel ── */
+        #savedListsSection { margin-top:1.25rem; }
+        .saved-lists-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; }
+        .saved-lists-header h3 { font-size:0.9rem; color:var(--text-muted); margin:0; font-weight:600; }
+        .list-chips { display:flex; flex-wrap:wrap; gap:0.5rem; }
+        .list-chip { display:flex; align-items:center; gap:0.35rem; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.6rem; font-size:0.83rem; }
+        .list-chip-name { font-weight:600; color:var(--text); cursor:default; }
+        .list-chip-count { font-size:0.74rem; color:var(--text-muted); }
+        .list-chip-btn { background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--accent); padding:0 0.15rem; }
+        .list-chip-btn:hover { text-decoration:underline; }
+        .list-chip-btn.del { color:#c0392b; }
+        .list-filter-bar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; background:var(--bg); border:1px solid var(--accent-soft); border-radius:6px; padding:0.4rem 0.75rem; font-size:0.85rem; }
+        .list-filter-bar strong { color:var(--accent); flex:1; }
+        .list-filter-bar button { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:0.82rem; }
+        .list-filter-bar button:hover { color:var(--text); }
 
         .flip-hint { font-size:0.68rem; color:var(--text-muted); text-align:right; margin-top:0.35rem; opacity:0.65; user-select:none; }
         .sb-divider { border:none; border-top:1px solid var(--border); margin:0.5rem 0; }
@@ -88,6 +81,44 @@
         .btn-roll { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem; }
         .btn-roll:hover { opacity:.85; }
         .roll-result-text { font-size:0.9rem; color:var(--text); font-style:italic; }
+
+
+        /* ── Stat blocks ── */
+        .stat-controls-bar { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
+        .stat-controls-bar .search-row { flex:1; min-width:180px; margin-bottom:0; }
+        .card-mode-row { display:flex; align-items:center; gap:0.35rem; flex-shrink:0; }
+        .card-mode-label { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; }
+        .mode-btn { background:none; border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.6rem; font-size:0.82rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
+        .mode-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .mode-btn:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
+
+        .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
+        .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); position:relative; transition:transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+        .stat-block.homebrew { border-color:var(--accent-soft); }
+        .stat-block.flip-mode { cursor:pointer; }
+        .stat-block.flip-mode:hover { border-color:var(--accent-soft); }
+        .stat-block.selectable { cursor:pointer; }
+        .stat-block.selectable:hover { border-color:var(--accent-soft); }
+        .stat-block.selected { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+        .sb-check { position:absolute; top:0.45rem; right:0.6rem; width:1.1rem; height:1.1rem; border:2px solid var(--border); border-radius:3px; background:var(--bg); transition:all .15s; display:flex; align-items:center; justify-content:center; font-size:0.7rem; }
+        .selected .sb-check { background:var(--accent); border-color:var(--accent); color:#fff; }
+        .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; }
+        .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin:0 0 0.55rem; }
+        .stat-row { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.82rem; margin-bottom:0.4rem; }
+        .stat-pill { background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.45rem; white-space:nowrap; }
+        .stat-pill strong { color:var(--accent); }
+        .ability-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:0.2rem; text-align:center; font-size:0.78rem; margin:0.45rem 0; }
+        .ability-grid .ab-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; }
+        .ability-grid .ab-val { font-weight:700; color:var(--text); font-size:0.8rem; }
+        .stat-empty { color:var(--text-muted); font-size:0.9rem; padding:1rem 0; }
+
+        /* ── Selection bar ── */
+        #selectionBar { display:none; position:sticky; bottom:1.25rem; z-index:10; background:var(--accent); color:#fff; border-radius:8px; padding:0.6rem 1rem; margin-top:1rem; align-items:center; gap:0.6rem; flex-wrap:wrap; box-shadow:0 4px 16px rgba(0,0,0,.25); }
+        #selectionBar.visible { display:flex; }
+        #selectionBar .sel-count { font-size:0.88rem; font-weight:600; flex:1; }
+        #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.28rem 0.65rem; font-size:0.82rem; cursor:pointer; transition:background .15s; }
+        #selectionBar .btn-sel:hover { background:rgba(255,255,255,.35); }
+        #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
 
         /* ── Narrative ── */
         .narrative-section { margin-bottom:0.5rem; }
@@ -202,9 +233,18 @@
                 <span class="card-mode-label">Cards:</span>
                 <button class="mode-btn" id="modeBtnFlip" data-mode="flip">Flip</button>
                 <button class="mode-btn" id="modeBtnFull" data-mode="full">Full</button>
+                <button class="mode-btn" id="modeBtnSelect" data-mode="select">Select</button>
             </div>
         </div>
+        <div id="savedListsSection"></div>
+        <div id="listFilterBar" class="list-filter-bar" style="display:none"></div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
+        <div id="selectionBar">
+            <span class="sel-count" id="selectionCount">0 selected</span>
+            <button class="btn-sel" id="btnSaveList">Save as list…</button>
+            <button class="btn-sel" id="btnAddToList">Add to list…</button>
+            <button class="btn-sel ghost" id="btnClearSel">Clear</button>
+        </div>
     </div>
 
     <!-- ══ ROLL TABLES ══════════════════════════════════════════════════════ -->
@@ -658,6 +698,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     settings5e.cardMode = cardMode;
     saveSettings();
     updateModeButtons();
+    updateSelectionBar();
     buildStatGrid(document.getElementById('statSearch').value);
   });
 });
@@ -752,41 +793,174 @@ function renderFull(c) {
 
 function renderStatBlock(c, idx) {
   const isHB = c._homebrew;
+  if (cardMode === 'select') {
+    const sel = selectedNames.has(c.name);
+    return `<div class="stat-block selectable${isHB?' homebrew':''}${sel?' selected':''}" data-idx="${idx}" data-face="select">
+      <div class="sb-check">${sel?'✓':''}</div>
+      ${renderFront(c)}
+    </div>`;
+  }
   const cls = `stat-block${isHB?' homebrew':''}${cardMode==='flip'?' flip-mode':''}`;
   const inner = cardMode === 'full' ? renderFull(c) : renderFront(c);
   return `<div class="${cls}" data-idx="${idx}" data-face="front">${inner}</div>`;
 }
 
-// Flip click handler — event delegation on the grid container
+// Unified click handler on the grid
 document.getElementById('statGrid').addEventListener('click', e => {
-  if (cardMode !== 'flip') return;
-  const block = e.target.closest('.stat-block.flip-mode');
+  const block = e.target.closest('.stat-block');
   if (!block) return;
   const c = CURRENT_FILTERED[+block.dataset.idx];
   if (!c) return;
-  const isFront = block.dataset.face === 'front';
-  block.style.transition = 'transform 0.13s ease-in';
-  block.style.transform  = 'scaleX(0)';
-  setTimeout(() => {
-    block.innerHTML    = isFront ? renderBack(c) : renderFront(c);
-    block.dataset.face = isFront ? 'back' : 'front';
-    block.style.transition = 'transform 0.13s ease-out';
-    block.style.transform  = 'scaleX(1)';
-  }, 130);
+
+  if (cardMode === 'select') {
+    if (selectedNames.has(c.name)) selectedNames.delete(c.name);
+    else selectedNames.add(c.name);
+    block.classList.toggle('selected', selectedNames.has(c.name));
+    const chk = block.querySelector('.sb-check');
+    if (chk) chk.textContent = selectedNames.has(c.name) ? '✓' : '';
+    updateSelectionBar();
+    return;
+  }
+
+  if (cardMode === 'flip') {
+    if (!block.classList.contains('flip-mode')) return;
+    const isFront = block.dataset.face === 'front';
+    block.style.transition = 'transform 0.13s ease-in';
+    block.style.transform  = 'scaleX(0)';
+    setTimeout(() => {
+      block.innerHTML    = isFront ? renderBack(c) : renderFront(c);
+      block.dataset.face = isFront ? 'back' : 'front';
+      block.style.transition = 'transform 0.13s ease-out';
+      block.style.transform  = 'scaleX(1)';
+    }, 130);
+  }
+});
+
+// ── Monster lists ─────────────────────────────────────────────────────────────
+let selectedNames = new Set();
+let monsterLists  = (() => { try { return JSON.parse(localStorage.getItem('5e-monster-lists') || '[]'); } catch(e) { return []; } })();
+let activeListId  = null; // id of list currently being viewed, or null
+
+function saveMonsterLists() { localStorage.setItem('5e-monster-lists', JSON.stringify(monsterLists)); }
+
+function updateSelectionBar() {
+  const n   = selectedNames.size;
+  const bar = document.getElementById('selectionBar');
+  bar.classList.toggle('visible', n > 0 && cardMode === 'select');
+  document.getElementById('selectionCount').textContent = n === 1 ? '1 selected' : `${n} selected`;
+}
+
+function renderSavedLists() {
+  const sec = document.getElementById('savedListsSection');
+  if (!monsterLists.length) { sec.innerHTML = ''; return; }
+  const chips = monsterLists.map(lst => `
+    <div class="list-chip" data-lid="${lst.id}">
+      <span class="list-chip-name">${lst.name}</span>
+      <span class="list-chip-count">(${lst.names.length})</span>
+      <button class="list-chip-btn show-btn" data-lid="${lst.id}" title="Filter to this list">Show</button>
+      <button class="list-chip-btn del" data-lid="${lst.id}" title="Delete list">✕</button>
+    </div>`).join('');
+  sec.innerHTML = `<div class="saved-lists-header"><h3>Saved Lists</h3></div><div class="list-chips">${chips}</div>`;
+
+  sec.querySelectorAll('.show-btn').forEach(btn => btn.addEventListener('click', () => showList(btn.dataset.lid)));
+  sec.querySelectorAll('.list-chip-btn.del').forEach(btn => btn.addEventListener('click', () => deleteList(btn.dataset.lid)));
+}
+
+function showList(id) {
+  const lst = monsterLists.find(l => l.id === id);
+  if (!lst) return;
+  activeListId = id;
+  const bar = document.getElementById('listFilterBar');
+  bar.style.display = 'flex';
+  bar.innerHTML = `<strong>Showing: ${lst.name}</strong> <span style="color:var(--text-muted);font-size:0.8rem">${lst.names.length} creatures</span> <button onclick="clearListFilter()">× Clear</button>`;
+  document.getElementById('statSearch').value = '';
+  buildStatGrid('');
+}
+
+function clearListFilter() {
+  activeListId = null;
+  const bar = document.getElementById('listFilterBar');
+  bar.style.display = 'none';
+  buildStatGrid(document.getElementById('statSearch').value);
+}
+
+function deleteList(id) {
+  const lst = monsterLists.find(l => l.id === id);
+  if (!lst || !confirm(`Delete list "${lst.name}"?`)) return;
+  monsterLists = monsterLists.filter(l => l.id !== id);
+  saveMonsterLists();
+  if (activeListId === id) clearListFilter();
+  renderSavedLists();
+}
+
+function saveNewList(name, names) {
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  monsterLists.push({ id, name, names: [...names] });
+  saveMonsterLists();
+  renderSavedLists();
+}
+
+function addToExistingList(id, names) {
+  const lst = monsterLists.find(l => l.id === id);
+  if (!lst) return;
+  for (const n of names) { if (!lst.names.includes(n)) lst.names.push(n); }
+  saveMonsterLists();
+  renderSavedLists();
+}
+
+document.getElementById('btnSaveList').addEventListener('click', () => {
+  if (!selectedNames.size) return;
+  const name = prompt('List name:', 'My List');
+  if (!name) return;
+  saveNewList(name, selectedNames);
+  selectedNames.clear();
+  updateSelectionBar();
+  buildStatGrid(document.getElementById('statSearch').value);
+});
+
+document.getElementById('btnAddToList').addEventListener('click', () => {
+  if (!selectedNames.size || !monsterLists.length) {
+    alert(monsterLists.length ? 'Nothing selected.' : 'No lists yet — use "Save as list" first.');
+    return;
+  }
+  const opts = monsterLists.map((l, i) => `${i+1}. ${l.name} (${l.names.length})`).join('\n');
+  const ans  = prompt(`Add to which list?\n\n${opts}\n\nEnter number:`);
+  if (!ans) return;
+  const idx = parseInt(ans) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= monsterLists.length) { alert('Invalid choice.'); return; }
+  addToExistingList(monsterLists[idx].id, selectedNames);
+  selectedNames.clear();
+  updateSelectionBar();
+  buildStatGrid(document.getElementById('statSearch').value);
+});
+
+document.getElementById('btnClearSel').addEventListener('click', () => {
+  selectedNames.clear();
+  updateSelectionBar();
+  buildStatGrid(document.getElementById('statSearch').value);
 });
 
 function buildStatGrid(filter) {
   const q = (filter || '').toLowerCase();
   const grid = document.getElementById('statGrid');
+
+  // Apply active list filter first, then text search within it
+  let pool = ALL_CREATURES;
+  if (activeListId) {
+    const lst = monsterLists.find(l => l.id === activeListId);
+    if (lst) pool = ALL_CREATURES.filter(c => lst.names.includes(c.name));
+  }
+
   CURRENT_FILTERED = q
-    ? ALL_CREATURES.filter(c =>
+    ? pool.filter(c =>
         c.name.toLowerCase().includes(q) ||
         (c.typeLine||'').toLowerCase().includes(q) ||
         ('cr'+(c.cr||'')).includes(q)
       )
-    : ALL_CREATURES;
+    : pool;
+
   if (!CURRENT_FILTERED.length) {
-    grid.innerHTML = `<p class="stat-empty">${q ? 'No matches.' : 'No creatures loaded.'}</p>`;
+    grid.innerHTML = `<p class="stat-empty">${q || activeListId ? 'No matches.' : 'No creatures loaded.'}</p>`;
     return;
   }
   grid.innerHTML = `<div class="stat-grid">${CURRENT_FILTERED.map((c, i) => renderStatBlock(c, i)).join('')}</div>`;
@@ -1160,6 +1334,7 @@ document.getElementById('btnImport').addEventListener('click', () => {
 // ─── INITIALISE ──────────────────────────────────────────────────────────────
 buildNarrative();
 renderAll();
+renderSavedLists();
 
 (async function init() {
   try {
