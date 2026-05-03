@@ -97,12 +97,11 @@
         .stat-block.homebrew { border-color:var(--accent-soft); }
         .stat-block.flip-mode { cursor:pointer; }
         .stat-block.flip-mode:hover { border-color:var(--accent-soft); }
-        .stat-block.selectable { cursor:pointer; }
-        .stat-block.selectable:hover { border-color:var(--accent-soft); }
         .stat-block.selected { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
-        .sb-check { position:absolute; top:0.45rem; right:0.6rem; width:1.1rem; height:1.1rem; border:2px solid var(--border); border-radius:3px; background:var(--bg); transition:all .15s; display:flex; align-items:center; justify-content:center; font-size:0.7rem; }
+        .sb-check { position:absolute; top:0.5rem; right:0.55rem; width:1.35rem; height:1.35rem; border:2px solid var(--border); border-radius:4px; background:var(--bg); transition:all .15s; display:flex; align-items:center; justify-content:center; font-size:0.85rem; cursor:pointer; flex-shrink:0; z-index:1; }
+        .sb-check:hover { border-color:var(--accent-soft); }
         .selected .sb-check { background:var(--accent); border-color:var(--accent); color:#fff; }
-        .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; }
+        .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; padding-right:1.75rem; }
         .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin:0 0 0.55rem; }
         .stat-row { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.82rem; margin-bottom:0.4rem; }
         .stat-pill { background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.45rem; white-space:nowrap; }
@@ -233,16 +232,16 @@
                 <span class="card-mode-label">Cards:</span>
                 <button class="mode-btn" id="modeBtnFlip" data-mode="flip">Flip</button>
                 <button class="mode-btn" id="modeBtnFull" data-mode="full">Full</button>
-                <button class="mode-btn" id="modeBtnSelect" data-mode="select">Select</button>
             </div>
         </div>
         <div id="savedListsSection"></div>
-        <div id="listFilterBar" class="list-filter-bar" style="display:none"></div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
         <div id="selectionBar">
-            <span class="sel-count" id="selectionCount">0 selected</span>
-            <button class="btn-sel" id="btnSaveList">Save as list…</button>
-            <button class="btn-sel" id="btnAddToList">Add to list…</button>
+            <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> <span id="selListSaved"></span> ·</span>
+            <span class="sel-count" id="selectionCount"></span>
+            <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
+            <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
+            <button class="btn-sel" id="btnSaveList">Save as…</button>
             <button class="btn-sel ghost" id="btnClearSel">Clear</button>
         </div>
     </div>
@@ -698,7 +697,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     settings5e.cardMode = cardMode;
     saveSettings();
     updateModeButtons();
-    updateSelectionBar();
+    updateHoverBar();
     buildStatGrid(document.getElementById('statSearch').value);
   });
 });
@@ -793,16 +792,13 @@ function renderFull(c) {
 
 function renderStatBlock(c, idx) {
   const isHB = c._homebrew;
-  if (cardMode === 'select') {
-    const sel = selectedNames.has(c.name);
-    return `<div class="stat-block selectable${isHB?' homebrew':''}${sel?' selected':''}" data-idx="${idx}" data-face="select">
-      <div class="sb-check">${sel?'✓':''}</div>
-      ${renderFront(c)}
-    </div>`;
-  }
-  const cls = `stat-block${isHB?' homebrew':''}${cardMode==='flip'?' flip-mode':''}`;
+  const sel  = selectedNames.has(c.name);
+  const cls  = `stat-block${isHB?' homebrew':''}${cardMode==='flip'?' flip-mode':''}${sel?' selected':''}`;
   const inner = cardMode === 'full' ? renderFull(c) : renderFront(c);
-  return `<div class="${cls}" data-idx="${idx}" data-face="front">${inner}</div>`;
+  return `<div class="${cls}" data-idx="${idx}" data-face="front">
+    <div class="sb-check" title="Select">${sel?'✓':''}</div>
+    <div class="sb-content">${inner}</div>
+  </div>`;
 }
 
 // Unified click handler on the grid
@@ -812,26 +808,29 @@ document.getElementById('statGrid').addEventListener('click', e => {
   const c = CURRENT_FILTERED[+block.dataset.idx];
   if (!c) return;
 
-  if (cardMode === 'select') {
+  // Checkbox click — toggle selection only, don't flip
+  if (e.target.closest('.sb-check')) {
     if (selectedNames.has(c.name)) selectedNames.delete(c.name);
     else selectedNames.add(c.name);
-    block.classList.toggle('selected', selectedNames.has(c.name));
-    const chk = block.querySelector('.sb-check');
-    if (chk) chk.textContent = selectedNames.has(c.name) ? '✓' : '';
-    updateSelectionBar();
+    const sel = selectedNames.has(c.name);
+    block.classList.toggle('selected', sel);
+    block.querySelector('.sb-check').textContent = sel ? '✓' : '';
+    updateHoverBar();
     return;
   }
 
+  // Card body click — flip animation on .sb-content only (preserves checkbox)
   if (cardMode === 'flip') {
-    if (!block.classList.contains('flip-mode')) return;
+    const content = block.querySelector('.sb-content');
+    if (!content) return;
     const isFront = block.dataset.face === 'front';
-    block.style.transition = 'transform 0.13s ease-in';
-    block.style.transform  = 'scaleX(0)';
+    content.style.transition = 'transform 0.13s ease-in';
+    content.style.transform  = 'scaleX(0)';
     setTimeout(() => {
-      block.innerHTML    = isFront ? renderBack(c) : renderFront(c);
+      content.innerHTML  = isFront ? renderBack(c) : renderFront(c);
       block.dataset.face = isFront ? 'back' : 'front';
-      block.style.transition = 'transform 0.13s ease-out';
-      block.style.transform  = 'scaleX(1)';
+      content.style.transition = 'transform 0.13s ease-out';
+      content.style.transform  = 'scaleX(1)';
     }, 130);
   }
 });
@@ -840,13 +839,33 @@ document.getElementById('statGrid').addEventListener('click', e => {
 let selectedNames = new Set();
 let monsterLists  = (() => { try { return JSON.parse(localStorage.getItem('5e-monster-lists') || '[]'); } catch(e) { return []; } })();
 let activeListId  = null; // id of list currently being viewed, or null
+let showAllPool   = false; // when true, grid shows ALL_CREATURES even in list view
 
 function saveMonsterLists() { localStorage.setItem('5e-monster-lists', JSON.stringify(monsterLists)); }
 
-function updateSelectionBar() {
+function updateHoverBar() {
   const n   = selectedNames.size;
+  const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
   const bar = document.getElementById('selectionBar');
-  bar.classList.toggle('visible', n > 0 && cardMode === 'select');
+  bar.classList.toggle('visible', n > 0 || !!lst);
+
+  // List context label + "Showing" vs "Editing"
+  const ctxEl = document.getElementById('selListCtx');
+  ctxEl.style.display = lst ? '' : 'none';
+  if (lst) {
+    const origSet = new Set(lst.names);
+    const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    document.getElementById('selListLabel').textContent = diverged ? 'Editing:' : 'Showing:';
+    document.getElementById('selListName').textContent  = `"${lst.name}"`;
+    document.getElementById('selListSaved').textContent = `(${lst.names.length} saved)`;
+    document.getElementById('btnUpdateList').style.display = diverged ? '' : 'none';
+    document.getElementById('btnShowAll').style.display    = showAllPool ? 'none' : '';
+  } else {
+    document.getElementById('btnUpdateList').style.display = 'none';
+    document.getElementById('btnShowAll').style.display    = 'none';
+  }
+
+  // Selection count
   document.getElementById('selectionCount').textContent = n === 1 ? '1 selected' : `${n} selected`;
 }
 
@@ -861,7 +880,6 @@ function renderSavedLists() {
       <button class="list-chip-btn del" data-lid="${lst.id}" title="Delete list">✕</button>
     </div>`).join('');
   sec.innerHTML = `<div class="saved-lists-header"><h3>Saved Lists</h3></div><div class="list-chips">${chips}</div>`;
-
   sec.querySelectorAll('.show-btn').forEach(btn => btn.addEventListener('click', () => showList(btn.dataset.lid)));
   sec.querySelectorAll('.list-chip-btn.del').forEach(btn => btn.addEventListener('click', () => deleteList(btn.dataset.lid)));
 }
@@ -869,19 +887,12 @@ function renderSavedLists() {
 function showList(id) {
   const lst = monsterLists.find(l => l.id === id);
   if (!lst) return;
-  activeListId = id;
-  const bar = document.getElementById('listFilterBar');
-  bar.style.display = 'flex';
-  bar.innerHTML = `<strong>Showing: ${lst.name}</strong> <span style="color:var(--text-muted);font-size:0.8rem">${lst.names.length} creatures</span> <button onclick="clearListFilter()">× Clear</button>`;
+  activeListId  = id;
+  showAllPool   = false;
+  selectedNames = new Set(lst.names);
   document.getElementById('statSearch').value = '';
+  updateHoverBar();
   buildStatGrid('');
-}
-
-function clearListFilter() {
-  activeListId = null;
-  const bar = document.getElementById('listFilterBar');
-  bar.style.display = 'none';
-  buildStatGrid(document.getElementById('statSearch').value);
 }
 
 function deleteList(id) {
@@ -889,7 +900,12 @@ function deleteList(id) {
   if (!lst || !confirm(`Delete list "${lst.name}"?`)) return;
   monsterLists = monsterLists.filter(l => l.id !== id);
   saveMonsterLists();
-  if (activeListId === id) clearListFilter();
+  if (activeListId === id) {
+    activeListId = null;
+    selectedNames.clear();
+    updateHoverBar();
+    buildStatGrid(document.getElementById('statSearch').value);
+  }
   renderSavedLists();
 }
 
@@ -900,13 +916,14 @@ function saveNewList(name, names) {
   renderSavedLists();
 }
 
-function addToExistingList(id, names) {
-  const lst = monsterLists.find(l => l.id === id);
+document.getElementById('btnUpdateList').addEventListener('click', () => {
+  const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
   if (!lst) return;
-  for (const n of names) { if (!lst.names.includes(n)) lst.names.push(n); }
+  lst.names = [...selectedNames];
   saveMonsterLists();
   renderSavedLists();
-}
+  updateHoverBar();
+});
 
 document.getElementById('btnSaveList').addEventListener('click', () => {
   if (!selectedNames.size) return;
@@ -914,43 +931,32 @@ document.getElementById('btnSaveList').addEventListener('click', () => {
   if (!name) return;
   saveNewList(name, selectedNames);
   selectedNames.clear();
-  updateSelectionBar();
+  activeListId = null;
+  updateHoverBar();
   buildStatGrid(document.getElementById('statSearch').value);
 });
 
-document.getElementById('btnAddToList').addEventListener('click', () => {
-  if (!selectedNames.size || !monsterLists.length) {
-    alert(monsterLists.length ? 'Nothing selected.' : 'No lists yet — use "Save as list" first.');
-    return;
-  }
-  const opts = monsterLists.map((l, i) => `${i+1}. ${l.name} (${l.names.length})`).join('\n');
-  const ans  = prompt(`Add to which list?\n\n${opts}\n\nEnter number:`);
-  if (!ans) return;
-  const idx = parseInt(ans) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= monsterLists.length) { alert('Invalid choice.'); return; }
-  addToExistingList(monsterLists[idx].id, selectedNames);
-  selectedNames.clear();
-  updateSelectionBar();
+document.getElementById('btnShowAll').addEventListener('click', () => {
+  showAllPool = true;
+  updateHoverBar();
   buildStatGrid(document.getElementById('statSearch').value);
 });
 
 document.getElementById('btnClearSel').addEventListener('click', () => {
   selectedNames.clear();
-  updateSelectionBar();
+  activeListId  = null;
+  showAllPool   = false;
+  updateHoverBar();
   buildStatGrid(document.getElementById('statSearch').value);
 });
 
 function buildStatGrid(filter) {
-  const q = (filter || '').toLowerCase();
-  const grid = document.getElementById('statGrid');
-
-  // Apply active list filter first, then text search within it
-  let pool = ALL_CREATURES;
-  if (activeListId) {
-    const lst = monsterLists.find(l => l.id === activeListId);
-    if (lst) pool = ALL_CREATURES.filter(c => lst.names.includes(c.name));
-  }
-
+  const q   = (filter || '').toLowerCase();
+  const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
+  // Use full pool when: no active list, showAllPool flag set, or user is typing a search
+  const pool = (lst && !showAllPool && !q)
+    ? ALL_CREATURES.filter(c => lst.names.includes(c.name))
+    : ALL_CREATURES;
   CURRENT_FILTERED = q
     ? pool.filter(c =>
         c.name.toLowerCase().includes(q) ||
@@ -958,15 +964,19 @@ function buildStatGrid(filter) {
         ('cr'+(c.cr||'')).includes(q)
       )
     : pool;
-
+  const grid = document.getElementById('statGrid');
   if (!CURRENT_FILTERED.length) {
-    grid.innerHTML = `<p class="stat-empty">${q || activeListId ? 'No matches.' : 'No creatures loaded.'}</p>`;
+    grid.innerHTML = `<p class="stat-empty">${q ? 'No matches.' : 'No creatures loaded.'}</p>`;
     return;
   }
   grid.innerHTML = `<div class="stat-grid">${CURRENT_FILTERED.map((c, i) => renderStatBlock(c, i)).join('')}</div>`;
 }
 
-document.getElementById('statSearch').addEventListener('input', e => buildStatGrid(e.target.value));
+document.getElementById('statSearch').addEventListener('input', e => {
+  if (activeListId && e.target.value) showAllPool = true;
+  buildStatGrid(e.target.value);
+  updateHoverBar();
+});
 
 // ─── ROLL TABLES ─────────────────────────────────────────────────────────────
 const BUILTIN_ROLL_TABLES = [
