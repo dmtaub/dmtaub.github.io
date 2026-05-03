@@ -400,31 +400,41 @@
 const META_URL = '5e-meta.json';
 
 // ─── SRD PARSING HELPERS ─────────────────────────────────────────────────────
-function extractText(item) {
-  return (item.subelements || []).map(s => (s.text || '').trim()).join(' ').replace(/\s+/g, ' ').trim();
+function elText(el) {
+  return (el.textContent || '').replace(/\s+/g, ' ').trim();
 }
-function rowTexts(row) {
-  return row.map(cell =>
-    (cell.subelements || []).map(s => (s.text || '').trim()).join(' ').replace(/\s+/g, ' ').trim()
-  );
+function tdTexts(row) {
+  return [...row.querySelectorAll('td')].map(td => elText(td));
 }
 
 // ─── WEAPONS PARSER ──────────────────────────────────────────────────────────
-function parseWeapons(data, meta) {
-  const cfg = meta.weapons;
+// Expects a parsed HTML Document from DOMParser.
+function parseWeapons(doc, meta) {
+  const heading = doc.getElementById(meta.weapons.heading_id);
+  if (!heading) return [];
+
+  // Collect the first two <table> siblings after the heading
+  const tables = [];
+  let el = heading.nextElementSibling;
+  while (el && tables.length < 2) {
+    if (el.tagName === 'TABLE') tables.push(el);
+    else if (/^H[123]$/.test(el.tagName)) break;
+    el = el.nextElementSibling;
+  }
+  if (tables.length < 2) return [];
+
+  // First table: header row + initial category label
   let category = 'Simple Melee Weapons';
-  const headerTbl = data[cfg.header_table_idx];
-  if (headerTbl && headerTbl.type === 'table' && (headerTbl.rows || []).length >= 2) {
-    const cat = rowTexts(headerTbl.rows[1]);
-    if (cat.length === 1 && cat[0]) category = cat[0];
+  const headerRows = tables[0].querySelectorAll('tr');
+  if (headerRows.length >= 2) {
+    const cells = tdTexts(headerRows[1]);
+    if (cells.length === 1 && cells[0]) category = cells[0];
   }
 
-  const tbl = data[cfg.data_table_idx];
-  if (!tbl || tbl.type !== 'table') return [];
-
+  // Second table: weapon rows (single-cell rows are category dividers)
   const weapons = [];
-  for (const row of (tbl.rows || [])) {
-    const cells = rowTexts(row);
+  tables[1].querySelectorAll('tr').forEach(row => {
+    const cells = tdTexts(row);
     if (cells.length === 1 && cells[0]) {
       category = cells[0];
     } else if (cells.length >= 3 && cells[0]) {
@@ -437,65 +447,75 @@ function parseWeapons(data, meta) {
         category,
       });
     }
-  }
+  });
   return weapons;
 }
 
 // ─── MONSTER PARSER ──────────────────────────────────────────────────────────
-function parseMonsters(data, meta) {
-  const cfg        = meta.monsters;
-  const typeRe     = new RegExp(cfg.type_line_re, cfg.type_line_re_flags);
-  const actionSet  = new Set(cfg.action_headings);
-  const statHeader = cfg.stat_table_header[0]; // "STR"
-  const fp         = cfg.field_patterns;
-  // Compile field regexes once
+// Expects a parsed HTML Document from DOMParser.
+function parseMonsters(doc, meta) {
+  const cfg       = meta.monsters;
+  const typeRe    = new RegExp(cfg.type_line_re, cfg.type_line_re_flags);
+  const actionSet = new Set(cfg.action_headings);
+  const fp        = cfg.field_patterns;
   const acRe    = new RegExp(fp.ac.re,    fp.ac.flags);
   const hpRe    = new RegExp(fp.hp.re,    fp.hp.flags);
   const speedRe = new RegExp(fp.speed.re, fp.speed.flags);
   const crRe    = new RegExp(fp.cr.re,    fp.cr.flags);
 
+  const section = doc.getElementById(cfg.section_id);
+  if (!section) return [];
+
   const monsters = [];
+  let el = section.nextElementSibling;
 
-  for (let i = cfg.start_idx; i < data.length - 5; i++) {
-    const item = data[i];
-    if (item.type !== 'h4') continue;
+  while (el) {
+    if (el.tagName === 'H4') {
+      const name = elText(el);
+      if (name && name.length <= cfg.name_max_length) {
 
-    const name = extractText(item);
-    if (!name || name.length > cfg.name_max_length) continue;
+        // Find first non-empty <p> sibling — should be the type line
+        let typeP = el.nextElementSibling;
+        while (typeP && typeP.tagName === 'P' && !elText(typeP)) {
+          typeP = typeP.nextElementSibling;
+        }
 
-    const next = data[i + 1];
-    if (!next || next.type !== 'paragraph') continue;
-    const typeLine = extractText(next);
-    if (!typeRe.test(typeLine)) continue;
+        if (typeP && typeP.tagName === 'P') {
+          const em = typeP.querySelector('em');
+          const typeLine = em ? elText(em) : elText(typeP);
 
-    const m = { name, typeLine };
+          if (typeRe.test(typeLine)) {
+            const m = { name, typeLine };
+            let sib = typeP.nextElementSibling;
+            let k = 0;
 
-    for (let j = i + 2; j < i + cfg.lookahead_limit && j < data.length; j++) {
-      const it = data[j];
-      if (it.type === 'h4') {
-        if (!actionSet.has(extractText(it))) break;
-        continue;
-      }
-      if (it.type === 'h3' || it.type === 'h2' || it.type === 'h1') break;
+            while (sib && k < cfg.lookahead_limit) {
+              if (sib.tagName === 'H4') {
+                if (!actionSet.has(elText(sib))) break; // new monster starts
+              } else if (/^H[123]$/.test(sib.tagName)) {
+                break;
+              } else if (sib.tagName === 'P') {
+                const txt = sib.textContent;
+                if (!m.ac   ) { const r = acRe.exec(txt);    if (r) m.ac    = r[fp.ac.group]; }
+                if (!m.hp   ) { const r = hpRe.exec(txt);    if (r) { m.hp = r[fp.hp.group]; m.hpDice = r[fp.hp.group2] || ''; } }
+                if (!m.speed) { const r = speedRe.exec(txt); if (r) m.speed = r[fp.speed.group].replace(/\s+/g,' ').trim(); }
+                if (!m.cr   ) { const r = crRe.exec(txt);    if (r) m.cr    = r[fp.cr.group]; }
+              } else if (sib.tagName === 'TABLE' && !m.str) {
+                const rows = sib.querySelectorAll('tr');
+                if (rows.length >= 2 && tdTexts(rows[0])[0] === cfg.stat_table_first_header) {
+                  [m.str, m.dex, m.con, m.int, m.wis, m.cha] = tdTexts(rows[1]);
+                }
+              }
+              sib = sib.nextElementSibling;
+              k++;
+            }
 
-      if (it.type === 'paragraph') {
-        const txt = extractText(it);
-        if (!m.ac    ) { const r = acRe.exec(txt);    if (r) m.ac = r[fp.ac.group]; }
-        if (!m.hp    ) { const r = hpRe.exec(txt);    if (r) { m.hp = r[fp.hp.group]; m.hpDice = r[fp.hp.group2] || ''; } }
-        if (!m.speed ) { const r = speedRe.exec(txt); if (r) m.speed = r[fp.speed.group].replace(/\s+/g,' ').trim(); }
-        if (!m.cr    ) { const r = crRe.exec(txt);    if (r) m.cr = r[fp.cr.group]; }
-      }
-
-      if (it.type === 'table' && !m.str) {
-        const rows = it.rows || [];
-        if (rows.length >= 2 && rowTexts(rows[0])[0] === statHeader) {
-          const v = rowTexts(rows[1]);
-          [m.str, m.dex, m.con, m.int, m.wis, m.cha] = v;
+            monsters.push(m);
+          }
         }
       }
     }
-
-    monsters.push(m);
+    el = el.nextElementSibling;
   }
   return monsters;
 }
@@ -506,12 +526,13 @@ async function loadSRD(meta) {
   if (cached) {
     try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(meta.cache_key); }
   }
-  showBanner('Fetching SRD 5.1 (~13 MB, first visit only)…');
+  showBanner('Fetching SRD 5.1 (~1.8 MB, first visit only)…');
   const resp = await fetch(meta.srd_url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   showBanner('Parsing monsters and equipment…');
-  const raw    = await resp.json();
-  const parsed = { weapons: parseWeapons(raw, meta), monsters: parseMonsters(raw, meta) };
+  const html   = await resp.text();
+  const doc    = new DOMParser().parseFromString(html, 'text/html');
+  const parsed = { weapons: parseWeapons(doc, meta), monsters: parseMonsters(doc, meta) };
   try { localStorage.setItem(meta.cache_key, JSON.stringify(parsed)); } catch(e) { /* storage full */ }
   return parsed;
 }
