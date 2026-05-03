@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5e Tools — Daniel M. Taub</title>
+    <link type="text/css" rel="stylesheet" href="style.css">
+    <style>
+        * { box-sizing: border-box; }
+
+        .page-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .back-link { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        .theme-toggle { background: none; border: 1px solid var(--accent); border-radius: 20px; min-width: 40px; height: 28px; padding: 0 10px; cursor: pointer; color: var(--text); font-size: 0.85rem; }
+        .theme-toggle:hover { border-color: var(--accent-soft); }
+
+        h1.page-title { font-size: 1.7rem; margin: 0 0 0.2rem; color: var(--text); }
+        .page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.25rem; }
+
+        /* ── Loading banner ── */
+        #loadBanner { display:none; align-items:center; gap:0.6rem; background:var(--accent); color:#fff; padding:0.55rem 1rem; border-radius:6px; margin-bottom:1rem; font-size:0.88rem; }
+        #loadBanner.err { background:#c0392b; }
+        .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ── Tabs ── */
+        .tabs { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.5rem; border-bottom:1px solid var(--border); padding-bottom:0.75rem; }
+        .tab-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.85rem; cursor:pointer; font-size:0.9rem; color:var(--text-muted); transition:all .15s; }
+        .tab-btn:hover { border-color:var(--accent-soft); color:var(--text); }
+        .tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; }
+
+        /* ── Shared ── */
+        .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.25rem 1.5rem; margin-bottom:1rem; box-shadow:0 2px 8px var(--shadow); }
+        .card h2 { font-size:1.1rem; margin:0 0 0.75rem; color:var(--accent); }
+        .card h3 { font-size:0.95rem; margin:0.85rem 0 0.4rem; color:var(--text); }
+
+        .search-row { display:flex; gap:0.5rem; margin-bottom:1rem; }
+        .search-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.75rem; font-size:0.9rem; color:var(--text); }
+        .search-input:focus { outline:none; border-color:var(--accent-soft); }
+        .search-input::placeholder { color:var(--text-muted); }
+
+        /* ── Stat blocks ── */
+        .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
+        .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); }
+        .stat-block.homebrew { border-color:var(--accent-soft); }
+        .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; }
+        .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin:0 0 0.55rem; }
+        .stat-row { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.82rem; margin-bottom:0.4rem; }
+        .stat-pill { background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.45rem; white-space:nowrap; }
+        .stat-pill strong { color:var(--accent); }
+        .ability-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:0.2rem; text-align:center; font-size:0.78rem; margin:0.45rem 0; }
+        .ability-grid .ab-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; }
+        .ability-grid .ab-val { font-weight:700; color:var(--text); font-size:0.8rem; }
+        .stat-block-traits { font-size:0.78rem; color:var(--text-muted); line-height:1.5; margin-top:0.5rem; border-top:1px solid var(--border); padding-top:0.5rem; }
+        .stat-block-traits em { color:var(--text); }
+        .stat-empty { color:var(--text-muted); font-size:0.9rem; padding:1rem 0; }
+
+        /* ── Roll tables ── */
+        .roll-section { margin-bottom:0.6rem; }
+        .roll-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.7rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; user-select:none; }
+        .roll-header:hover { border-color:var(--accent-soft); }
+        .roll-header h3 { margin:0; font-size:0.95rem; color:var(--text); }
+        .roll-header .roll-meta { font-size:0.8rem; color:var(--text-muted); }
+        .roll-body { display:none; background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 8px 8px; overflow:hidden; }
+        .roll-body.open { display:block; }
+        .roll-result-bar { display:flex; align-items:center; gap:0.75rem; padding:0.55rem 1rem; border-bottom:1px solid var(--border); background:var(--bg); }
+        .btn-roll { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem; }
+        .btn-roll:hover { opacity:.85; }
+        .roll-result-text { font-size:0.9rem; color:var(--text); font-style:italic; }
+
+        /* ── Narrative ── */
+        .narrative-section { margin-bottom:0.5rem; }
+        .narrative-header { display:flex; align-items:center; gap:0.5rem; cursor:pointer; padding:0.6rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; user-select:none; }
+        .narrative-header:hover { border-color:var(--accent-soft); }
+        .narrative-header .nh-icon { font-size:1rem; width:1.1rem; text-align:center; }
+        .narrative-header h3 { margin:0; font-size:0.93rem; color:var(--text); flex:1; }
+        .narrative-header .nh-sub { font-size:0.77rem; color:var(--text-muted); }
+        .narrative-body { display:none; background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 8px 8px; padding:0.7rem 1rem 1rem; }
+        .narrative-body.open { display:block; }
+        .roll-step { display:flex; gap:0.55rem; margin-bottom:0.4rem; font-size:0.87rem; align-items:flex-start; }
+        .roll-step-num { background:var(--accent); color:#fff; border-radius:50%; width:1.25rem; height:1.25rem; min-width:1.25rem; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; margin-top:0.1rem; }
+        .roll-step-text { color:var(--text); line-height:1.5; }
+        .roll-step-note { color:var(--text-muted); font-size:0.8rem; }
+        .narrative-tip { margin-top:0.75rem; padding:0.45rem 0.7rem; background:var(--bg); border-left:3px solid var(--accent-soft); border-radius:0 4px 4px 0; font-size:0.82rem; color:var(--text-muted); }
+
+        /* ── Reference tables ── */
+        .ref-table { width:100%; border-collapse:collapse; font-size:0.88rem; margin-top:0.5rem; }
+        .ref-table th { background:var(--bg); color:var(--text-muted); font-weight:600; text-align:left; padding:0.35rem 0.6rem; border-bottom:1px solid var(--border); }
+        .ref-table td { padding:0.3rem 0.6rem; border-bottom:1px solid var(--border); color:var(--text); vertical-align:top; }
+        .ref-table tr:last-child td { border-bottom:none; }
+        .ref-table tr:hover td { background:var(--bg); }
+        .ref-section-row td { background:var(--bg); font-style:italic; color:var(--text-muted); font-size:0.82rem; }
+
+        .ref-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:1.25rem; }
+
+        /* alignment grid */
+        .align-grid { display:grid; grid-template-columns:auto repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:6px; overflow:hidden; font-size:0.82rem; }
+        .align-cell { background:var(--surface); padding:0.45rem 0.55rem; }
+        .align-header { background:var(--bg); color:var(--text-muted); font-weight:600; text-align:center; padding:0.35rem 0.55rem; }
+        .align-row-label { background:var(--bg); color:var(--text-muted); font-weight:600; display:flex; align-items:center; justify-content:flex-end; padding:0.35rem 0.6rem; writing-mode:horizontal-tb; }
+        .align-abbr { font-weight:700; color:var(--accent); display:block; font-size:0.9rem; }
+        .align-desc { color:var(--text-muted); font-size:0.75rem; line-height:1.35; }
+
+        /* ── Encounter builder ── */
+        .enc-toolbar { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; align-items:flex-end; }
+        .field-group { display:flex; flex-direction:column; gap:0.2rem; }
+        .field-group label { font-size:0.78rem; color:var(--text-muted); }
+        .enc-input { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem; font-size:0.88rem; color:var(--text); width:110px; }
+        .enc-input.wide { width:190px; }
+        .enc-input:focus { outline:none; border-color:var(--accent-soft); }
+        .btn { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.4rem 0.9rem; cursor:pointer; font-size:0.88rem; transition:opacity .15s; align-self:flex-end; }
+        .btn:hover { opacity:.85; }
+        .btn.secondary { background:none; color:var(--accent); border:1px solid var(--accent); }
+        .btn.secondary:hover { background:var(--bg); }
+        .btn.danger { background:#c0392b; }
+        .btn.sm { padding:0.25rem 0.55rem; font-size:0.8rem; }
+
+        .enc-slots { display:flex; gap:0.4rem; flex-wrap:wrap; margin:0; }
+        .enc-slot { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:0.28rem 0.7rem; font-size:0.85rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
+        .enc-slot:hover, .enc-slot.active { border-color:var(--accent); color:var(--text); }
+        .enc-slot.active { background:var(--surface); font-weight:600; color:var(--accent); }
+
+        .combatant-list { display:flex; flex-direction:column; gap:0.45rem; margin-bottom:1rem; }
+        .combatant-row { display:flex; align-items:center; gap:0.5rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.7rem; flex-wrap:wrap; }
+        .combatant-row.active-turn { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+        .combatant-row.defeated { opacity:.4; }
+        .comb-init { font-size:1.05rem; font-weight:700; color:var(--accent); min-width:1.8rem; text-align:center; }
+        .comb-name { font-weight:600; font-size:0.9rem; flex:1; min-width:90px; }
+        .comb-ac { font-size:0.8rem; color:var(--text-muted); white-space:nowrap; }
+        .comb-hp-wrap { display:flex; align-items:center; gap:0.3rem; }
+        .hp-bar-wrap { width:70px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+        .hp-bar { height:100%; background:#5cb85c; border-radius:3px; transition:width .2s; }
+        .hp-bar.mid { background:#f0ad4e; }
+        .hp-bar.low { background:#d9534f; }
+        .comb-hp { font-size:0.85rem; white-space:nowrap; }
+        .comb-hp-input { width:48px; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.18rem 0.3rem; font-size:0.82rem; color:var(--text); text-align:center; }
+        .comb-conditions { font-size:0.72rem; flex:1; min-width:70px; }
+        .condition-tag { display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:0 0.28rem; margin:0.08rem; cursor:pointer; color:var(--text-muted); }
+        .condition-tag.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+        .round-tracker { display:flex; align-items:center; gap:0.85rem; font-size:0.88rem; margin-bottom:0.7rem; padding:0.45rem 0.7rem; background:var(--bg); border-radius:6px; border:1px solid var(--border); flex-wrap:wrap; }
+        .round-tracker strong { color:var(--accent); }
+
+        .enc-io textarea { width:100%; height:110px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; font-size:0.82rem; color:var(--text); font-family:monospace; resize:vertical; margin-top:0.5rem; }
+        .enc-io textarea:focus { outline:none; border-color:var(--accent-soft); }
+
+        @media (max-width:520px) {
+            .stat-grid { grid-template-columns:1fr; }
+            .enc-input.wide { width:100%; }
+            .hp-bar-wrap { display:none; }
+            .ref-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body><script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
+<div class="page-wrap">
+    <div class="topbar">
+        <a class="back-link" href="utils.html">← Utils</a>
+        <button class="theme-toggle" id="themeToggle">☀</button>
+    </div>
+    <h1 class="page-title">5e Tools</h1>
+    <p class="page-subtitle">Personal DnD 5e assistant — stat blocks, roll tables, narrative patterns, encounter builder, quick reference.</p>
+
+    <div id="loadBanner"><span class="spinner"></span><span id="loadMsg">Loading…</span></div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="statblocks">Stat Blocks</button>
+        <button class="tab-btn" data-tab="rolltables">Roll Tables</button>
+        <button class="tab-btn" data-tab="narrative">Narrative Rolls</button>
+        <button class="tab-btn" data-tab="encounter">Encounter Builder</button>
+        <button class="tab-btn" data-tab="reference">Reference</button>
+    </div>
+
+    <!-- ══ STAT BLOCKS ══════════════════════════════════════════════════════ -->
+    <div id="tab-statblocks" class="tab-panel active">
+        <div class="search-row">
+            <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
+        </div>
+        <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
+    </div>
+
+    <!-- ══ ROLL TABLES ══════════════════════════════════════════════════════ -->
+    <div id="tab-rolltables" class="tab-panel">
+        <div id="rollTablesContainer"></div>
+    </div>
+
+    <!-- ══ NARRATIVE ════════════════════════════════════════════════════════ -->
+    <div id="tab-narrative" class="tab-panel">
+        <div class="card" style="margin-bottom:1rem">
+            <h2>Narrative Roll Pattern Library</h2>
+            <p style="font-size:0.88rem;color:var(--text-muted);margin:0">Common "roll packages" — sequences of checks that fit recurring story situations. Adapt DCs to your party level.</p>
+            <div class="narrative-tip" style="margin-top:0.75rem">General principle: 2–3 rolls per situation feels satisfying. More than 3 starts to feel like dice tax. One good roll with a creative interpretation often beats a chain of mediocre ones.</div>
+        </div>
+        <div id="narrativeContainer"></div>
+    </div>
+
+    <!-- ══ ENCOUNTER BUILDER ════════════════════════════════════════════════ -->
+    <div id="tab-encounter" class="tab-panel">
+        <div class="card">
+            <h2>Encounter Builder</h2>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem">
+                <strong style="font-size:0.88rem">Encounters:</strong>
+                <div class="enc-slots" id="encSlots"></div>
+                <button class="btn secondary sm" id="btnNewEnc">+ New</button>
+                <button class="btn secondary sm" id="btnRenameEnc">Rename</button>
+                <button class="btn danger sm" id="btnDeleteEnc">Delete</button>
+            </div>
+            <div class="round-tracker">
+                <span>Round <strong id="roundNum">1</strong></span>
+                <span>Turn <strong id="turnNum">—</strong></span>
+                <button class="btn sm" id="btnNextTurn">Next Turn ▶</button>
+                <button class="btn secondary sm" id="btnRollInit">Roll Initiative</button>
+                <button class="btn secondary sm" id="btnSortInit">Sort</button>
+                <button class="btn secondary sm" id="btnResetRound" style="margin-left:auto">Reset</button>
+            </div>
+            <div class="enc-toolbar">
+                <div class="field-group"><label>Name</label><input class="enc-input wide" id="addName" placeholder="Goblin Scout" type="text"></div>
+                <div class="field-group"><label>HP</label><input class="enc-input" id="addHp" placeholder="7" type="number" min="0"></div>
+                <div class="field-group"><label>AC</label><input class="enc-input" id="addAc" placeholder="13" type="number" min="0"></div>
+                <div class="field-group"><label>Init</label><input class="enc-input" id="addInit" placeholder="auto" type="number"></div>
+                <div class="field-group"><label>Type</label>
+                    <select class="enc-input" id="addType">
+                        <option value="enemy">Enemy</option>
+                        <option value="ally">Ally / PC</option>
+                        <option value="neutral">Neutral</option>
+                    </select>
+                </div>
+                <button class="btn" id="btnAddCombatant">Add</button>
+            </div>
+            <div class="combatant-list" id="combatantList"></div>
+            <div>
+                <strong style="font-size:0.85rem;color:var(--text-muted)">Import / Export</strong>
+                <div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap">
+                    <button class="btn secondary sm" id="btnExport">Export JSON</button>
+                    <button class="btn secondary sm" id="btnImport">Import JSON</button>
+                </div>
+                <div class="enc-io"><textarea id="jsonIO" placeholder="Paste JSON here to import, or click Export…"></textarea></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ REFERENCE ════════════════════════════════════════════════════════ -->
+    <div id="tab-reference" class="tab-panel">
+        <div class="ref-grid">
+
+            <div class="card">
+                <h2>Proficiency Bonus</h2>
+                <table class="ref-table">
+                    <thead><tr><th>Level</th><th>Bonus</th></tr></thead>
+                    <tbody>
+                        <tr><td>1–4</td><td>+2</td></tr>
+                        <tr><td>5–8</td><td>+3</td></tr>
+                        <tr><td>9–12</td><td>+4</td></tr>
+                        <tr><td>13–16</td><td>+5</td></tr>
+                        <tr><td>17–20</td><td>+6</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Ability Score → Modifier</h2>
+                <table class="ref-table">
+                    <thead><tr><th>Score</th><th>Modifier</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>−5</td></tr>
+                        <tr><td>2–3</td><td>−4</td></tr>
+                        <tr><td>4–5</td><td>−3</td></tr>
+                        <tr><td>6–7</td><td>−2</td></tr>
+                        <tr><td>8–9</td><td>−1</td></tr>
+                        <tr><td>10–11</td><td>+0</td></tr>
+                        <tr><td>12–13</td><td>+1</td></tr>
+                        <tr><td>14–15</td><td>+2</td></tr>
+                        <tr><td>16–17</td><td>+3</td></tr>
+                        <tr><td>18–19</td><td>+4</td></tr>
+                        <tr><td>20–21</td><td>+5</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Spell Save DCs</h2>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.5rem">Formula: <strong style="color:var(--text)">8 + Prof Bonus + Spellcasting Modifier</strong></p>
+                <table class="ref-table">
+                    <thead><tr><th>Class(es)</th><th>Ability</th></tr></thead>
+                    <tbody>
+                        <tr><td>Wizard, Artificer</td><td>Intelligence</td></tr>
+                        <tr><td>Cleric, Druid, Ranger</td><td>Wisdom</td></tr>
+                        <tr><td>Bard, Paladin, Sorcerer, Warlock</td><td>Charisma</td></tr>
+                    </tbody>
+                </table>
+                <h3 style="margin-top:0.85rem">Common DC targets</h3>
+                <table class="ref-table">
+                    <thead><tr><th>Difficulty</th><th>DC</th></tr></thead>
+                    <tbody>
+                        <tr><td>Very Easy</td><td>5</td></tr>
+                        <tr><td>Easy</td><td>10</td></tr>
+                        <tr><td>Medium</td><td>15</td></tr>
+                        <tr><td>Hard</td><td>20</td></tr>
+                        <tr><td>Very Hard</td><td>25</td></tr>
+                        <tr><td>Nearly Impossible</td><td>30</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Alignment</h2>
+                <div class="align-grid">
+                    <div class="align-header"></div>
+                    <div class="align-header">Lawful</div>
+                    <div class="align-header">Neutral</div>
+                    <div class="align-header">Chaotic</div>
+                    <div class="align-row-label">Good</div>
+                    <div class="align-cell"><span class="align-abbr">LG</span><span class="align-desc">Honor, virtue, authority in service of the greater good</span></div>
+                    <div class="align-cell"><span class="align-abbr">NG</span><span class="align-desc">Kindness and good deeds without care for rules or chaos</span></div>
+                    <div class="align-cell"><span class="align-abbr">CG</span><span class="align-desc">Freedom, individualism, good intentions, dislikes authority</span></div>
+                    <div class="align-row-label">Neutral</div>
+                    <div class="align-cell"><span class="align-abbr">LN</span><span class="align-desc">Order and duty without strong moral agenda</span></div>
+                    <div class="align-cell"><span class="align-abbr">N</span><span class="align-desc">Balance, pragmatism, avoids extremes</span></div>
+                    <div class="align-cell"><span class="align-abbr">CN</span><span class="align-desc">Freedom, unreliability, follows whims</span></div>
+                    <div class="align-row-label">Evil</div>
+                    <div class="align-cell"><span class="align-abbr">LE</span><span class="align-desc">Methodical evil, power through order and discipline</span></div>
+                    <div class="align-cell"><span class="align-abbr">NE</span><span class="align-desc">Pure self-interest, no honor or loyalty</span></div>
+                    <div class="align-cell"><span class="align-abbr">CE</span><span class="align-desc">Chaos, cruelty, destruction for its own sake</span></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Conditions — full width -->
+        <div class="card" style="margin-top:0">
+            <h2>Conditions</h2>
+            <table class="ref-table">
+                <thead><tr><th>Condition</th><th>Key Effect</th></tr></thead>
+                <tbody>
+                    <tr><td>Blinded</td><td>Auto-miss ranged; attacks against it have advantage</td></tr>
+                    <tr><td>Charmed</td><td>Can't attack charmer; charmer has adv on social checks vs it</td></tr>
+                    <tr><td>Frightened</td><td>Disadv on checks/attacks while source visible; can't move closer</td></tr>
+                    <tr><td>Grappled</td><td>Speed 0; ends if grappler incapacitated or target escapes</td></tr>
+                    <tr><td>Incapacitated</td><td>No actions or reactions</td></tr>
+                    <tr><td>Invisible</td><td>Attacks have advantage; attacks against it have disadvantage</td></tr>
+                    <tr><td>Paralyzed</td><td>Incapacitated, can't move/speak; attacks within 5 ft auto-crit</td></tr>
+                    <tr><td>Petrified</td><td>Turned to stone; paralyzed + resistant to all damage</td></tr>
+                    <tr><td>Poisoned</td><td>Disadvantage on attack rolls and ability checks</td></tr>
+                    <tr><td>Prone</td><td>Disadv on attacks; attacks within 5 ft have adv, ranged disadv</td></tr>
+                    <tr><td>Restrained</td><td>Speed 0; disadv on attacks; attacks against it have advantage</td></tr>
+                    <tr><td>Stunned</td><td>Incapacitated; auto-fail Str/Dex saves; attacks have advantage</td></tr>
+                    <tr><td>Unconscious</td><td>Stunned + prone + auto-crit within 5 ft</td></tr>
+                    <tr><td>Exhaustion 1</td><td>Disadvantage on ability checks</td></tr>
+                    <tr><td>Exhaustion 2</td><td>Speed halved</td></tr>
+                    <tr><td>Exhaustion 3</td><td>Disadvantage on attack rolls and saving throws</td></tr>
+                    <tr><td>Exhaustion 4</td><td>Hit point maximum halved</td></tr>
+                    <tr><td>Exhaustion 5</td><td>Speed = 0</td></tr>
+                    <tr><td>Exhaustion 6</td><td>Death</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Weapons — populated from SRD -->
+        <div class="card">
+            <h2>Weapons</h2>
+            <div id="weaponsTableWrap"><p style="color:var(--text-muted);font-size:0.88rem">Loading from SRD…</p></div>
+        </div>
+    </div>
+</div>
+
+<script>
+/*
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  HOMEBREW EXTENSION                                                       ║
+  ║  Set window.HOMEBREW_5E before this script to inject custom content.      ║
+  ║                                                                            ║
+  ║  window.HOMEBREW_5E = {                                                   ║
+  ║    creatures: [                                                            ║
+  ║      {                                                                     ║
+  ║        name: 'My Monster',                                                ║
+  ║        typeLine: 'Medium humanoid, chaotic neutral',                      ║
+  ║        cr: '2',                                                            ║
+  ║        hp: '45',  hpDice: '(7d8+14)',                                     ║
+  ║        ac: '14',  speed: '30 ft.',                                        ║
+  ║        str:'16 (+3)', dex:'14 (+2)', con:'14 (+2)',                       ║
+  ║        int:'10 (+0)', wis:'10 (+0)', cha:'8 (-1)',                        ║
+  ║        traits: 'Optional free-text trait notes.'                          ║
+  ║      }                                                                     ║
+  ║    ],                                                                      ║
+  ║    rollTables: [                                                           ║
+  ║      { name:'My Table', die:'d6', entries:['A','B','C','D','E','F'] }     ║
+  ║    ]                                                                       ║
+  ║  };                                                                        ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+*/
+
+// ─── SRD CONFIG ──────────────────────────────────────────────────────────────
+// Source: CC-BY-SA-4.0 SRD 5.1 converted by Tabyltop
+// https://github.com/Tabyltop/CC-SRD
+const SRD_URL       = 'https://raw.githubusercontent.com/Tabyltop/CC-SRD/main/SRD5.1-CCBY4.0License-TT.json';
+const SRD_CACHE_KEY = '5e-srd-parsed-v1';
+
+// Verified offsets into the flat document array
+const SRD_IDX = {
+  WEAPONS_HEADER : 1464,   // table: [header row, "Simple Melee Weapons" category]
+  WEAPONS_TABLE  : 1465,   // table: 40 weapon rows + category dividers
+  MONSTERS_START : 7052,   // h2 "Monsters (A)" — individual entries are h4 headings that follow
+};
+
+// ─── SRD PARSING HELPERS ─────────────────────────────────────────────────────
+function extractText(item) {
+  return (item.subelements || []).map(s => (s.text || '').trim()).join(' ').replace(/\s+/g, ' ').trim();
+}
+function rowTexts(row) {
+  return row.map(cell =>
+    (cell.subelements || []).map(s => (s.text || '').trim()).join(' ').replace(/\s+/g, ' ').trim()
+  );
+}
+
+// ─── WEAPONS PARSER ──────────────────────────────────────────────────────────
+function parseWeapons(data) {
+  // Initial category from the header table (index WEAPONS_HEADER, row 1)
+  let category = 'Simple Melee Weapons';
+  const headerTbl = data[SRD_IDX.WEAPONS_HEADER];
+  if (headerTbl && headerTbl.type === 'table' && (headerTbl.rows || []).length >= 2) {
+    const cat = rowTexts(headerTbl.rows[1]);
+    if (cat.length === 1 && cat[0]) category = cat[0];
+  }
+
+  const tbl = data[SRD_IDX.WEAPONS_TABLE];
+  if (!tbl || tbl.type !== 'table') return [];
+
+  const weapons = [];
+  for (const row of (tbl.rows || [])) {
+    const cells = rowTexts(row);
+    if (cells.length === 1 && cells[0]) {
+      category = cells[0]; // section header like "Simple Ranged Weapons"
+    } else if (cells.length >= 3 && cells[0]) {
+      weapons.push({
+        name      : cells[0],
+        cost      : cells[1] || '—',
+        damage    : cells[2] || '—',
+        weight    : cells[3] || '—',
+        properties: (cells[4] || '').replace(/\s*--\s*/g, '-') || '—',
+        category,
+      });
+    }
+  }
+  return weapons;
+}
+
+// ─── MONSTER PARSER ───────────────────────────────────────────────────────────
+const MONSTER_TYPE_RE  = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s+(aberration|beast|celestial|construct|dragon|elemental|fey|fiend|giant|humanoid|monstrosity|ooze|plant|undead|swarm)/i;
+const ACTION_HEADINGS  = new Set(['Actions','Legendary Actions','Reactions','Lair Actions','Regional Effects','Bonus Actions']);
+
+function parseMonsters(data) {
+  const monsters = [];
+
+  for (let i = SRD_IDX.MONSTERS_START; i < data.length - 5; i++) {
+    const item = data[i];
+    if (item.type !== 'h4') continue;
+
+    const name = extractText(item);
+    if (!name || name.length > 55) continue;
+
+    // The paragraph immediately after a monster-name h4 is its type/alignment line
+    const next = data[i + 1];
+    if (!next || next.type !== 'paragraph') continue;
+    const typeLine = extractText(next);
+    if (!MONSTER_TYPE_RE.test(typeLine)) continue;
+
+    const m = { name, typeLine };
+
+    for (let j = i + 2; j < i + 70 && j < data.length; j++) {
+      const it = data[j];
+      if (it.type === 'h4') {
+        if (!ACTION_HEADINGS.has(extractText(it))) break;
+        continue;
+      }
+      if (it.type === 'h3' || it.type === 'h2' || it.type === 'h1') break;
+
+      if (it.type === 'paragraph') {
+        const txt = extractText(it);
+        if (!m.ac    && /Armor Class/i.test(txt))    { const r = txt.match(/Armor Class\s+(\d+)/i);                          if (r) m.ac = r[1]; }
+        if (!m.hp    && /Hit Points/i.test(txt))     { const r = txt.match(/Hit Points\s+(\d+)\s*(\([^)]+\))?/i);            if (r) { m.hp = r[1]; m.hpDice = r[2] || ''; } }
+        if (!m.speed && /^Speed\s/i.test(txt))       { m.speed = txt.replace(/^Speed\s+/i,'').replace(/\s+/g,' ').trim(); }
+        if (!m.cr    && /Challenge/i.test(txt))      { const r = txt.match(/Challenge\s+([0-9/]+)/i);                        if (r) m.cr = r[1]; }
+      }
+
+      if (it.type === 'table' && !m.str) {
+        const rows = it.rows || [];
+        if (rows.length >= 2 && rowTexts(rows[0])[0] === 'STR') {
+          const v = rowTexts(rows[1]);
+          [m.str, m.dex, m.con, m.int, m.wis, m.cha] = v;
+        }
+      }
+    }
+
+    monsters.push(m);
+  }
+  return monsters;
+}
+
+// ─── SRD LOADER + CACHE ───────────────────────────────────────────────────────
+async function loadSRD() {
+  const cached = localStorage.getItem(SRD_CACHE_KEY);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(SRD_CACHE_KEY); }
+  }
+  showBanner('Fetching SRD 5.1 (~13 MB, first visit only)…');
+  const resp = await fetch(SRD_URL);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  showBanner('Parsing monsters and equipment…');
+  const raw  = await resp.json();
+  const parsed = { weapons: parseWeapons(raw), monsters: parseMonsters(raw) };
+  try { localStorage.setItem(SRD_CACHE_KEY, JSON.stringify(parsed)); } catch(e) { /* storage full */ }
+  return parsed;
+}
+
+// ─── BANNER ──────────────────────────────────────────────────────────────────
+function showBanner(msg, isErr) {
+  const el = document.getElementById('loadBanner');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.classList.toggle('err', !!isErr);
+  document.getElementById('loadMsg').textContent = msg;
+}
+
+// ─── THEME ───────────────────────────────────────────────────────────────────
+(function(){
+  const btn = document.getElementById('themeToggle');
+  function setDark(d, save) {
+    document.body.classList.toggle('dark', d);
+    if (save) localStorage.setItem('theme', d ? 'dark' : 'light');
+    btn.textContent = d ? '🌙' : '☀';
+  }
+  setDark(document.body.classList.contains('dark'));
+  btn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
+})();
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── STAT BLOCKS ─────────────────────────────────────────────────────────────
+let ALL_CREATURES = [];
+
+function renderStatBlock(c) {
+  const isHB = c._homebrew;
+  const abilLabels = ['STR','DEX','CON','INT','WIS','CHA'];
+  const abilKeys   = ['str','dex','con','int','wis','cha'];
+  const abilCells  = abilKeys.map((k, i) => {
+    const val = c[k] || '—';
+    return `<div><div class="ab-label">${abilLabels[i]}</div><div class="ab-val">${val}</div></div>`;
+  }).join('');
+  return `<div class="stat-block${isHB?' homebrew':''}">
+    <div class="stat-block-name">${c.name}${isHB?' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>':''}</div>
+    <div class="stat-block-meta">${c.typeLine || c.type || ''}${c.cr ? ' — CR '+c.cr : ''}</div>
+    <div class="stat-row">
+      <span class="stat-pill"><strong>HP</strong> ${c.hp||'?'}${c.hpDice?' <span style="color:var(--text-muted);font-size:0.75rem">'+c.hpDice+'</span>':''}</span>
+      <span class="stat-pill"><strong>AC</strong> ${c.ac||'?'}</span>
+      ${c.speed ? `<span class="stat-pill"><strong>Spd</strong> ${c.speed}</span>` : ''}
+    </div>
+    <div class="ability-grid">${abilCells}</div>
+    ${c.traits ? `<div class="stat-block-traits">${c.traits}</div>` : ''}
+  </div>`;
+}
+
+function buildStatGrid(filter) {
+  const q = (filter || '').toLowerCase();
+  const grid = document.getElementById('statGrid');
+  const results = q
+    ? ALL_CREATURES.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        (c.typeLine||'').toLowerCase().includes(q) ||
+        ('cr'+(c.cr||'')).includes(q)
+      )
+    : ALL_CREATURES;
+  if (!results.length) {
+    grid.innerHTML = `<p class="stat-empty">${q ? 'No matches.' : 'No creatures loaded.'}</p>`;
+    return;
+  }
+  grid.innerHTML = `<div class="stat-grid">${results.map(renderStatBlock).join('')}</div>`;
+}
+
+document.getElementById('statSearch').addEventListener('input', e => buildStatGrid(e.target.value));
+
+// ─── ROLL TABLES ─────────────────────────────────────────────────────────────
+const BUILTIN_ROLL_TABLES = [
+  { name:'Random NPC Trait', die:'d20', entries:['Speaks in a constant whisper','Missing an ear','Hums tunelessly while thinking','Never makes eye contact','Constantly fidgets with a ring','Has a noticeable regional accent','Distrusts magic deeply','Carries a faded letter they won\'t explain','Laughs at inappropriate times','Smells strongly of pine or herbs','Has a glass eye','Quotes proverbs that don\'t quite fit','Excessively formal in all speech','Treats their horse better than people','Scars from an obvious old fire','Wears mismatched boots','Twitches when someone mentions a specific city','Speaks to animals as if they understand','Keeps a detailed journal, writes after every conversation','Claims to have met someone famous under dubious circumstances'] },
+  { name:'NPC Motivation', die:'d12', entries:['Survival — desperate, running out of options','Loyalty — protecting someone they love','Greed — always weighing what\'s in it for them','Duty — bound by oath, law, or station','Fear — something threatens them or their secret','Ambition — on the rise, using everyone as a step','Grief — a recent loss is driving their choices','Curiosity — can\'t leave a mystery alone','Revenge — a specific wrong consumes them','Guilt — atoning for something real or imagined','Idealism — truly believes in a cause, however naively','Manipulation — lying about all of the above'] },
+  { name:'Urban Encounter', die:'d12', entries:['A pickpocket fleeing through the crowd','Two merchants in heated dispute, gathering an audience','A street healer hawking dubious remedies','A guard looking for someone matching one PC\'s description','A hooded figure drops a sealed letter and disappears','A public flogging drawing a crowd','A beggar who knows more than they let on','A cart overturns spilling exotic goods','A bard who\'s heard of the party — and has the details wrong','A fire breaks out in a nearby building','Two rival gang members eyeing each other across the market','A child following the party convinced one of them is their lost parent'] },
+  { name:'Wilderness Encounter', die:'d12', entries:['Tracks of something large — recent','An abandoned campsite, still-warm coals','A wounded traveler, alone on the road','A merchant caravan stopped for a broken wheel','Strange fog that doesn\'t lift till midday','Territorial predator blocking the path','A standing stone with faded script','Goblin or bandit ambush, poorly executed','An old shrine with a fresh offering','A flooded river crossing — needs another route','Another adventuring party, going the opposite direction','Evidence of a battle — no survivors, but recent'] },
+  { name:'Dungeon Event', die:'d10', entries:['Distant scraping stone','A light source ahead that shouldn\'t be there','Water seeping through the ceiling','Smell of something rotting','Graffiti in a language nobody recognizes','A tripwire, already disarmed','Sounds of arguing creatures in the next room','A door opens from the other side as the party approaches','A section of floor gives slightly underfoot','Something small scurries away from the torchlight'] },
+  { name:'Weather', die:'d8', entries:['Clear and still — unnaturally quiet','Light rain, comfortable for travel','Heavy rain — visibility halved, tracks wash away','Thunderstorm — Perception at disadvantage','Thick fog — 60 ft max visibility','Scorching heat — DC 10 Con per hour or 1 exhaustion','Bitter cold — unprotected: 1d4 cold damage per hour','Unseasonal snow or hail — difficult terrain outdoors'] },
+  { name:'Treasure Flavor', die:'d12', entries:['Gold coins with an unfamiliar mint mark','A gem wrapped in oilcloth and hidden in a boot','A small statue of a deity — valuable to the right buyer','A letter of credit from a distant bank','Fine jewelry, clearly a set — one piece missing','A vial of perfume worth more than it looks','A small locked box with no key','Military medals from a disbanded order','A pouch of spell components — one rare ingredient included','A hand-drawn map with no labels, only landmarks','Promissory notes signed by a local noble','An antique weapon — no magic, but historically significant'] },
+  { name:'Random Human Name', die:'d12', entries:['Aldric Vane','Seren Holt','Mira Ashwood','Torben Gull','Isolde Crane','Daveth Marsh','Lysa Fenn','Corwin Slate','Nessa Briar','Edric Hale','Wynn Caldwell','Petra Dusk'] },
+];
+
+let ALL_ROLL_TABLES = [];
+
+function buildRollTables(tables) {
+  ALL_ROLL_TABLES = tables;
+  const container = document.getElementById('rollTablesContainer');
+  container.innerHTML = tables.map((t, i) => {
+    const isHB = t._homebrew ? ' <span style="font-size:0.72rem;color:var(--accent-soft)">[HB]</span>' : '';
+    return `<div class="roll-section">
+      <div class="roll-header" data-idx="${i}">
+        <h3>${t.name}${isHB}</h3>
+        <span class="roll-meta">${t.die} · ${t.entries.length} results</span>
+      </div>
+      <div class="roll-body" id="rtbody-${i}">
+        <div class="roll-result-bar">
+          <button class="btn-roll" data-idx="${i}">Roll ${t.die}</button>
+          <span class="roll-result-text" id="rtresult-${i}">—</span>
+        </div>
+        <table class="ref-table"><thead><tr><th>#</th><th>Result</th></tr></thead><tbody>
+          ${t.entries.map((e,j) => `<tr><td>${j+1}</td><td>${e}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.roll-header').forEach(h => {
+    h.addEventListener('click', () => document.getElementById('rtbody-'+h.dataset.idx).classList.toggle('open'));
+  });
+  container.querySelectorAll('.btn-roll').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const t = ALL_ROLL_TABLES[btn.dataset.idx];
+      document.getElementById('rtresult-'+btn.dataset.idx).textContent =
+        t.entries[Math.floor(Math.random() * t.entries.length)];
+    });
+  });
+}
+
+// ─── NARRATIVE ───────────────────────────────────────────────────────────────
+const NARRATIVE_DATA = [
+  { icon:'🌿', category:'Environmental Hazards', scenarios:[
+    { name:'Hostile Environment Travel', sub:'blizzard, poisoned tunnel, volcanic heat', steps:[
+      { check:'Group Survival (Wis)', note:'find the safest path — fail = disadvantage forward' },
+      { check:'Con Save', note:'resist environmental damage (cold, poison, heat)' },
+      { check:'Perception', note:'notice a shortcut, shelter, or incoming danger' },
+    ]},
+    { name:'Unstable Terrain', sub:'cave-in, crumbling floor, flooding chamber', steps:[
+      { check:'Perception', note:'spot the danger first' },
+      { check:'Dex Save', note:'avoid being caught' },
+      { check:'Athletics or Acrobatics', note:'get clear / help someone else' },
+    ]},
+  ]},
+  { icon:'🗣️', category:'Social Encounters', scenarios:[
+    { name:'Hostile NPC Negotiation', sub:'guard, enemy, suspicious elder', steps:[
+      { check:'Insight', note:'read their true motivation' },
+      { check:'Persuasion or Deception', note:'the pitch' },
+      { check:'Insight (again)', note:'did it land? Are they hiding something?' },
+    ]},
+    { name:'Earning Trust Over Time', sub:'multi-beat conversation, cautious NPCs', steps:[
+      { check:'Persuasion', note:'open them up' },
+      { check:'History or Investigation', note:'demonstrate you know something real' },
+      { check:'Insight', note:'catch their tell / know when to stop pushing' },
+    ]},
+  ]},
+  { icon:'🏃', category:'Chase Sequences', scenarios:[
+    { name:'Foot Chase', sub:'urban or wilderness pursuit', steps:[
+      { check:'Initiative', note:'who moves first' },
+      { check:'Athletics vs Athletics/Acrobatics (contested, repeated)', note:'core pursuit rolls' },
+      { check:'Perception', note:'spot a shortcut or obstacle ahead' },
+      { check:'Acrobatics or Dex Save', note:'navigate obstacle — fence, crowd, rubble' },
+      { check:'Sleight of Hand (optional)', note:'drop something to slow pursuer' },
+    ]},
+    { name:'Mounted or Tunnel Chase', sub:'horse, cart, narrow passages', steps:[
+      { check:'Animal Handling or Vehicle check', note:'replaces Athletics for mount/vehicle' },
+      { check:'Survival', note:'navigate branching paths or shortcuts' },
+    ]},
+  ]},
+  { icon:'🔍', category:'Investigation Scenes', scenarios:[
+    { name:'Searching a Room / Body', sub:'any careful examination scene', steps:[
+      { check:'Perception', note:'notice anything obvious' },
+      { check:'Investigation', note:'find what\'s hidden' },
+      { check:'Arcana, History, or Nature', note:'understand what you found' },
+    ]},
+    { name:'Decoding a Clue', sub:'cipher, coded message, ancient text', steps:[
+      { check:'Investigation', note:'structure of the code' },
+      { check:'History or Arcana', note:'recognize the system' },
+      { check:'Insight', note:'guess intent from context even without a full decode' },
+    ]},
+  ]},
+  { icon:'⚔️', category:'Combat with Environmental Pressure', scenarios:[
+    { name:'Timed Fight', sub:'ritual completing, structure collapsing', steps:[
+      { check:'Countdown each round (pulse)', note:'Pulse 3: partial effect (disadv on saves); Pulse 5: full effect triggers unless stopped' },
+    ]},
+    { name:'Fight + Escape Hybrid', sub:'fight your way out through a hazard', steps:[
+      { check:'Combat round(s)', note:'create an opening' },
+      { check:'Athletics or Acrobatics', note:'move through hazard' },
+      { check:'Con Save', note:'resist lingering damage — smoke, water, cold' },
+    ]},
+  ]},
+  { icon:'🧩', category:'Puzzles / Ancient Mechanisms', scenarios:[
+    { name:'Activating Old Magic', sub:'ancient device, forgotten machinery', steps:[
+      { check:'Arcana or History', note:'understand what it does' },
+      { check:'Investigation', note:'find the activation method' },
+      { check:'Dexterity or spell check', note:'execute correctly' },
+    ]},
+    { name:'Ritual Disruption', sub:'shaman mid-ritual, enemy spellcaster', steps:[
+      { check:'Arcana', note:'understand what\'s happening' },
+      { check:'Contested roll or spell save', note:'interrupt it' },
+      { check:'Con or Wis Save', note:'resist backlash' },
+    ]},
+  ]},
+  { icon:'🤝', category:'Group Dynamics', scenarios:[
+    { name:'Group Stealth', sub:'everyone must stay quiet', steps:[
+      { check:'Everyone rolls Stealth', note:'lowest roll is what matters — consider letting a skilled scout go ahead' },
+    ]},
+    { name:'Group Morale Check', sub:'after a major loss or scary revelation', steps:[
+      { check:'Wis Save DC 10–12 (each player)', note:'fail = one round hesitation / disadv on next action' },
+      { check:'DM note', note:'can be skipped if it would feel punishing for younger/newer players' },
+    ]},
+  ]},
+  { icon:'🌊', category:'Water / Spirit Encounters', scenarios:[
+    { name:'Appeasing a Nature Spirit', sub:'river spirit, ancient grove guardian', steps:[
+      { check:'Nature or Religion', note:'know the right approach' },
+      { check:'Persuasion or Performance', note:'make the offering correctly' },
+      { check:'Insight or Perception', note:'read the spirit\'s response' },
+    ]},
+    { name:'Corrupted Water Navigation', sub:'tainted river, poisoned fen', steps:[
+      { check:'Survival', note:'find the safe crossing' },
+      { check:'Con Save', note:'resist sickness/corruption on contact' },
+      { check:'Perception', note:'spot what\'s causing it upstream' },
+    ]},
+  ]},
+  { icon:'🏕️', category:'Downtime / Camp Scenes', scenarios:[
+    { name:'Making Camp in Dangerous Territory', sub:'hostile wilderness, enemy-controlled region', steps:[
+      { check:'Survival', note:'find a defensible spot' },
+      { check:'Stealth (group)', note:'settle in without being noticed' },
+      { check:'Perception', note:'watch rotation — catch anything during the night' },
+    ]},
+    { name:'Treating Wounds in the Field', sub:'post-combat recovery', steps:[
+      { check:'Medicine', note:'stabilize / maximize healing' },
+      { check:'Herbalism Kit (optional)', note:'bonus HP if a skilled healer assists' },
+    ]},
+  ]},
+];
+
+function buildNarrative() {
+  const container = document.getElementById('narrativeContainer');
+  let html = '';
+  NARRATIVE_DATA.forEach((section, si) => {
+    html += `<div class="card" style="margin-bottom:0.85rem"><h2>${section.icon} ${section.category}</h2>`;
+    section.scenarios.forEach((sc, sci) => {
+      const id = `nb-${si}-${sci}`;
+      html += `<div class="narrative-section">
+        <div class="narrative-header" data-id="${id}">
+          <span class="nh-icon">▶</span>
+          <h3>${sc.name}</h3>
+          <span class="nh-sub">${sc.sub}</span>
+        </div>
+        <div class="narrative-body" id="${id}">
+          ${sc.steps.map((s,k) => `<div class="roll-step">
+            <span class="roll-step-num">${k+1}</span>
+            <div>
+              <div class="roll-step-text"><strong>${s.check}</strong></div>
+              ${s.note ? `<div class="roll-step-note">${s.note}</div>` : ''}
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('.narrative-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const body = document.getElementById(h.dataset.id);
+      const open = body.classList.toggle('open');
+      h.querySelector('.nh-icon').textContent = open ? '▼' : '▶';
+    });
+  });
+}
+
+// ─── REFERENCE — WEAPONS ─────────────────────────────────────────────────────
+function buildWeaponsTable(weapons) {
+  const wrap = document.getElementById('weaponsTableWrap');
+  if (!weapons || !weapons.length) {
+    wrap.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem">Could not load weapon data.</p>';
+    return;
+  }
+  // Group by category
+  const byCategory = {};
+  for (const w of weapons) {
+    if (!byCategory[w.category]) byCategory[w.category] = [];
+    byCategory[w.category].push(w);
+  }
+  let html = '<table class="ref-table"><thead><tr><th>Name</th><th>Cost</th><th>Damage</th><th>Weight</th><th>Properties</th></tr></thead><tbody>';
+  for (const [cat, ws] of Object.entries(byCategory)) {
+    html += `<tr class="ref-section-row"><td colspan="5">${cat}</td></tr>`;
+    for (const w of ws) {
+      html += `<tr><td>${w.name}</td><td>${w.cost}</td><td>${w.damage}</td><td>${w.weight}</td><td>${w.properties}</td></tr>`;
+    }
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ─── ENCOUNTER BUILDER ───────────────────────────────────────────────────────
+const CONDITIONS = ['Blinded','Charmed','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Poisoned','Prone','Restrained','Stunned','Unconscious'];
+
+let encounterState = (() => {
+  try { return JSON.parse(localStorage.getItem('5e-encounters') || 'null'); } catch(e) {}
+  return null;
+})() || { slots:[{ name:'Encounter 1', combatants:[] }], current:0, round:1, turn:0 };
+
+function saveEnc() { localStorage.setItem('5e-encounters', JSON.stringify(encounterState)); }
+function curEnc()  { return encounterState.slots[encounterState.current]; }
+
+function renderSlots() {
+  const el = document.getElementById('encSlots');
+  el.innerHTML = encounterState.slots.map((s,i) =>
+    `<span class="enc-slot ${i===encounterState.current?'active':''}" data-i="${i}">${s.name}</span>`
+  ).join('');
+  el.querySelectorAll('.enc-slot').forEach(sp => sp.addEventListener('click', () => {
+    encounterState.current = parseInt(sp.dataset.i);
+    encounterState.round = 1; encounterState.turn = 0;
+    saveEnc(); renderAll();
+  }));
+}
+
+function hpClass(cur, max) {
+  if (!max) return '';
+  const p = cur / max;
+  return p <= 0.25 ? 'low' : p <= 0.5 ? 'mid' : '';
+}
+
+function renderCombatants() {
+  const enc = curEnc();
+  const list = document.getElementById('combatantList');
+  if (!enc.combatants.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.88rem;padding:0.4rem 0">No combatants. Add one above.</div>';
+    return;
+  }
+  list.innerHTML = enc.combatants.map((c,i) => {
+    const pct = c.maxHp > 0 ? Math.max(0, Math.min(100, c.hp / c.maxHp * 100)) : 100;
+    const conds = c.conditions || [];
+    return `<div class="combatant-row ${encounterState.turn===i?'active-turn':''} ${c.hp<=0?'defeated':''}">
+      <div class="comb-init">${c.initiative??'—'}</div>
+      <div class="comb-name">${c.name} <span style="font-size:0.7rem;color:var(--text-muted)">(${c.type})</span></div>
+      <div class="comb-ac">AC ${c.ac}</div>
+      <div class="comb-hp-wrap">
+        <div class="hp-bar-wrap"><div class="hp-bar ${hpClass(c.hp,c.maxHp)}" style="width:${pct}%"></div></div>
+        <span class="comb-hp">
+          <input class="comb-hp-input" data-i="${i}" type="number" value="${c.hp}" min="0" max="${c.maxHp}"> / ${c.maxHp}
+        </span>
+      </div>
+      <div class="comb-conditions">${CONDITIONS.map(cd =>
+        `<span class="condition-tag ${conds.includes(cd)?'on':''}" data-i="${i}" data-cond="${cd}" title="${cd}">${cd.substring(0,3)}</span>`
+      ).join('')}</div>
+      <button class="btn danger sm" data-rm="${i}">✕</button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.comb-hp-input').forEach(inp => inp.addEventListener('change', () => {
+    curEnc().combatants[+inp.dataset.i].hp = Math.max(0, +inp.value || 0);
+    saveEnc(); renderCombatants();
+  }));
+  list.querySelectorAll('.condition-tag').forEach(tag => tag.addEventListener('click', () => {
+    const c = curEnc().combatants[+tag.dataset.i];
+    c.conditions = c.conditions || [];
+    const idx = c.conditions.indexOf(tag.dataset.cond);
+    if (idx >= 0) c.conditions.splice(idx,1); else c.conditions.push(tag.dataset.cond);
+    saveEnc(); renderCombatants();
+  }));
+  list.querySelectorAll('[data-rm]').forEach(btn => btn.addEventListener('click', () => {
+    curEnc().combatants.splice(+btn.dataset.rm, 1);
+    if (encounterState.turn >= curEnc().combatants.length) encounterState.turn = 0;
+    saveEnc(); renderAll();
+  }));
+}
+
+function renderRoundTracker() {
+  document.getElementById('roundNum').textContent = encounterState.round;
+  const t = curEnc().combatants[encounterState.turn];
+  document.getElementById('turnNum').textContent = t ? t.name : '—';
+}
+
+function renderAll() { renderSlots(); renderCombatants(); renderRoundTracker(); }
+
+document.getElementById('btnNewEnc').addEventListener('click', () => {
+  const name = prompt('Encounter name:', 'Encounter '+(encounterState.slots.length+1));
+  if (!name) return;
+  encounterState.slots.push({ name, combatants:[] });
+  encounterState.current = encounterState.slots.length - 1;
+  encounterState.round = 1; encounterState.turn = 0;
+  saveEnc(); renderAll();
+});
+document.getElementById('btnRenameEnc').addEventListener('click', () => {
+  const name = prompt('New name:', curEnc().name);
+  if (name) { curEnc().name = name; saveEnc(); renderSlots(); }
+});
+document.getElementById('btnDeleteEnc').addEventListener('click', () => {
+  if (encounterState.slots.length <= 1) { alert('Cannot delete the last encounter.'); return; }
+  if (!confirm('Delete "'+curEnc().name+'"?')) return;
+  encounterState.slots.splice(encounterState.current, 1);
+  encounterState.current = Math.max(0, encounterState.current - 1);
+  encounterState.round = 1; encounterState.turn = 0;
+  saveEnc(); renderAll();
+});
+document.getElementById('btnAddCombatant').addEventListener('click', () => {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) return;
+  const maxHp = parseInt(document.getElementById('addHp').value) || 10;
+  const ac    = parseInt(document.getElementById('addAc').value)  || 10;
+  const initV = document.getElementById('addInit').value.trim();
+  curEnc().combatants.push({ name, hp:maxHp, maxHp, ac, initiative: initV!=='' ? +initV : null, type: document.getElementById('addType').value, conditions:[] });
+  saveEnc(); renderCombatants();
+  document.getElementById('addName').value = '';
+  ['addHp','addAc','addInit'].forEach(id => document.getElementById(id).value = '');
+});
+document.getElementById('addName').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('btnAddCombatant').click(); });
+document.getElementById('btnNextTurn').addEventListener('click', () => {
+  const cs = curEnc().combatants;
+  if (!cs.length) return;
+  encounterState.turn = (encounterState.turn + 1) % cs.length;
+  if (encounterState.turn === 0) encounterState.round++;
+  saveEnc(); renderAll();
+});
+document.getElementById('btnRollInit').addEventListener('click', () => {
+  curEnc().combatants.forEach(c => { c.initiative = Math.floor(Math.random()*20)+1; });
+  saveEnc(); renderCombatants();
+});
+document.getElementById('btnSortInit').addEventListener('click', () => {
+  curEnc().combatants.sort((a,b) => (b.initiative??-99)-(a.initiative??-99));
+  encounterState.turn = 0;
+  saveEnc(); renderCombatants();
+});
+document.getElementById('btnResetRound').addEventListener('click', () => {
+  encounterState.round = 1; encounterState.turn = 0;
+  saveEnc(); renderRoundTracker();
+});
+document.getElementById('btnExport').addEventListener('click', () => {
+  document.getElementById('jsonIO').value = JSON.stringify(curEnc(), null, 2);
+});
+document.getElementById('btnImport').addEventListener('click', () => {
+  try {
+    const d = JSON.parse(document.getElementById('jsonIO').value);
+    if (!Array.isArray(d.combatants)) throw new Error('Missing combatants array');
+    encounterState.slots[encounterState.current] = d;
+    encounterState.turn = 0;
+    saveEnc(); renderAll();
+  } catch(e) { alert('Invalid JSON: '+e.message); }
+});
+
+// ─── INITIALISE ──────────────────────────────────────────────────────────────
+buildNarrative();
+renderAll();
+
+(async function init() {
+  try {
+    const srd = await loadSRD();
+    const hb  = window.HOMEBREW_5E || {};
+
+    ALL_CREATURES = [
+      ...srd.monsters,
+      ...(hb.creatures || []).map(c => ({ ...c, _homebrew:true })),
+    ];
+
+    const allTables = [
+      ...BUILTIN_ROLL_TABLES,
+      ...(hb.rollTables || []).map(t => ({ ...t, _homebrew:true })),
+    ];
+
+    buildStatGrid('');
+    buildRollTables(allTables);
+    buildWeaponsTable(srd.weapons);
+    showBanner(null);
+  } catch(e) {
+    console.error('SRD load failed:', e);
+    showBanner('Could not load SRD data — check your connection and refresh. Encounter builder and narrative rolls still work.', true);
+    buildStatGrid('');
+    buildRollTables(BUILTIN_ROLL_TABLES);
+    buildWeaponsTable([]);
+  }
+})();
+</script>
+</body>
+</html>
