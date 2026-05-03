@@ -393,18 +393,11 @@
   ╚══════════════════════════════════════════════════════════════════════════╝
 */
 
-// ─── SRD CONFIG ──────────────────────────────────────────────────────────────
-// Source: CC-BY-SA-4.0 SRD 5.1 converted by Tabyltop
-// https://github.com/Tabyltop/CC-SRD
-const SRD_URL       = 'https://raw.githubusercontent.com/Tabyltop/CC-SRD/main/SRD5.1-CCBY4.0License-TT.json';
-const SRD_CACHE_KEY = '5e-srd-parsed-v1';
-
-// Verified offsets into the flat document array
-const SRD_IDX = {
-  WEAPONS_HEADER : 1464,   // table: [header row, "Simple Melee Weapons" category]
-  WEAPONS_TABLE  : 1465,   // table: 40 weapon rows + category dividers
-  MONSTERS_START : 7052,   // h2 "Monsters (A)" — individual entries are h4 headings that follow
-};
+// ─── SRD CONFIG — loaded from 5e-meta.json ───────────────────────────────────
+// All source URLs, array indices, and regex patterns live in 5e-meta.json.
+// Edit that file to update offsets if the SRD source ever changes.
+// The only thing hardcoded here is the path to the metadata file itself.
+const META_URL = '5e-meta.json';
 
 // ─── SRD PARSING HELPERS ─────────────────────────────────────────────────────
 function extractText(item) {
@@ -417,23 +410,23 @@ function rowTexts(row) {
 }
 
 // ─── WEAPONS PARSER ──────────────────────────────────────────────────────────
-function parseWeapons(data) {
-  // Initial category from the header table (index WEAPONS_HEADER, row 1)
+function parseWeapons(data, meta) {
+  const cfg = meta.weapons;
   let category = 'Simple Melee Weapons';
-  const headerTbl = data[SRD_IDX.WEAPONS_HEADER];
+  const headerTbl = data[cfg.header_table_idx];
   if (headerTbl && headerTbl.type === 'table' && (headerTbl.rows || []).length >= 2) {
     const cat = rowTexts(headerTbl.rows[1]);
     if (cat.length === 1 && cat[0]) category = cat[0];
   }
 
-  const tbl = data[SRD_IDX.WEAPONS_TABLE];
+  const tbl = data[cfg.data_table_idx];
   if (!tbl || tbl.type !== 'table') return [];
 
   const weapons = [];
   for (const row of (tbl.rows || [])) {
     const cells = rowTexts(row);
     if (cells.length === 1 && cells[0]) {
-      category = cells[0]; // section header like "Simple Ranged Weapons"
+      category = cells[0];
     } else if (cells.length >= 3 && cells[0]) {
       weapons.push({
         name      : cells[0],
@@ -448,47 +441,54 @@ function parseWeapons(data) {
   return weapons;
 }
 
-// ─── MONSTER PARSER ───────────────────────────────────────────────────────────
-const MONSTER_TYPE_RE  = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s+(aberration|beast|celestial|construct|dragon|elemental|fey|fiend|giant|humanoid|monstrosity|ooze|plant|undead|swarm)/i;
-const ACTION_HEADINGS  = new Set(['Actions','Legendary Actions','Reactions','Lair Actions','Regional Effects','Bonus Actions']);
+// ─── MONSTER PARSER ──────────────────────────────────────────────────────────
+function parseMonsters(data, meta) {
+  const cfg        = meta.monsters;
+  const typeRe     = new RegExp(cfg.type_line_re, cfg.type_line_re_flags);
+  const actionSet  = new Set(cfg.action_headings);
+  const statHeader = cfg.stat_table_header[0]; // "STR"
+  const fp         = cfg.field_patterns;
+  // Compile field regexes once
+  const acRe    = new RegExp(fp.ac.re,    fp.ac.flags);
+  const hpRe    = new RegExp(fp.hp.re,    fp.hp.flags);
+  const speedRe = new RegExp(fp.speed.re, fp.speed.flags);
+  const crRe    = new RegExp(fp.cr.re,    fp.cr.flags);
 
-function parseMonsters(data) {
   const monsters = [];
 
-  for (let i = SRD_IDX.MONSTERS_START; i < data.length - 5; i++) {
+  for (let i = cfg.start_idx; i < data.length - 5; i++) {
     const item = data[i];
     if (item.type !== 'h4') continue;
 
     const name = extractText(item);
-    if (!name || name.length > 55) continue;
+    if (!name || name.length > cfg.name_max_length) continue;
 
-    // The paragraph immediately after a monster-name h4 is its type/alignment line
     const next = data[i + 1];
     if (!next || next.type !== 'paragraph') continue;
     const typeLine = extractText(next);
-    if (!MONSTER_TYPE_RE.test(typeLine)) continue;
+    if (!typeRe.test(typeLine)) continue;
 
     const m = { name, typeLine };
 
-    for (let j = i + 2; j < i + 70 && j < data.length; j++) {
+    for (let j = i + 2; j < i + cfg.lookahead_limit && j < data.length; j++) {
       const it = data[j];
       if (it.type === 'h4') {
-        if (!ACTION_HEADINGS.has(extractText(it))) break;
+        if (!actionSet.has(extractText(it))) break;
         continue;
       }
       if (it.type === 'h3' || it.type === 'h2' || it.type === 'h1') break;
 
       if (it.type === 'paragraph') {
         const txt = extractText(it);
-        if (!m.ac    && /Armor Class/i.test(txt))    { const r = txt.match(/Armor Class\s+(\d+)/i);                          if (r) m.ac = r[1]; }
-        if (!m.hp    && /Hit Points/i.test(txt))     { const r = txt.match(/Hit Points\s+(\d+)\s*(\([^)]+\))?/i);            if (r) { m.hp = r[1]; m.hpDice = r[2] || ''; } }
-        if (!m.speed && /^Speed\s/i.test(txt))       { m.speed = txt.replace(/^Speed\s+/i,'').replace(/\s+/g,' ').trim(); }
-        if (!m.cr    && /Challenge/i.test(txt))      { const r = txt.match(/Challenge\s+([0-9/]+)/i);                        if (r) m.cr = r[1]; }
+        if (!m.ac    ) { const r = acRe.exec(txt);    if (r) m.ac = r[fp.ac.group]; }
+        if (!m.hp    ) { const r = hpRe.exec(txt);    if (r) { m.hp = r[fp.hp.group]; m.hpDice = r[fp.hp.group2] || ''; } }
+        if (!m.speed ) { const r = speedRe.exec(txt); if (r) m.speed = r[fp.speed.group].replace(/\s+/g,' ').trim(); }
+        if (!m.cr    ) { const r = crRe.exec(txt);    if (r) m.cr = r[fp.cr.group]; }
       }
 
       if (it.type === 'table' && !m.str) {
         const rows = it.rows || [];
-        if (rows.length >= 2 && rowTexts(rows[0])[0] === 'STR') {
+        if (rows.length >= 2 && rowTexts(rows[0])[0] === statHeader) {
           const v = rowTexts(rows[1]);
           [m.str, m.dex, m.con, m.int, m.wis, m.cha] = v;
         }
@@ -500,19 +500,19 @@ function parseMonsters(data) {
   return monsters;
 }
 
-// ─── SRD LOADER + CACHE ───────────────────────────────────────────────────────
-async function loadSRD() {
-  const cached = localStorage.getItem(SRD_CACHE_KEY);
+// ─── SRD LOADER + CACHE ──────────────────────────────────────────────────────
+async function loadSRD(meta) {
+  const cached = localStorage.getItem(meta.cache_key);
   if (cached) {
-    try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(SRD_CACHE_KEY); }
+    try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(meta.cache_key); }
   }
   showBanner('Fetching SRD 5.1 (~13 MB, first visit only)…');
-  const resp = await fetch(SRD_URL);
+  const resp = await fetch(meta.srd_url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   showBanner('Parsing monsters and equipment…');
-  const raw  = await resp.json();
-  const parsed = { weapons: parseWeapons(raw), monsters: parseMonsters(raw) };
-  try { localStorage.setItem(SRD_CACHE_KEY, JSON.stringify(parsed)); } catch(e) { /* storage full */ }
+  const raw    = await resp.json();
+  const parsed = { weapons: parseWeapons(raw, meta), monsters: parseMonsters(raw, meta) };
+  try { localStorage.setItem(meta.cache_key, JSON.stringify(parsed)); } catch(e) { /* storage full */ }
   return parsed;
 }
 
@@ -959,7 +959,12 @@ renderAll();
 
 (async function init() {
   try {
-    const srd = await loadSRD();
+    showBanner('Loading configuration…');
+    const metaResp = await fetch(META_URL);
+    if (!metaResp.ok) throw new Error(`Could not load ${META_URL} (HTTP ${metaResp.status})`);
+    const meta = await metaResp.json();
+
+    const srd = await loadSRD(meta);
     const hb  = window.HOMEBREW_5E || {};
 
     ALL_CREATURES = [
