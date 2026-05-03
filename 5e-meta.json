@@ -1,0 +1,37 @@
+{
+  "_comment": "Metadata for traversing the CC-BY-SA 4.0 SRD 5.1 HTML produced by Tabyltop. The app fetches this file first, then uses it to fetch and parse the SRD. Update selectors/patterns here if the source file ever changes; the HTML never needs to change for structural updates.",
+
+  "srd_url": "https://raw.githubusercontent.com/Tabyltop/CC-SRD/main/SRD5.1-CCBY4.0License-TT.html",
+  "attribution": "SRD 5.1 © Wizards of the Coast LLC, licensed CC-BY-4.0. HTML conversion by Tabyltop (https://www.tabyltop.com).",
+  "cache_key": "5e-srd-parsed-v2",
+
+  "weapons": {
+    "_comment": "The weapons section starts at the element with heading_id. The first <table> sibling contains the column headers and initial category label. The second <table> sibling contains all weapon rows; single-cell rows are category dividers.",
+    "heading_id": "Weapons",
+    "columns": ["name", "cost", "damage", "weight", "properties"]
+  },
+
+  "monsters": {
+    "_comment": "Individual monsters are <h4> elements after the element with section_id. A monster h4 is identified by its next non-empty <p> sibling containing an <em> child whose text matches type_line_re. Walk subsequent siblings up to lookahead_limit collecting fields via field_patterns and the ability-score <table> (identified by stat_table_first_header in the first cell of its first row). Stop the block when an <h4> not in action_headings is encountered, or any <h1>/<h2>/<h3>.",
+    "section_id": "Monsters",
+    "lookahead_limit": 70,
+    "name_max_length": 55,
+    "type_line_re": "^(Tiny|Small|Medium|Large|Huge|Gargantuan)\\s+(aberration|beast|celestial|construct|dragon|elemental|fey|fiend|giant|humanoid|monstrosity|ooze|plant|undead|swarm)",
+    "type_line_re_flags": "i",
+    "action_headings": [
+      "Actions",
+      "Legendary Actions",
+      "Reactions",
+      "Lair Actions",
+      "Regional Effects",
+      "Bonus Actions"
+    ],
+    "stat_table_first_header": "STR",
+    "field_patterns": {
+      "ac":    { "re": "Armor Class\\s+(\\d+)",                   "flags": "i", "group": 1 },
+      "hp":    { "re": "Hit Points\\s+(\\d+)\\s*(\\([^)]+\\))?", "flags": "i", "group": 1, "group2": 2 },
+      "speed": { "re": "Speed\\s+(.+)",                           "flags": "i", "group": 1 },
+      "cr":    { "re": "Challenge\\s+([0-9/]+)",                  "flags": "i", "group": 1 }
+    }
+  }
+}
