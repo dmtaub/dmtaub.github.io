@@ -44,9 +44,19 @@
         .search-input::placeholder { color:var(--text-muted); }
 
         /* ── Stat blocks ── */
+        .stat-controls-bar { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
+        .stat-controls-bar .search-row { flex:1; min-width:180px; margin-bottom:0; }
+        .card-mode-row { display:flex; align-items:center; gap:0.35rem; flex-shrink:0; }
+        .card-mode-label { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; }
+        .mode-btn { background:none; border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.6rem; font-size:0.82rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
+        .mode-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .mode-btn:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
+
         .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
-        .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); }
+        .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); position:relative; transition:transform 0.15s ease; }
         .stat-block.homebrew { border-color:var(--accent-soft); }
+        .stat-block.flip-mode { cursor:pointer; }
+        .stat-block.flip-mode:hover { border-color:var(--accent-soft); }
         .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; }
         .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin:0 0 0.55rem; }
         .stat-row { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.82rem; margin-bottom:0.4rem; }
@@ -55,9 +65,16 @@
         .ability-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:0.2rem; text-align:center; font-size:0.78rem; margin:0.45rem 0; }
         .ability-grid .ab-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; }
         .ability-grid .ab-val { font-weight:700; color:var(--text); font-size:0.8rem; }
-        .stat-block-traits { font-size:0.78rem; color:var(--text-muted); line-height:1.5; margin-top:0.5rem; border-top:1px solid var(--border); padding-top:0.5rem; }
-        .stat-block-traits em { color:var(--text); }
         .stat-empty { color:var(--text-muted); font-size:0.9rem; padding:1rem 0; }
+
+        .flip-hint { font-size:0.68rem; color:var(--text-muted); text-align:right; margin-top:0.35rem; opacity:0.65; user-select:none; }
+        .sb-divider { border:none; border-top:1px solid var(--border); margin:0.5rem 0; }
+        .sb-back-row { font-size:0.78rem; margin:0.2rem 0; line-height:1.4; color:var(--text); }
+        .sb-back-row strong { color:var(--accent); margin-right:0.25em; }
+        .sb-section-title { font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--accent); letter-spacing:0.05em; margin:0.55rem 0 0.2rem; }
+        .sb-entry { margin:0.35rem 0; font-size:0.78rem; line-height:1.45; color:var(--text); }
+        .sb-entry-name { font-style:italic; font-weight:700; color:var(--text); }
+        .sb-actions-scroll { max-height:180px; overflow-y:auto; }
 
         /* ── Roll tables ── */
         .roll-section { margin-bottom:0.6rem; }
@@ -177,8 +194,15 @@
 
     <!-- ══ STAT BLOCKS ══════════════════════════════════════════════════════ -->
     <div id="tab-statblocks" class="tab-panel active">
-        <div class="search-row">
-            <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
+        <div class="stat-controls-bar">
+            <div class="search-row">
+                <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
+            </div>
+            <div class="card-mode-row">
+                <span class="card-mode-label">Cards:</span>
+                <button class="mode-btn" id="modeBtnFlip" data-mode="flip">Flip</button>
+                <button class="mode-btn" id="modeBtnFull" data-mode="full">Full</button>
+            </div>
         </div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
     </div>
@@ -458,10 +482,22 @@ function parseMonsters(doc, meta) {
   const typeRe    = new RegExp(cfg.type_line_re, cfg.type_line_re_flags);
   const actionSet = new Set(cfg.action_headings);
   const fp        = cfg.field_patterns;
-  const acRe    = new RegExp(fp.ac.re,    fp.ac.flags);
-  const hpRe    = new RegExp(fp.hp.re,    fp.hp.flags);
-  const speedRe = new RegExp(fp.speed.re, fp.speed.flags);
-  const crRe    = new RegExp(fp.cr.re,    fp.cr.flags);
+
+  // Compile all field regexes from meta
+  const fieldRegs = {};
+  for (const [key, pat] of Object.entries(fp)) {
+    fieldRegs[key] = { re: new RegExp(pat.re, pat.flags), group: pat.group, group2: pat.group2 };
+  }
+
+  // Maps action heading text → camelCase key on the monster object
+  const sectionKeyMap = {
+    'actions': 'actions',
+    'legendary actions': 'legendaryActions',
+    'reactions': 'reactions',
+    'bonus actions': 'bonusActions',
+    'lair actions': 'lairActions',
+    'regional effects': 'regionalEffects',
+  };
 
   const section = doc.getElementById(cfg.section_id);
   if (!section) return [];
@@ -488,18 +524,51 @@ function parseMonsters(doc, meta) {
             const m = { name, typeLine };
             let sib = typeP.nextElementSibling;
             let k = 0;
+            let currentSection = null; // null = pre-actions phase (traits live here)
 
             while (sib && k < cfg.lookahead_limit) {
               if (sib.tagName === 'H4') {
-                if (!actionSet.has(elText(sib))) break; // new monster starts
+                const h4name = elText(sib);
+                if (actionSet.has(h4name)) {
+                  currentSection = sectionKeyMap[h4name.toLowerCase()] || h4name.toLowerCase().replace(/\s+/g,'');
+                } else {
+                  break; // new monster starts
+                }
               } else if (/^H[123]$/.test(sib.tagName)) {
                 break;
               } else if (sib.tagName === 'P') {
                 const txt = sib.textContent;
-                if (!m.ac   ) { const r = acRe.exec(txt);    if (r) m.ac    = r[fp.ac.group]; }
-                if (!m.hp   ) { const r = hpRe.exec(txt);    if (r) { m.hp = r[fp.hp.group]; m.hpDice = r[fp.hp.group2] || ''; } }
-                if (!m.speed) { const r = speedRe.exec(txt); if (r) m.speed = r[fp.speed.group].replace(/\s+/g,' ').trim(); }
-                if (!m.cr   ) { const r = crRe.exec(txt);    if (r) m.cr    = r[fp.cr.group]; }
+
+                // Extract each known field (only until first match per field)
+                for (const [key, freg] of Object.entries(fieldRegs)) {
+                  if (!m[key]) {
+                    const r = freg.re.exec(txt);
+                    if (r) {
+                      m[key] = r[freg.group];
+                      if (key === 'hp' && freg.group2 && r[freg.group2]) m.hpDice = r[freg.group2];
+                      if (key === 'speed') m[key] = m[key].replace(/\s+/g,' ').trim();
+                    }
+                  }
+                }
+
+                // Trait / action entries: identified by <b><em>Name</em></b> pattern
+                const bem = sib.querySelector('b > em');
+                if (bem) {
+                  const bEl = bem.parentElement;
+                  const rawName = elText(bem).replace(/\.\s*$/, '');
+                  const entryText = txt.replace(bEl.textContent, '').replace(/^\s*[.\s]+/, '').trim();
+                  const secKey = currentSection || 'traits';
+                  m[secKey] = m[secKey] || [];
+                  m[secKey].push({ name: rawName, text: entryText });
+                } else {
+                  // Continuation paragraph — append to last entry of current section
+                  const secKey = currentSection || 'traits';
+                  const arr = m[secKey];
+                  if (arr && arr.length) {
+                    const line = elText(sib);
+                    if (line) arr[arr.length - 1].text += ' ' + line;
+                  }
+                }
               } else if (sib.tagName === 'TABLE' && !m.str) {
                 const rows = sib.querySelectorAll('tr');
                 if (rows.length >= 2 && tdTexts(rows[0])[0] === cfg.stat_table_first_header) {
@@ -570,43 +639,157 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ─── STAT BLOCKS ─────────────────────────────────────────────────────────────
 let ALL_CREATURES = [];
+let CURRENT_FILTERED = [];
 
-function renderStatBlock(c) {
-  const isHB = c._homebrew;
-  const abilLabels = ['STR','DEX','CON','INT','WIS','CHA'];
-  const abilKeys   = ['str','dex','con','int','wis','cha'];
-  const abilCells  = abilKeys.map((k, i) => {
-    const val = c[k] || '—';
-    return `<div><div class="ab-label">${abilLabels[i]}</div><div class="ab-val">${val}</div></div>`;
-  }).join('');
-  return `<div class="stat-block${isHB?' homebrew':''}">
-    <div class="stat-block-name">${c.name}${isHB?' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>':''}</div>
-    <div class="stat-block-meta">${c.typeLine || c.type || ''}${c.cr ? ' — CR '+c.cr : ''}</div>
-    <div class="stat-row">
-      <span class="stat-pill"><strong>HP</strong> ${c.hp||'?'}${c.hpDice?' <span style="color:var(--text-muted);font-size:0.75rem">'+c.hpDice+'</span>':''}</span>
-      <span class="stat-pill"><strong>AC</strong> ${c.ac||'?'}</span>
-      ${c.speed ? `<span class="stat-pill"><strong>Spd</strong> ${c.speed}</span>` : ''}
-    </div>
-    <div class="ability-grid">${abilCells}</div>
-    ${c.traits ? `<div class="stat-block-traits">${c.traits}</div>` : ''}
-  </div>`;
+// Settings — persisted to localStorage under '5e-settings'
+let settings5e = (() => { try { return JSON.parse(localStorage.getItem('5e-settings') || '{}'); } catch(e) { return {}; } })();
+let cardMode = settings5e.cardMode || 'flip';
+
+function saveSettings() { localStorage.setItem('5e-settings', JSON.stringify(settings5e)); }
+
+function updateModeButtons() {
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === cardMode));
 }
+updateModeButtons();
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    cardMode = btn.dataset.mode;
+    settings5e.cardMode = cardMode;
+    saveSettings();
+    updateModeButtons();
+    buildStatGrid(document.getElementById('statSearch').value);
+  });
+});
+
+// ── Renderers ────────────────────────────────────────────────────────────────
+
+function abilityGrid(c) {
+  return ['STR','DEX','CON','INT','WIS','CHA'].map((lbl, i) => {
+    const val = c[['str','dex','con','int','wis','cha'][i]] || '—';
+    return `<div><div class="ab-label">${lbl}</div><div class="ab-val">${val}</div></div>`;
+  }).join('');
+}
+
+function hpPill(c) {
+  return `<span class="stat-pill"><strong>HP</strong> ${c.hp||'?'}${c.hpDice?` <span style="color:var(--text-muted);font-size:0.75rem">${c.hpDice}</span>`:''}</span>`;
+}
+
+function backFields(c) {
+  let h = '';
+  const row = (label, val) => val ? `<div class="sb-back-row"><strong>${label}</strong> ${val}</div>` : '';
+  h += row('Saves', c.saves);
+  h += row('Skills', c.skills);
+  h += row('Vulnerabilities', c.dmgVuln);
+  h += row('Resistances', c.dmgRes);
+  h += row('Immunities', c.dmgImm);
+  h += row('Condition Imm.', c.condImm);
+  h += row('Senses', c.senses);
+  h += row('Languages', c.languages);
+  return h;
+}
+
+function entryList(arr, title) {
+  if (!arr || !arr.length) return '';
+  return `<hr class="sb-divider">`
+    + (title ? `<div class="sb-section-title">${title}</div>` : '')
+    + arr.map(e => `<div class="sb-entry"><span class="sb-entry-name">${e.name}.</span> ${e.text}</div>`).join('');
+}
+
+function renderFront(c) {
+  const isHB = c._homebrew;
+  return `
+    <div class="stat-block-name">${c.name}${isHB?' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>':''}</div>
+    <div class="stat-block-meta">${c.typeLine||c.type||''}${c.cr?' — CR '+c.cr:''}</div>
+    <div class="stat-row">
+      ${hpPill(c)}
+      <span class="stat-pill"><strong>AC</strong> ${c.ac||'?'}</span>
+      ${c.speed?`<span class="stat-pill"><strong>Spd</strong> ${c.speed}</span>`:''}
+    </div>
+    <div class="ability-grid">${abilityGrid(c)}</div>
+    <div class="flip-hint">tap to flip ↺</div>`;
+}
+
+function renderBack(c) {
+  const fields = backFields(c);
+  const hasTraits = c.traits && c.traits.length;
+  const hasActions = c.actions || c.reactions || c.legendaryActions || c.bonusActions;
+  return `
+    <div class="stat-block-name">${c.name}</div>
+    <div class="stat-block-meta">${c.typeLine||''}${c.cr?' — CR '+c.cr:''}</div>
+    ${fields ? `<hr class="sb-divider">${fields}` : ''}
+    ${hasTraits ? entryList(c.traits) : ''}
+    ${c.actions ? entryList(c.actions, 'Actions') : ''}
+    ${c.reactions ? entryList(c.reactions, 'Reactions') : ''}
+    ${c.bonusActions ? entryList(c.bonusActions, 'Bonus Actions') : ''}
+    ${c.legendaryActions ? `<hr class="sb-divider"><div class="sb-section-title">Legendary Actions</div><div class="sb-actions-scroll">${c.legendaryActions.map(e=>`<div class="sb-entry"><span class="sb-entry-name">${e.name}.</span> ${e.text}</div>`).join('')}</div>` : ''}
+    ${!fields && !hasTraits && !hasActions ? '<div style="color:var(--text-muted);font-size:0.82rem;padding:0.25rem 0">No additional data.</div>' : ''}
+    <div class="flip-hint">tap to flip ↺</div>`;
+}
+
+function renderFull(c) {
+  const isHB = c._homebrew;
+  const fields = backFields(c);
+  let h = `
+    <div class="stat-block-name">${c.name}${isHB?' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>':''}</div>
+    <div class="stat-block-meta">${c.typeLine||c.type||''}${c.cr?' — CR '+c.cr:''}</div>
+    <div class="stat-row">
+      ${hpPill(c)}
+      <span class="stat-pill"><strong>AC</strong> ${c.ac||'?'}</span>
+      ${c.speed?`<span class="stat-pill"><strong>Spd</strong> ${c.speed}</span>`:''}
+    </div>
+    <div class="ability-grid">${abilityGrid(c)}</div>`;
+  if (fields) h += `<hr class="sb-divider">${fields}`;
+  // Homebrew string traits (legacy)
+  if (typeof c.traits === 'string' && c.traits) h += `<hr class="sb-divider"><div style="font-size:0.78rem;color:var(--text-muted);line-height:1.5">${c.traits}</div>`;
+  if (Array.isArray(c.traits) && c.traits.length) h += entryList(c.traits);
+  if (c.actions)          h += entryList(c.actions, 'Actions');
+  if (c.reactions)        h += entryList(c.reactions, 'Reactions');
+  if (c.bonusActions)     h += entryList(c.bonusActions, 'Bonus Actions');
+  if (c.legendaryActions) h += entryList(c.legendaryActions, 'Legendary Actions');
+  return h;
+}
+
+function renderStatBlock(c, idx) {
+  const isHB = c._homebrew;
+  const cls = `stat-block${isHB?' homebrew':''}${cardMode==='flip'?' flip-mode':''}`;
+  const inner = cardMode === 'full' ? renderFull(c) : renderFront(c);
+  return `<div class="${cls}" data-idx="${idx}" data-face="front">${inner}</div>`;
+}
+
+// Flip click handler — event delegation on the grid container
+document.getElementById('statGrid').addEventListener('click', e => {
+  if (cardMode !== 'flip') return;
+  const block = e.target.closest('.stat-block.flip-mode');
+  if (!block) return;
+  const c = CURRENT_FILTERED[+block.dataset.idx];
+  if (!c) return;
+  const isFront = block.dataset.face === 'front';
+  block.style.transition = 'transform 0.13s ease-in';
+  block.style.transform  = 'scaleX(0)';
+  setTimeout(() => {
+    block.innerHTML    = isFront ? renderBack(c) : renderFront(c);
+    block.dataset.face = isFront ? 'back' : 'front';
+    block.style.transition = 'transform 0.13s ease-out';
+    block.style.transform  = 'scaleX(1)';
+  }, 130);
+});
 
 function buildStatGrid(filter) {
   const q = (filter || '').toLowerCase();
   const grid = document.getElementById('statGrid');
-  const results = q
+  CURRENT_FILTERED = q
     ? ALL_CREATURES.filter(c =>
         c.name.toLowerCase().includes(q) ||
         (c.typeLine||'').toLowerCase().includes(q) ||
         ('cr'+(c.cr||'')).includes(q)
       )
     : ALL_CREATURES;
-  if (!results.length) {
+  if (!CURRENT_FILTERED.length) {
     grid.innerHTML = `<p class="stat-empty">${q ? 'No matches.' : 'No creatures loaded.'}</p>`;
     return;
   }
-  grid.innerHTML = `<div class="stat-grid">${results.map(renderStatBlock).join('')}</div>`;
+  grid.innerHTML = `<div class="stat-grid">${CURRENT_FILTERED.map((c, i) => renderStatBlock(c, i)).join('')}</div>`;
 }
 
 document.getElementById('statSearch').addEventListener('input', e => buildStatGrid(e.target.value));
