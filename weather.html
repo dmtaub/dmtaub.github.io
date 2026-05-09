@@ -16,21 +16,37 @@
         .theme-toggle { background:none; border:1px solid var(--accent); border-radius:20px; min-width:40px; height:28px; padding:0 10px; cursor:pointer; color:var(--text); font-size:0.85rem; }
 
         h1.page-title { font-size:1.7rem; margin:0 0 0.2rem; color:var(--text); }
-        .page-subtitle { color:var(--text-muted); font-size:0.95rem; margin:0 0 1.5rem; }
+        .page-subtitle { color:var(--text-muted); font-size:0.95rem; margin:0 0 1.25rem; }
 
-        /* ── Zip chips ── */
+        /* ── Location tabs ── */
+        .loc-tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:0.85rem; }
+        .loc-tab-btn { background:none; border:none; border-bottom:2px solid transparent; padding:0.4rem 1rem; cursor:pointer; font-size:0.88rem; font-weight:600; color:var(--text-muted); margin-bottom:-1px; transition:color .15s, border-color .15s; }
+        .loc-tab-btn:hover { color:var(--text); }
+        .loc-tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+        /* ── Preset location links ── */
+        .loc-bar { display:flex; gap:0; flex-wrap:wrap; align-items:baseline; margin-bottom:1.25rem; line-height:2; }
+        .loc-link { background:none; border:none; padding:0 0.6rem; cursor:pointer; font-size:0.88rem; color:var(--text-muted); white-space:nowrap; transition:color .15s; position:relative; }
+        .loc-link + .loc-link::before { content:'·'; position:absolute; left:0; color:var(--border); pointer-events:none; }
+        .loc-link:hover { color:var(--accent); }
+        .loc-link.active { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
+        .loc-link.bold-loc { font-weight:700; color:var(--text); }
+        .loc-link.bold-loc.active { color:var(--accent); }
+        .loc-bar-empty { font-size:0.88rem; color:var(--text-muted); font-style:italic; }
+
+        /* ── Custom tab chips + form ── */
         .zip-bar { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
-        .zip-chip { display:flex; align-items:center; gap:0.25rem; padding:0.35rem 0.7rem; border-radius:20px; border:1px solid var(--border); background:var(--surface); font-size:0.88rem; cursor:pointer; color:var(--text-muted); transition:all .15s; white-space:nowrap; }
+        .zip-chip { display:inline-flex; align-items:center; gap:0.25rem; padding:0.3rem 0.65rem; border-radius:20px; border:1px solid var(--border); background:var(--surface); font-size:0.85rem; cursor:pointer; color:var(--text-muted); transition:all .15s; white-space:nowrap; }
         .zip-chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
         .zip-chip:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
         .chip-label { pointer-events:none; }
         .chip-remove { background:none; border:none; cursor:pointer; color:inherit; opacity:.55; font-size:1rem; line-height:1; padding:0 0 0 0.15rem; }
         .chip-remove:hover { opacity:1; }
         .zip-add-form { display:flex; gap:0.4rem; }
-        .zip-input { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.7rem; font-size:0.88rem; color:var(--text); width:90px; }
+        .zip-input { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.65rem; font-size:0.85rem; color:var(--text); width:165px; }
         .zip-input:focus { outline:none; border-color:var(--accent-soft); }
         .zip-input::placeholder { color:var(--text-muted); }
-        .btn-add-zip { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.35rem 0.85rem; cursor:pointer; font-size:0.88rem; white-space:nowrap; transition:opacity .15s; }
+        .btn-add-zip { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem; white-space:nowrap; transition:opacity .15s; }
         .btn-add-zip:hover { opacity:.85; }
 
         /* ── Status ── */
@@ -84,14 +100,17 @@
         <button class="theme-toggle" id="themeToggle">☀</button>
     </div>
     <h1 class="page-title">Weather</h1>
-    <p class="page-subtitle">Hourly forecasts for saved US zip codes — data from the National Weather Service.</p>
+    <p class="page-subtitle">Hourly forecasts — data from the National Weather Service.</p>
 
-    <div class="zip-bar" id="zipBar">
-        <div class="zip-add-form">
-            <input class="zip-input" id="zipInput" type="text" placeholder="02143" maxlength="5" inputmode="numeric">
-            <button class="btn-add-zip" id="btnAddZip">+ Add zip</button>
-        </div>
+    <div class="loc-tabs" id="locTabs">
+        <button class="loc-tab-btn active" data-tab="east">East</button>
+        <button class="loc-tab-btn" data-tab="west">West</button>
+        <button class="loc-tab-btn" data-tab="europe">Europe</button>
+        <button class="loc-tab-btn" data-tab="asia">Asia</button>
+        <button class="loc-tab-btn" data-tab="custom">Custom</button>
     </div>
+
+    <div id="locBar"></div>
 
     <div class="status-banner hidden" id="statusBanner">
         <span class="spinner" id="statusSpinner"></span>
@@ -112,17 +131,106 @@ function setDark(dark, save) {
 setDark(document.body.classList.contains('dark'));
 themeBtn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
 
+// ─── Preset locations ────────────────────────────────────────────────────────
+// US entries: { key, zip, label, bold, default? }
+// Intl entries: { key, lat, lng, label, bold, default? }  (NWS US-only — intl shows error)
+const PRESETS = {
+  east: [
+    { key:'04609', zip:'04609', label:'Acadia',       bold:true  },
+    { key:'04538', zip:'04538', label:'Booth Bay',    bold:false },
+    { key:'05301', zip:'05301', label:'Brattleboro',  bold:false },
+    { key:'02139', zip:'02139', label:'Cambridge',    bold:true, default:true },
+    { key:'29577', zip:'29577', label:'Myrtle Beach', bold:false },
+    { key:'10001', zip:'10001', label:'NYC',           bold:false },
+    { key:'08226', zip:'08226', label:'Ocean City NJ',bold:true  },
+    { key:'19103', zip:'19103', label:'Phili',         bold:true  },
+    { key:'02903', zip:'02903', label:'Providence',    bold:false },
+    { key:'23220', zip:'23220', label:'Richmond',      bold:true  },
+    { key:'34236', zip:'34236', label:'Sarasota',      bold:false },
+    { key:'20001', zip:'20001', label:'Wash DC',       bold:false },
+    { key:'28401', zip:'28401', label:'Wilmington NC', bold:true  },
+  ],
+  west: [
+    { key:'59715', zip:'59715', label:'Bozeman',       bold:false },
+    { key:'97701', zip:'97701', label:'Bend',           bold:false },
+    { key:'80202', zip:'80202', label:'Denver',         bold:true  },
+    { key:'93920', zip:'93920', label:'Big Sur',        bold:false },
+    { key:'90001', zip:'90001', label:'Los Angeles',    bold:true, default:true },
+    { key:'98362', zip:'98362', label:'Olympic NP',     bold:true  },
+    { key:'85001', zip:'85001', label:'Phoenix',        bold:false },
+    { key:'97201', zip:'97201', label:'Portland',       bold:false },
+    { key:'87501', zip:'87501', label:'Santa Fe',       bold:false },
+    { key:'92101', zip:'92101', label:'San Diego',      bold:false },
+    { key:'94102', zip:'94102', label:'San Francisco',  bold:true  },
+    { key:'98101', zip:'98101', label:'Seattle',        bold:true  },
+    { key:'86336', zip:'86336', label:'Sedona',         bold:false },
+  ],
+  europe: [
+    { key:'52.37,4.90',   lat:52.37,  lng:4.90,   label:'Amsterdam',  bold:false },
+    { key:'41.39,2.17',   lat:41.39,  lng:2.17,   label:'Barcelona',  bold:false },
+    { key:'52.52,13.41',  lat:52.52,  lng:13.41,  label:'Berlin',     bold:false },
+    { key:'55.68,12.57',  lat:55.68,  lng:12.57,  label:'Copenhagen', bold:false },
+    { key:'55.95,-3.19',  lat:55.95,  lng:-3.19,  label:'Edinburgh',  bold:false },
+    { key:'51.51,-0.13',  lat:51.51,  lng:-0.13,  label:'London',     bold:true, default:true },
+    { key:'38.72,-9.14',  lat:38.72,  lng:-9.14,  label:'Lisbon',     bold:false },
+    { key:'48.86,2.35',   lat:48.86,  lng:2.35,   label:'Paris',      bold:true  },
+    { key:'50.08,14.44',  lat:50.08,  lng:14.44,  label:'Prague',     bold:false },
+    { key:'64.15,-21.94', lat:64.15,  lng:-21.94, label:'Reykjavik',  bold:false },
+    { key:'41.90,12.50',  lat:41.90,  lng:12.50,  label:'Rome',       bold:false },
+    { key:'48.21,16.37',  lat:48.21,  lng:16.37,  label:'Vienna',     bold:false },
+    { key:'47.38,8.54',   lat:47.38,  lng:8.54,   label:'Zurich',     bold:false },
+  ],
+  asia: [
+    { key:'-8.34,115.09', lat:-8.34,  lng:115.09, label:'Bali',       bold:false },
+    { key:'39.90,116.41', lat:39.90,  lng:116.41, label:'Beijing',    bold:false },
+    { key:'18.79,98.98',  lat:18.79,  lng:98.98,  label:'Chiang Mai', bold:false },
+    { key:'22.32,114.17', lat:22.32,  lng:114.17, label:'Hong Kong',  bold:false },
+    { key:'27.72,85.32',  lat:27.72,  lng:85.32,  label:'Kathmandu',  bold:false },
+    { key:'35.01,135.77', lat:35.01,  lng:135.77, label:'Kyoto',      bold:true, default:true },
+    { key:'28.61,77.21',  lat:28.61,  lng:77.21,  label:'Delhi',      bold:false },
+    { key:'19.08,72.88',  lat:19.08,  lng:72.88,  label:'Mumbai',     bold:false },
+    { key:'37.57,126.98', lat:37.57,  lng:126.98, label:'Seoul',      bold:true  },
+    { key:'31.23,121.47', lat:31.23,  lng:121.47, label:'Shanghai',   bold:false },
+    { key:'1.35,103.82',  lat:1.35,   lng:103.82, label:'Singapore',  bold:false },
+    { key:'13.76,100.50', lat:13.76,  lng:100.50, label:'Bangkok',    bold:false },
+    { key:'35.68,139.65', lat:35.68,  lng:139.65, label:'Tokyo',      bold:true  },
+  ],
+};
+
 // ─── State ───────────────────────────────────────────────────────────────────
 const ZIPS_KEY = 'weather-zips';
+const GEO_KEY  = 'weather-geo';
 let savedZips = (() => { try { return JSON.parse(localStorage.getItem(ZIPS_KEY) || '[]'); } catch(e) { return []; } })();
-let activeZip  = savedZips[0]?.zip || null;
-const forecastCache = new Map(); // zip → { periods, timestamp }
-let chart = null;
-let showHours = 24;
-const metrics = { temp: true, precip: true, wind: false, humid: false };
-let lastPeriods = null; // for metric toggles without re-fetch
+let geoCache  = (() => { try { return JSON.parse(localStorage.getItem(GEO_KEY)  || '{}'); } catch(e) { return {}; } })();
 
-function saveZips() { localStorage.setItem(ZIPS_KEY, JSON.stringify(savedZips)); }
+// pre-seed geoCache with international preset lat/lng
+Object.values(PRESETS).flat().forEach(p => {
+  if (p.lat !== undefined && !geoCache[p.key]) {
+    geoCache[p.key] = { key: p.key, lat: p.lat, lng: p.lng, city: p.label, state: '' };
+  }
+});
+
+let activeTab = 'east';
+let activeKey = PRESETS.east.find(p => p.default)?.key || PRESETS.east[0]?.key || null;
+const forecastCache = new Map();
+let chart      = null;
+let showHours  = 24;
+const metrics  = { temp: true, precip: true, wind: false, humid: false };
+let lastPeriods = null;
+
+function saveZips()     { localStorage.setItem(ZIPS_KEY, JSON.stringify(savedZips)); }
+function saveGeoCache() { localStorage.setItem(GEO_KEY,  JSON.stringify(geoCache));  }
+
+// ─── Unified geo lookup ───────────────────────────────────────────────────────
+async function getGeo(key) {
+  if (geoCache[key]) return geoCache[key];
+  const custom = savedZips.find(z => z.zip === key);
+  if (custom) { geoCache[key] = custom; saveGeoCache(); return custom; }
+  const geo = await fetchGeo(key); // key is zip for US
+  geoCache[key] = geo;
+  saveGeoCache();
+  return geo;
+}
 
 // ─── Status banner ───────────────────────────────────────────────────────────
 function showStatus(msg, isErr) {
@@ -133,54 +241,97 @@ function showStatus(msg, isErr) {
 }
 function hideStatus() { document.getElementById('statusBanner').className = 'status-banner hidden'; }
 
-// ─── Zip bar ─────────────────────────────────────────────────────────────────
-function renderZipBar() {
-  const bar = document.getElementById('zipBar');
-  const form = bar.querySelector('.zip-add-form');
-  bar.innerHTML = '';
+// ─── Location tabs ────────────────────────────────────────────────────────────
+document.getElementById('locTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.loc-tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.loc-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = btn.dataset.tab;
+  if (activeTab === 'custom') {
+    activeKey = savedZips[0]?.zip || null;
+  } else {
+    const list = PRESETS[activeTab] || [];
+    activeKey = (list.find(p => p.default) || list[0])?.key || null;
+  }
+  renderLocBar();
+  if (activeKey) loadForecast(activeKey); else renderEmpty();
+});
 
-  savedZips.forEach(z => {
-    const chip = document.createElement('div');
-    chip.className = 'zip-chip' + (z.zip === activeZip ? ' active' : '');
-    chip.innerHTML = `<span class="chip-label">${z.city ? `${z.city}, ${z.state}` : z.zip}</span>
-      <button class="chip-remove" title="Remove ${z.zip}">×</button>`;
-    chip.querySelector('.chip-label').addEventListener('click', () => {
-      activeZip = z.zip; renderZipBar(); loadForecast(z.zip);
-    });
-    chip.querySelector('.chip-remove').addEventListener('click', e => {
-      e.stopPropagation();
-      savedZips = savedZips.filter(x => x.zip !== z.zip);
-      forecastCache.delete(z.zip);
-      saveZips();
-      if (activeZip === z.zip) activeZip = savedZips[0]?.zip || null;
-      renderZipBar();
-      if (activeZip) loadForecast(activeZip); else renderEmpty();
-    });
-    bar.appendChild(chip);
-  });
+// ─── Location bar ─────────────────────────────────────────────────────────────
+function renderLocBar() {
+  const container = document.getElementById('locBar');
+  container.innerHTML = '';
 
-  bar.appendChild(form);
+  if (activeTab === 'custom') {
+    // chip-style bar with remove buttons + add form
+    const bar = document.createElement('div');
+    bar.className = 'zip-bar';
+    savedZips.forEach(z => {
+      const chip = document.createElement('div');
+      chip.className = 'zip-chip' + (z.zip === activeKey ? ' active' : '');
+      chip.innerHTML = `<span class="chip-label">${z.city ? `${z.city}, ${z.state}` : z.zip}</span>
+        <button class="chip-remove" title="Remove ${z.zip}">×</button>`;
+      chip.querySelector('.chip-label').addEventListener('click', () => {
+        activeKey = z.zip; renderLocBar(); loadForecast(z.zip);
+      });
+      chip.querySelector('.chip-remove').addEventListener('click', e => {
+        e.stopPropagation();
+        savedZips = savedZips.filter(x => x.zip !== z.zip);
+        forecastCache.delete(z.zip);
+        saveZips();
+        if (activeKey === z.zip) activeKey = savedZips[0]?.zip || null;
+        renderLocBar();
+        if (activeKey) loadForecast(activeKey); else renderEmpty();
+      });
+      bar.appendChild(chip);
+    });
+    const form = document.createElement('div');
+    form.className = 'zip-add-form';
+    form.innerHTML = `<input class="zip-input" id="zipInput" type="text" placeholder="90210 (lol 80s)" maxlength="5" inputmode="numeric">
+      <button class="btn-add-zip" id="btnAddZip">+ Add zip</button>`;
+    bar.appendChild(form);
+    container.appendChild(bar);
+    document.getElementById('btnAddZip').addEventListener('click', addZip);
+    document.getElementById('zipInput').addEventListener('keydown', e => { if (e.key === 'Enter') addZip(); });
+
+  } else {
+    // flat link bar
+    const list = PRESETS[activeTab] || [];
+    if (!list.length) {
+      container.innerHTML = `<div class="loc-bar"><span class="loc-bar-empty">No locations yet.</span></div>`;
+      return;
+    }
+    const bar = document.createElement('div');
+    bar.className = 'loc-bar';
+    list.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'loc-link' + (p.key === activeKey ? ' active' : '') + (p.bold ? ' bold-loc' : '');
+      btn.textContent = p.label;
+      btn.addEventListener('click', () => { activeKey = p.key; renderLocBar(); loadForecast(p.key); });
+      bar.appendChild(btn);
+    });
+    container.appendChild(bar);
+  }
 }
 
-document.getElementById('btnAddZip').addEventListener('click', addZip);
-document.getElementById('zipInput').addEventListener('keydown', e => { if (e.key === 'Enter') addZip(); });
-
+// ─── Add zip (custom tab) ────────────────────────────────────────────────────
 async function addZip() {
   const input = document.getElementById('zipInput');
   const zip = input.value.replace(/\D/g, '').slice(0, 5);
   if (zip.length !== 5) { showStatus('Enter a 5-digit US zip code.', true); return; }
   if (savedZips.find(z => z.zip === zip)) {
     input.value = '';
-    activeZip = zip; renderZipBar(); loadForecast(zip); return;
+    activeKey = zip; renderLocBar(); loadForecast(zip); return;
   }
   showStatus(`Looking up ${zip}…`);
   try {
     const geo = await fetchGeo(zip);
     savedZips.push(geo);
     saveZips();
-    activeZip = zip;
+    activeKey = zip;
     input.value = '';
-    renderZipBar();
+    renderLocBar();
     await loadForecast(zip);
   } catch(e) { showStatus(e.message, true); }
 }
@@ -201,42 +352,39 @@ async function fetchGeo(zip) {
 }
 
 // ─── NWS forecast ────────────────────────────────────────────────────────────
-const NWS_UA = { 'User-Agent': 'dmtaub.github.io/weather (dmtaub@gmail.com)' };
-const CACHE_TTL = 30 * 60 * 1000; // 30 min
+const NWS_UA  = { 'User-Agent': 'dmtaub.github.io/weather (dmtaub@gmail.com)' };
+const CACHE_TTL = 30 * 60 * 1000;
 
-async function loadForecast(zip) {
-  const hit = forecastCache.get(zip);
+async function loadForecast(key) {
+  const hit = forecastCache.get(key);
   if (hit && Date.now() - hit.ts < CACHE_TTL) {
-    lastPeriods = hit.periods; renderForecast(zip, hit.periods); hideStatus(); return;
+    lastPeriods = hit.periods; renderForecast(key, hit.periods); hideStatus(); return;
   }
-  const z = savedZips.find(x => x.zip === zip);
-  if (!z) return;
-  showStatus(`Fetching forecast for ${z.city || zip}…`);
+  showStatus(`Fetching forecast…`);
   try {
+    const z = await getGeo(key);
     const pts  = await fetch(`https://api.weather.gov/points/${z.lat},${z.lng}`, { headers: NWS_UA });
-    if (!pts.ok) throw new Error('NWS lookup failed — zip may not have NWS coverage.');
+    if (!pts.ok) throw new Error('NWS only covers US locations.');
     const ptsJ = await pts.json();
-    const url  = ptsJ.properties.forecastHourly;
-    const hr   = await fetch(url, { headers: NWS_UA });
+    const hr   = await fetch(ptsJ.properties.forecastHourly, { headers: NWS_UA });
     if (!hr.ok) throw new Error('Could not load hourly forecast data.');
     const periods = (await hr.json()).properties.periods;
-    forecastCache.set(zip, { periods, ts: Date.now() });
+    forecastCache.set(key, { periods, ts: Date.now() });
     lastPeriods = periods;
-    renderForecast(zip, periods);
+    renderForecast(key, periods);
     hideStatus();
   } catch(e) { showStatus(e.message, true); }
 }
 
 // ─── Forecast render ─────────────────────────────────────────────────────────
-function renderForecast(zip, periods) {
-  const z   = savedZips.find(x => x.zip === zip);
-  const now = periods.slice(0, showHours);
-  const cur = periods[0];
+function renderForecast(key, periods) {
+  const preset  = Object.values(PRESETS).flat().find(p => p.key === key);
+  const cached  = geoCache[key];
+  const locName = preset?.label || (cached?.city ? `${cached.city}${cached.state ? ', ' + cached.state : ''}` : key);
 
-  const labels = now.map(p => {
-    const d = new Date(p.startTime);
-    return d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
-  });
+  const now    = periods.slice(0, showHours);
+  const cur    = periods[0];
+  const labels = now.map(p => new Date(p.startTime).toLocaleTimeString([], { hour:'numeric', hour12:true }));
   const temps  = now.map(p => p.temperature);
   const precip = now.map(p => p.probabilityOfPrecipitation?.value ?? 0);
   const wind   = now.map(p => parseFloat(p.windSpeed) || 0);
@@ -245,16 +393,17 @@ function renderForecast(zip, periods) {
   const area = document.getElementById('forecastArea');
   area.innerHTML = `
     <div class="forecast-header">
-      <div class="forecast-location">${z?.city ? `${z.city}, ${z.state}` : zip}</div>
+      <div class="forecast-location">${locName}</div>
       <div class="forecast-current">
         Currently ${cur.temperature}°F &middot; ${cur.shortForecast} &middot; Wind ${cur.windSpeed} ${cur.windDirection}
       </div>
     </div>
-
     <div class="chart-controls">
       <div class="toggle-group" id="rangeGroup">
         <button class="toggle-btn ${showHours===24?'active':''}" data-hours="24">24h</button>
         <button class="toggle-btn ${showHours===48?'active':''}" data-hours="48">48h</button>
+        <button class="toggle-btn ${showHours===96?'active':''}" data-hours="96">4d</button>
+        <button class="toggle-btn ${showHours===168?'active':''}" data-hours="168">7d</button>
       </div>
       <span class="controls-spacer"></span>
       <div class="toggle-group">
@@ -264,19 +413,15 @@ function renderForecast(zip, periods) {
         <button class="toggle-btn ${metrics.humid?'active':''}"  data-metric="humid">Humidity</button>
       </div>
     </div>
-
     <div class="chart-wrap"><canvas id="wxChart" height="130"></canvas></div>
     <div class="hourly-wrap">${buildTable(now)}</div>`;
 
   area.querySelectorAll('[data-hours]').forEach(btn => btn.addEventListener('click', () => {
-    showHours = +btn.dataset.hours;
-    renderForecast(zip, periods);
+    showHours = +btn.dataset.hours; renderForecast(key, periods);
   }));
   area.querySelectorAll('[data-metric]').forEach(btn => btn.addEventListener('click', () => {
-    metrics[btn.dataset.metric] = !metrics[btn.dataset.metric];
-    renderForecast(zip, periods);
+    metrics[btn.dataset.metric] = !metrics[btn.dataset.metric]; renderForecast(key, periods);
   }));
-
   drawChart(labels, temps, precip, wind, humid);
 }
 
@@ -288,10 +433,10 @@ function cssVar(name) {
 
 function drawChart(labels, temps, precip, wind, humid) {
   if (chart) { chart.destroy(); chart = null; }
-  const ctx   = document.getElementById('wxChart').getContext('2d');
-  const grid  = cssVar('--border')     || 'rgba(128,128,128,.2)';
-  const muted = cssVar('--text-muted') || '#888';
-  const acc   = cssVar('--accent')     || '#7c6ccd';
+  const ctx  = document.getElementById('wxChart').getContext('2d');
+  const grid = cssVar('--border')     || 'rgba(128,128,128,.2)';
+  const muted= cssVar('--text-muted') || '#888';
+  const acc  = cssVar('--accent')     || '#7c6ccd';
 
   const datasets = [];
   if (metrics.temp) datasets.push({
@@ -323,20 +468,19 @@ function drawChart(labels, temps, precip, wind, humid) {
       plugins:{
         legend:{ labels:{ color:muted, font:{size:12}, boxWidth:14, padding:14 } },
         tooltip:{ callbacks:{ label: c => {
-          const v = c.parsed.y;
-          const l = c.dataset.label;
-          if (l.startsWith('Temp'))    return ` ${v}°F`;
-          if (l.startsWith('Precip'))  return ` ${v}% chance of rain`;
-          if (l.startsWith('Wind'))    return ` ${v} mph`;
-          if (l.startsWith('Humid'))   return ` ${v}%`;
+          const v = c.parsed.y, l = c.dataset.label;
+          if (l.startsWith('Temp'))   return ` ${v}°F`;
+          if (l.startsWith('Precip')) return ` ${v}% chance of rain`;
+          if (l.startsWith('Wind'))   return ` ${v} mph`;
+          if (l.startsWith('Humid'))  return ` ${v}%`;
           return ` ${v}`;
         }}},
       },
       scales:{
-        x:{ ticks:{ color:muted, maxTicksLimit:showHours===24?12:16, font:{size:11} }, grid:{ color:grid } },
+        x:{ ticks:{ color:muted, maxTicksLimit:showHours<=24?12:showHours<=48?16:24, font:{size:11} }, grid:{ color:grid } },
         yL:{ type:'linear', position:'left',  display:metrics.temp,
-             ticks:{ color:acc,   font:{size:11}, callback:v=>v+'°' }, grid:{ color:grid } },
-        yR:{ type:'linear', position:'right', display: metrics.precip||metrics.wind||metrics.humid,
+             ticks:{ color:acc,  font:{size:11}, callback:v=>v+'°' }, grid:{ color:grid } },
+        yR:{ type:'linear', position:'right', display:metrics.precip||metrics.wind||metrics.humid,
              min:0, max:100,
              ticks:{ color:muted, font:{size:11}, callback:v=>v+'%' }, grid:{ drawOnChartArea:false } },
       },
@@ -348,16 +492,13 @@ function drawChart(labels, temps, precip, wind, humid) {
 function buildTable(periods) {
   let lastDay = '';
   const rows = periods.map(p => {
-    const d    = new Date(p.startTime);
-    const day  = d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
-    const time = d.toLocaleTimeString([], { hour:'numeric', hour12:true });
-    const pr   = p.probabilityOfPrecipitation?.value ?? 0;
-    const hu   = p.relativeHumidity?.value ?? '—';
+    const d   = new Date(p.startTime);
+    const day = d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
+    const time= d.toLocaleTimeString([], { hour:'numeric', hour12:true });
+    const pr  = p.probabilityOfPrecipitation?.value ?? 0;
+    const hu  = p.relativeHumidity?.value ?? '—';
     let out = '';
-    if (day !== lastDay) {
-      lastDay = day;
-      out += `<tr class="day-row"><td colspan="6">${day}</td></tr>`;
-    }
+    if (day !== lastDay) { lastDay = day; out += `<tr class="day-row"><td colspan="6">${day}</td></tr>`; }
     out += `<tr>
       <td>${time}</td>
       <td class="temp-val">${p.temperature}°F</td>
@@ -369,9 +510,7 @@ function buildTable(periods) {
     return out;
   }).join('');
   return `<table class="hourly-table">
-    <thead><tr>
-      <th>Time</th><th>Temp</th><th>Conditions</th><th>Precip</th><th>Wind</th><th>Humidity</th>
-    </tr></thead>
+    <thead><tr><th>Time</th><th>Temp</th><th>Conditions</th><th>Precip</th><th>Wind</th><th>Humidity</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -386,8 +525,8 @@ function renderEmpty() {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-renderZipBar();
-if (activeZip) loadForecast(activeZip); else renderEmpty();
+renderLocBar();
+if (activeKey) loadForecast(activeKey); else renderEmpty();
 </script>
 </body>
 </html>
