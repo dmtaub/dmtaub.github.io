@@ -212,8 +212,12 @@ const GEO_KEY  = 'weather-geo';
 let savedZips  = (() => { try { return JSON.parse(localStorage.getItem(ZIPS_KEY) || '[]'); } catch(e) { return []; } })();
 let geoCache   = (() => { try { return JSON.parse(localStorage.getItem(GEO_KEY)  || '{}'); } catch(e) { return {}; } })();
 
-let activeTab    = 'east';
-let activeKey    = PRESETS.east.find(p => p.default)?.key || PRESETS.east[0]?.key || null;
+const LAST_KEY   = 'weather-last';
+const lastVisited = (() => { try { return JSON.parse(localStorage.getItem(LAST_KEY) || 'null'); } catch(e) { return null; } })();
+// find which tab the saved key belongs to
+const lastTab    = lastVisited ? (Object.entries(PRESETS).find(([, list]) => list.some(p => p.key === lastVisited))?.[0] || 'east') : 'east';
+let activeTab    = lastTab;
+let activeKey    = lastVisited || PRESETS.east.find(p => p.default)?.key || PRESETS.east[0]?.key || null;
 const expandedTabs = new Set();
 const forecastCache = new Map();
 let chart       = null;
@@ -391,6 +395,7 @@ async function loadForecast(key) {
     const periods = (await hr.json()).properties.periods;
     forecastCache.set(key, { periods, ts: Date.now() });
     lastPeriods = periods;
+    localStorage.setItem(LAST_KEY, JSON.stringify(key));
     renderForecast(key, periods);
     hideStatus();
   } catch(e) { showStatus(e.message, true); }
@@ -545,6 +550,7 @@ function renderEmpty() {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.loc-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === activeTab));
 renderLocBar();
 if (activeKey) loadForecast(activeKey); else renderEmpty();
 </script>
