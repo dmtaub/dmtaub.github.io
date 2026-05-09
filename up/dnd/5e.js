@@ -1,459 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5e Tools — Daniel M. Taub</title>
-    <link type="text/css" rel="stylesheet" href="style.css">
-    <style>
-        * { box-sizing: border-box; }
+  /*
+  ======================================================================
+  HOMEBREW EXTENSION
+  Set window.HOMEBREW_5E before this script to inject custom content.
 
-        .page-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-
-        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .back-link { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
-        .back-link:hover { text-decoration: underline; }
-        .theme-toggle { background: none; border: 1px solid var(--accent); border-radius: 20px; min-width: 40px; height: 28px; padding: 0 10px; cursor: pointer; color: var(--text); font-size: 0.85rem; }
-        .theme-toggle:hover { border-color: var(--accent-soft); }
-
-        h1.page-title { font-size: 1.7rem; margin: 0 0 0.2rem; color: var(--text); }
-        .page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.25rem; }
-
-        /* ── Loading banner ── */
-        #loadBanner { display:none; align-items:center; gap:0.6rem; background:var(--accent); color:#fff; padding:0.55rem 1rem; border-radius:6px; margin-bottom:1rem; font-size:0.88rem; }
-        #loadBanner.err { background:#c0392b; }
-        .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-
-        /* ── Tabs ── */
-        .tabs { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.5rem; border-bottom:1px solid var(--border); padding-bottom:0.75rem; }
-        .tab-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.85rem; cursor:pointer; font-size:0.9rem; color:var(--text-muted); transition:all .15s; }
-        .tab-btn:hover { border-color:var(--accent-soft); color:var(--text); }
-        .tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-        .tab-panel { display:none; }
-        .tab-panel.active { display:block; }
-
-        /* ── Shared ── */
-        .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.25rem 1.5rem; margin-bottom:1rem; box-shadow:0 2px 8px var(--shadow); }
-        .card h2 { font-size:1.1rem; margin:0 0 0.75rem; color:var(--accent); }
-        .card h3 { font-size:0.95rem; margin:0.85rem 0 0.4rem; color:var(--text); }
-
-        .search-row { display:flex; gap:0.5rem; margin-bottom:1rem; }
-        .search-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.75rem; font-size:0.9rem; color:var(--text); }
-        .search-input:focus { outline:none; border-color:var(--accent-soft); }
-        .search-input::placeholder { color:var(--text-muted); }
-
-
-        /* ── Saved lists panel ── */
-        #savedListsSection { margin-top:1.25rem; }
-        .saved-lists-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; }
-        .saved-lists-header h3 { font-size:0.9rem; color:var(--text-muted); margin:0; font-weight:600; }
-        .list-chips { display:flex; flex-wrap:wrap; gap:0.5rem; }
-        .list-chip { display:flex; align-items:center; gap:0.35rem; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.6rem; font-size:0.83rem; }
-        .list-chip-name { font-weight:600; color:var(--text); cursor:default; }
-        .list-chip-count { font-size:0.74rem; color:var(--text-muted); }
-        .list-chip-btn { background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--accent); padding:0 0.15rem; }
-        .list-chip-btn:hover { text-decoration:underline; }
-        .list-chip-btn.del { color:#c0392b; }
-        .list-filter-bar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; background:var(--bg); border:1px solid var(--accent-soft); border-radius:6px; padding:0.4rem 0.75rem; font-size:0.85rem; }
-        .list-filter-bar strong { color:var(--accent); flex:1; }
-        .list-filter-bar button { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:0.82rem; }
-        .list-filter-bar button:hover { color:var(--text); }
-
-        .flip-hint { font-size:0.68rem; color:var(--text-muted); text-align:right; margin-top:0.35rem; opacity:0.65; user-select:none; }
-        .sb-divider { border:none; border-top:1px solid var(--border); margin:0.5rem 0; }
-        .sb-back-row { font-size:0.78rem; margin:0.2rem 0; line-height:1.4; color:var(--text); }
-        .sb-back-row strong { color:var(--accent); margin-right:0.25em; }
-        .sb-section-title { font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--accent); letter-spacing:0.05em; margin:0.55rem 0 0.2rem; }
-        .sb-entry { margin:0.35rem 0; font-size:0.78rem; line-height:1.45; color:var(--text); }
-        .sb-entry-name { font-style:italic; font-weight:700; color:var(--text); }
-        .sb-actions-scroll { max-height:180px; overflow-y:auto; }
-
-        /* ── Roll tables ── */
-        .roll-section { margin-bottom:0.6rem; }
-        .roll-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.7rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; user-select:none; }
-        .roll-header:hover { border-color:var(--accent-soft); }
-        .roll-header h3 { margin:0; font-size:0.95rem; color:var(--text); }
-        .roll-header .roll-meta { font-size:0.8rem; color:var(--text-muted); }
-        .roll-body { display:none; background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 8px 8px; overflow:hidden; }
-        .roll-body.open { display:block; }
-        .roll-result-bar { display:flex; align-items:center; gap:0.75rem; padding:0.55rem 1rem; border-bottom:1px solid var(--border); background:var(--bg); }
-        .btn-roll { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem; }
-        .btn-roll:hover { opacity:.85; }
-        .roll-result-text { font-size:0.9rem; color:var(--text); font-style:italic; }
-
-
-        /* ── Stat blocks ── */
-        .stat-controls-bar { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
-        .stat-controls-bar .search-row { flex:1; min-width:180px; margin-bottom:0; }
-        .card-mode-row { display:flex; align-items:center; gap:0.35rem; flex-shrink:0; }
-        .card-mode-label { font-size:0.82rem; color:var(--text-muted); white-space:nowrap; }
-        .mode-btn { background:none; border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.6rem; font-size:0.82rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
-        .mode-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-        .mode-btn:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
-
-        .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
-        .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); position:relative; transition:transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
-        .stat-block.homebrew { border-color:var(--accent-soft); }
-        .stat-block.flip-mode { cursor:pointer; }
-        .stat-block.flip-mode:hover { border-color:var(--accent-soft); }
-        .stat-block.selected { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
-        .sb-check { position:absolute; top:0.5rem; right:0.55rem; width:1.35rem; height:1.35rem; border:2px solid var(--border); border-radius:4px; background:var(--bg); transition:all .15s; display:flex; align-items:center; justify-content:center; font-size:0.85rem; cursor:pointer; flex-shrink:0; z-index:1; }
-        .sb-check:hover { border-color:var(--accent-soft); }
-        .selected .sb-check { background:var(--accent); border-color:var(--accent); color:#fff; }
-        .stat-block-name { font-weight:700; font-size:1rem; color:var(--accent); margin:0 0 0.15rem; padding-right:1.75rem; }
-        .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin:0 0 0.55rem; }
-        .stat-row { display:flex; gap:0.35rem; flex-wrap:wrap; font-size:0.82rem; margin-bottom:0.4rem; }
-        .stat-pill { background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.45rem; white-space:nowrap; }
-        .stat-pill strong { color:var(--accent); }
-        .ability-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:0.2rem; text-align:center; font-size:0.78rem; margin:0.45rem 0; }
-        .ability-grid .ab-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; }
-        .ability-grid .ab-val { font-weight:700; color:var(--text); font-size:0.8rem; }
-        .stat-empty { color:var(--text-muted); font-size:0.9rem; padding:1rem 0; }
-
-        /* ── Selection bar ── */
-        #selectionBar { display:none; position:sticky; bottom:1.25rem; z-index:10; background:var(--accent); color:#fff; border-radius:8px; padding:0.6rem 1rem; margin-top:1rem; align-items:center; gap:0.6rem; flex-wrap:wrap; box-shadow:0 4px 16px rgba(0,0,0,.25); }
-        #selectionBar.visible { display:flex; }
-        #selectionBar .sel-count { font-size:0.88rem; font-weight:600; flex:1; }
-        #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.28rem 0.65rem; font-size:0.82rem; cursor:pointer; transition:background .15s; }
-        #selectionBar .btn-sel:hover { background:rgba(255,255,255,.35); }
-        #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
-
-        /* ── Narrative ── */
-        .narrative-section { margin-bottom:0.5rem; }
-        .narrative-header { display:flex; align-items:center; gap:0.5rem; cursor:pointer; padding:0.6rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; user-select:none; }
-        .narrative-header:hover { border-color:var(--accent-soft); }
-        .narrative-header .nh-icon { font-size:1rem; width:1.1rem; text-align:center; }
-        .narrative-header h3 { margin:0; font-size:0.93rem; color:var(--text); flex:1; }
-        .narrative-header .nh-sub { font-size:0.77rem; color:var(--text-muted); }
-        .narrative-body { display:none; background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 8px 8px; padding:0.7rem 1rem 1rem; }
-        .narrative-body.open { display:block; }
-        .roll-step { display:flex; gap:0.55rem; margin-bottom:0.4rem; font-size:0.87rem; align-items:flex-start; }
-        .roll-step-num { background:var(--accent); color:#fff; border-radius:50%; width:1.25rem; height:1.25rem; min-width:1.25rem; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; margin-top:0.1rem; }
-        .roll-step-text { color:var(--text); line-height:1.5; }
-        .roll-step-note { color:var(--text-muted); font-size:0.8rem; }
-        .narrative-tip { margin-top:0.75rem; padding:0.45rem 0.7rem; background:var(--bg); border-left:3px solid var(--accent-soft); border-radius:0 4px 4px 0; font-size:0.82rem; color:var(--text-muted); }
-
-        /* ── Reference tables ── */
-        .ref-table { width:100%; border-collapse:collapse; font-size:0.88rem; margin-top:0.5rem; }
-        .ref-table th { background:var(--bg); color:var(--text-muted); font-weight:600; text-align:left; padding:0.35rem 0.6rem; border-bottom:1px solid var(--border); }
-        .ref-table td { padding:0.3rem 0.6rem; border-bottom:1px solid var(--border); color:var(--text); vertical-align:top; }
-        .ref-table tr:last-child td { border-bottom:none; }
-        .ref-table tr:hover td { background:var(--bg); }
-        .ref-section-row td { background:var(--bg); font-style:italic; color:var(--text-muted); font-size:0.82rem; }
-
-        .ref-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:1.25rem; }
-
-        /* alignment grid */
-        .align-grid { display:grid; grid-template-columns:auto repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:6px; overflow:hidden; font-size:0.82rem; }
-        .align-cell { background:var(--surface); padding:0.45rem 0.55rem; }
-        .align-header { background:var(--bg); color:var(--text-muted); font-weight:600; text-align:center; padding:0.35rem 0.55rem; }
-        .align-row-label { background:var(--bg); color:var(--text-muted); font-weight:600; display:flex; align-items:center; justify-content:flex-end; padding:0.35rem 0.6rem; writing-mode:horizontal-tb; }
-        .align-abbr { font-weight:700; color:var(--accent); display:block; font-size:0.9rem; }
-        .align-desc { color:var(--text-muted); font-size:0.75rem; line-height:1.35; }
-
-        /* ── Encounter builder ── */
-        .enc-toolbar { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; align-items:flex-end; }
-        .field-group { display:flex; flex-direction:column; gap:0.2rem; }
-        .field-group label { font-size:0.78rem; color:var(--text-muted); }
-        .enc-input { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem; font-size:0.88rem; color:var(--text); width:110px; }
-        .enc-input.wide { width:190px; }
-        .enc-input:focus { outline:none; border-color:var(--accent-soft); }
-        .btn { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.4rem 0.9rem; cursor:pointer; font-size:0.88rem; transition:opacity .15s; align-self:flex-end; }
-        .btn:hover { opacity:.85; }
-        .btn.secondary { background:none; color:var(--accent); border:1px solid var(--accent); }
-        .btn.secondary:hover { background:var(--bg); }
-        .btn.danger { background:#c0392b; }
-        .btn.sm { padding:0.25rem 0.55rem; font-size:0.8rem; }
-
-        .enc-slots { display:flex; gap:0.4rem; flex-wrap:wrap; margin:0; }
-        .enc-slot { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:0.28rem 0.7rem; font-size:0.85rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
-        .enc-slot:hover, .enc-slot.active { border-color:var(--accent); color:var(--text); }
-        .enc-slot.active { background:var(--surface); font-weight:600; color:var(--accent); }
-
-        .combatant-list { display:flex; flex-direction:column; gap:0.45rem; margin-bottom:1rem; }
-        .combatant-row { display:flex; align-items:center; gap:0.5rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.7rem; flex-wrap:wrap; }
-        .combatant-row.active-turn { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-        .combatant-row.defeated { opacity:.4; }
-        .comb-init { font-size:1.05rem; font-weight:700; color:var(--accent); min-width:1.8rem; text-align:center; }
-        .comb-name { font-weight:600; font-size:0.9rem; flex:1; min-width:90px; }
-        .comb-ac { font-size:0.8rem; color:var(--text-muted); white-space:nowrap; }
-        .comb-hp-wrap { display:flex; align-items:center; gap:0.3rem; }
-        .hp-bar-wrap { width:70px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
-        .hp-bar { height:100%; background:#5cb85c; border-radius:3px; transition:width .2s; }
-        .hp-bar.mid { background:#f0ad4e; }
-        .hp-bar.low { background:#d9534f; }
-        .comb-hp { font-size:0.85rem; white-space:nowrap; }
-        .comb-hp-input { width:48px; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.18rem 0.3rem; font-size:0.82rem; color:var(--text); text-align:center; }
-        .comb-conditions { font-size:0.72rem; flex:1; min-width:70px; }
-        .condition-tag { display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:0 0.28rem; margin:0.08rem; cursor:pointer; color:var(--text-muted); }
-        .condition-tag.on { background:var(--accent); color:#fff; border-color:var(--accent); }
-
-        .round-tracker { display:flex; align-items:center; gap:0.85rem; font-size:0.88rem; margin-bottom:0.7rem; padding:0.45rem 0.7rem; background:var(--bg); border-radius:6px; border:1px solid var(--border); flex-wrap:wrap; }
-        .round-tracker strong { color:var(--accent); }
-
-        .enc-io textarea { width:100%; height:110px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; font-size:0.82rem; color:var(--text); font-family:monospace; resize:vertical; margin-top:0.5rem; }
-        .enc-io textarea:focus { outline:none; border-color:var(--accent-soft); }
-
-        @media (max-width:520px) {
-            .stat-grid { grid-template-columns:1fr; }
-            .enc-input.wide { width:100%; }
-            .hp-bar-wrap { display:none; }
-            .ref-grid { grid-template-columns:1fr; }
-        }
-    </style>
-</head>
-<body><script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
-<div class="page-wrap">
-    <div class="topbar">
-        <a class="back-link" href="utils.html">← Utils</a>
-        <button class="theme-toggle" id="themeToggle">☀</button>
-    </div>
-    <h1 class="page-title">5e Tools</h1>
-    <p class="page-subtitle">Personal DnD 5e assistant — stat blocks, roll tables, narrative patterns, encounter builder, quick reference.</p>
-
-    <div id="loadBanner"><span class="spinner"></span><span id="loadMsg">Loading…</span></div>
-
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="statblocks">Stat Blocks</button>
-        <button class="tab-btn" data-tab="rolltables">Roll Tables</button>
-        <button class="tab-btn" data-tab="narrative">Narrative Rolls</button>
-        <button class="tab-btn" data-tab="encounter">Encounter Builder</button>
-        <button class="tab-btn" data-tab="reference">Reference</button>
-    </div>
-
-    <!-- ══ STAT BLOCKS ══════════════════════════════════════════════════════ -->
-    <div id="tab-statblocks" class="tab-panel active">
-        <div class="stat-controls-bar">
-            <div class="search-row">
-                <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
-            </div>
-            <div class="card-mode-row">
-                <span class="card-mode-label">Cards:</span>
-                <button class="mode-btn" id="modeBtnFlip" data-mode="flip">Flip</button>
-                <button class="mode-btn" id="modeBtnFull" data-mode="full">Full</button>
-            </div>
-        </div>
-        <div id="savedListsSection"></div>
-        <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
-        <div id="selectionBar">
-            <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> <span id="selListSaved"></span> ·</span>
-            <span class="sel-count" id="selectionCount"></span>
-            <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
-            <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
-            <button class="btn-sel" id="btnSaveList">Save as…</button>
-            <button class="btn-sel ghost" id="btnClearSel">Clear</button>
-        </div>
-    </div>
-
-    <!-- ══ ROLL TABLES ══════════════════════════════════════════════════════ -->
-    <div id="tab-rolltables" class="tab-panel">
-        <div id="rollTablesContainer"></div>
-    </div>
-
-    <!-- ══ NARRATIVE ════════════════════════════════════════════════════════ -->
-    <div id="tab-narrative" class="tab-panel">
-        <div class="card" style="margin-bottom:1rem">
-            <h2>Narrative Roll Pattern Library</h2>
-            <p style="font-size:0.88rem;color:var(--text-muted);margin:0">Common "roll packages" — sequences of checks that fit recurring story situations. Adapt DCs to your party level.</p>
-            <div class="narrative-tip" style="margin-top:0.75rem">General principle: 2–3 rolls per situation feels satisfying. More than 3 starts to feel like dice tax. One good roll with a creative interpretation often beats a chain of mediocre ones.</div>
-        </div>
-        <div id="narrativeContainer"></div>
-    </div>
-
-    <!-- ══ ENCOUNTER BUILDER ════════════════════════════════════════════════ -->
-    <div id="tab-encounter" class="tab-panel">
-        <div class="card">
-            <h2>Encounter Builder</h2>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem">
-                <strong style="font-size:0.88rem">Encounters:</strong>
-                <div class="enc-slots" id="encSlots"></div>
-                <button class="btn secondary sm" id="btnNewEnc">+ New</button>
-                <button class="btn secondary sm" id="btnRenameEnc">Rename</button>
-                <button class="btn danger sm" id="btnDeleteEnc">Delete</button>
-            </div>
-            <div class="round-tracker">
-                <span>Round <strong id="roundNum">1</strong></span>
-                <span>Turn <strong id="turnNum">—</strong></span>
-                <button class="btn sm" id="btnNextTurn">Next Turn ▶</button>
-                <button class="btn secondary sm" id="btnRollInit">Roll Initiative</button>
-                <button class="btn secondary sm" id="btnSortInit">Sort</button>
-                <button class="btn secondary sm" id="btnResetRound" style="margin-left:auto">Reset</button>
-            </div>
-            <div class="enc-toolbar">
-                <div class="field-group"><label>Name</label><input class="enc-input wide" id="addName" placeholder="Goblin Scout" type="text"></div>
-                <div class="field-group"><label>HP</label><input class="enc-input" id="addHp" placeholder="7" type="number" min="0"></div>
-                <div class="field-group"><label>AC</label><input class="enc-input" id="addAc" placeholder="13" type="number" min="0"></div>
-                <div class="field-group"><label>Init</label><input class="enc-input" id="addInit" placeholder="auto" type="number"></div>
-                <div class="field-group"><label>Type</label>
-                    <select class="enc-input" id="addType">
-                        <option value="enemy">Enemy</option>
-                        <option value="ally">Ally / PC</option>
-                        <option value="neutral">Neutral</option>
-                    </select>
-                </div>
-                <button class="btn" id="btnAddCombatant">Add</button>
-            </div>
-            <div class="combatant-list" id="combatantList"></div>
-            <div>
-                <strong style="font-size:0.85rem;color:var(--text-muted)">Import / Export</strong>
-                <div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap">
-                    <button class="btn secondary sm" id="btnExport">Export JSON</button>
-                    <button class="btn secondary sm" id="btnImport">Import JSON</button>
-                </div>
-                <div class="enc-io"><textarea id="jsonIO" placeholder="Paste JSON here to import, or click Export…"></textarea></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ══ REFERENCE ════════════════════════════════════════════════════════ -->
-    <div id="tab-reference" class="tab-panel">
-        <div class="ref-grid">
-
-            <div class="card">
-                <h2>Proficiency Bonus</h2>
-                <table class="ref-table">
-                    <thead><tr><th>Level</th><th>Bonus</th></tr></thead>
-                    <tbody>
-                        <tr><td>1–4</td><td>+2</td></tr>
-                        <tr><td>5–8</td><td>+3</td></tr>
-                        <tr><td>9–12</td><td>+4</td></tr>
-                        <tr><td>13–16</td><td>+5</td></tr>
-                        <tr><td>17–20</td><td>+6</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <h2>Ability Score → Modifier</h2>
-                <table class="ref-table">
-                    <thead><tr><th>Score</th><th>Modifier</th></tr></thead>
-                    <tbody>
-                        <tr><td>1</td><td>−5</td></tr>
-                        <tr><td>2–3</td><td>−4</td></tr>
-                        <tr><td>4–5</td><td>−3</td></tr>
-                        <tr><td>6–7</td><td>−2</td></tr>
-                        <tr><td>8–9</td><td>−1</td></tr>
-                        <tr><td>10–11</td><td>+0</td></tr>
-                        <tr><td>12–13</td><td>+1</td></tr>
-                        <tr><td>14–15</td><td>+2</td></tr>
-                        <tr><td>16–17</td><td>+3</td></tr>
-                        <tr><td>18–19</td><td>+4</td></tr>
-                        <tr><td>20–21</td><td>+5</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <h2>Spell Save DCs</h2>
-                <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.5rem">Formula: <strong style="color:var(--text)">8 + Prof Bonus + Spellcasting Modifier</strong></p>
-                <table class="ref-table">
-                    <thead><tr><th>Class(es)</th><th>Ability</th></tr></thead>
-                    <tbody>
-                        <tr><td>Wizard, Artificer</td><td>Intelligence</td></tr>
-                        <tr><td>Cleric, Druid, Ranger</td><td>Wisdom</td></tr>
-                        <tr><td>Bard, Paladin, Sorcerer, Warlock</td><td>Charisma</td></tr>
-                    </tbody>
-                </table>
-                <h3 style="margin-top:0.85rem">Common DC targets</h3>
-                <table class="ref-table">
-                    <thead><tr><th>Difficulty</th><th>DC</th></tr></thead>
-                    <tbody>
-                        <tr><td>Very Easy</td><td>5</td></tr>
-                        <tr><td>Easy</td><td>10</td></tr>
-                        <tr><td>Medium</td><td>15</td></tr>
-                        <tr><td>Hard</td><td>20</td></tr>
-                        <tr><td>Very Hard</td><td>25</td></tr>
-                        <tr><td>Nearly Impossible</td><td>30</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <h2>Alignment</h2>
-                <div class="align-grid">
-                    <div class="align-header"></div>
-                    <div class="align-header">Lawful</div>
-                    <div class="align-header">Neutral</div>
-                    <div class="align-header">Chaotic</div>
-                    <div class="align-row-label">Good</div>
-                    <div class="align-cell"><span class="align-abbr">LG</span><span class="align-desc">Honor, virtue, authority in service of the greater good</span></div>
-                    <div class="align-cell"><span class="align-abbr">NG</span><span class="align-desc">Kindness and good deeds without care for rules or chaos</span></div>
-                    <div class="align-cell"><span class="align-abbr">CG</span><span class="align-desc">Freedom, individualism, good intentions, dislikes authority</span></div>
-                    <div class="align-row-label">Neutral</div>
-                    <div class="align-cell"><span class="align-abbr">LN</span><span class="align-desc">Order and duty without strong moral agenda</span></div>
-                    <div class="align-cell"><span class="align-abbr">N</span><span class="align-desc">Balance, pragmatism, avoids extremes</span></div>
-                    <div class="align-cell"><span class="align-abbr">CN</span><span class="align-desc">Freedom, unreliability, follows whims</span></div>
-                    <div class="align-row-label">Evil</div>
-                    <div class="align-cell"><span class="align-abbr">LE</span><span class="align-desc">Methodical evil, power through order and discipline</span></div>
-                    <div class="align-cell"><span class="align-abbr">NE</span><span class="align-desc">Pure self-interest, no honor or loyalty</span></div>
-                    <div class="align-cell"><span class="align-abbr">CE</span><span class="align-desc">Chaos, cruelty, destruction for its own sake</span></div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Conditions — full width -->
-        <div class="card" style="margin-top:0">
-            <h2>Conditions</h2>
-            <table class="ref-table">
-                <thead><tr><th>Condition</th><th>Key Effect</th></tr></thead>
-                <tbody>
-                    <tr><td>Blinded</td><td>Auto-miss ranged; attacks against it have advantage</td></tr>
-                    <tr><td>Charmed</td><td>Can't attack charmer; charmer has adv on social checks vs it</td></tr>
-                    <tr><td>Frightened</td><td>Disadv on checks/attacks while source visible; can't move closer</td></tr>
-                    <tr><td>Grappled</td><td>Speed 0; ends if grappler incapacitated or target escapes</td></tr>
-                    <tr><td>Incapacitated</td><td>No actions or reactions</td></tr>
-                    <tr><td>Invisible</td><td>Attacks have advantage; attacks against it have disadvantage</td></tr>
-                    <tr><td>Paralyzed</td><td>Incapacitated, can't move/speak; attacks within 5 ft auto-crit</td></tr>
-                    <tr><td>Petrified</td><td>Turned to stone; paralyzed + resistant to all damage</td></tr>
-                    <tr><td>Poisoned</td><td>Disadvantage on attack rolls and ability checks</td></tr>
-                    <tr><td>Prone</td><td>Disadv on attacks; attacks within 5 ft have adv, ranged disadv</td></tr>
-                    <tr><td>Restrained</td><td>Speed 0; disadv on attacks; attacks against it have advantage</td></tr>
-                    <tr><td>Stunned</td><td>Incapacitated; auto-fail Str/Dex saves; attacks have advantage</td></tr>
-                    <tr><td>Unconscious</td><td>Stunned + prone + auto-crit within 5 ft</td></tr>
-                    <tr><td>Exhaustion 1</td><td>Disadvantage on ability checks</td></tr>
-                    <tr><td>Exhaustion 2</td><td>Speed halved</td></tr>
-                    <tr><td>Exhaustion 3</td><td>Disadvantage on attack rolls and saving throws</td></tr>
-                    <tr><td>Exhaustion 4</td><td>Hit point maximum halved</td></tr>
-                    <tr><td>Exhaustion 5</td><td>Speed = 0</td></tr>
-                    <tr><td>Exhaustion 6</td><td>Death</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Weapons — populated from SRD -->
-        <div class="card">
-            <h2>Weapons</h2>
-            <div id="weaponsTableWrap"><p style="color:var(--text-muted);font-size:0.88rem">Loading from SRD…</p></div>
-        </div>
-    </div>
-</div>
-
-<script>
-/*
-  ╔══════════════════════════════════════════════════════════════════════════╗
-  ║  HOMEBREW EXTENSION                                                       ║
-  ║  Set window.HOMEBREW_5E before this script to inject custom content.      ║
-  ║                                                                            ║
-  ║  window.HOMEBREW_5E = {                                                   ║
-  ║    creatures: [                                                            ║
-  ║      {                                                                     ║
-  ║        name: 'My Monster',                                                ║
-  ║        typeLine: 'Medium humanoid, chaotic neutral',                      ║
-  ║        cr: '2',                                                            ║
-  ║        hp: '45',  hpDice: '(7d8+14)',                                     ║
-  ║        ac: '14',  speed: '30 ft.',                                        ║
-  ║        str:'16 (+3)', dex:'14 (+2)', con:'14 (+2)',                       ║
-  ║        int:'10 (+0)', wis:'10 (+0)', cha:'8 (-1)',                        ║
-  ║        traits: 'Optional free-text trait notes.'                          ║
-  ║      }                                                                     ║
-  ║    ],                                                                      ║
-  ║    rollTables: [                                                           ║
-  ║      { name:'My Table', die:'d6', entries:['A','B','C','D','E','F'] }     ║
-  ║    ]                                                                       ║
-  ║  };                                                                        ║
-  ╚══════════════════════════════════════════════════════════════════════════╝
+  window.HOMEBREW_5E = {
+    creatures: [
+      {
+        name: 'My Monster',
+        typeLine: 'Medium humanoid, chaotic neutral',
+        cr: '2',
+        hp: '45',  hpDice: '(7d8+14)',
+        ac: '14',  speed: '30 ft.',
+        str:'16 (+3)', dex:'14 (+2)', con:'14 (+2)',
+        int:'10 (+0)', wis:'10 (+0)', cha:'8 (-1)',
+        traits: 'Optional free-text trait notes.'
+      }
+    ],
+    rollTables: [
+      { name:'My Table', die:'d6', entries:['A','B','C','D','E','F'] }
+    ]
+  };
+  ======================================================================
 */
 
 // ─── SRD CONFIG — loaded from 5e-meta.json ───────────────────────────────────
@@ -654,27 +221,23 @@ function showBanner(msg, isErr) {
   document.getElementById('loadMsg').textContent = msg;
 }
 
-// ─── THEME ───────────────────────────────────────────────────────────────────
-(function(){
-  const btn = document.getElementById('themeToggle');
-  function setDark(d, save) {
-    document.body.classList.toggle('dark', d);
-    if (save) localStorage.setItem('theme', d ? 'dark' : 'light');
-    btn.textContent = d ? '🌙' : '☀';
-  }
-  setDark(document.body.classList.contains('dark'));
-  btn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
-})();
-
 // ─── TABS ────────────────────────────────────────────────────────────────────
+const LAST_TAB_KEY = '5e-last-tab';
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    localStorage.setItem(LAST_TAB_KEY, btn.dataset.tab);
   });
 });
+(function restoreTab() {
+  const last = localStorage.getItem(LAST_TAB_KEY);
+  if (!last) return;
+  const btn = document.querySelector(`.tab-btn[data-tab="${last}"]`);
+  if (btn) btn.click();
+})();
 
 // ─── STAT BLOCKS ─────────────────────────────────────────────────────────────
 let ALL_CREATURES = [];
@@ -1341,10 +904,124 @@ document.getElementById('btnImport').addEventListener('click', () => {
   } catch(e) { alert('Invalid JSON: '+e.message); }
 });
 
+// ─── ROSTERS ─────────────────────────────────────────────────────────────────
+let playerRoster = (() => { try { return JSON.parse(localStorage.getItem('5e-players') || '[]'); } catch(e) { return []; } })();
+let npcRoster    = (() => { try { return JSON.parse(localStorage.getItem('5e-npcs')    || '[]'); } catch(e) { return []; } })();
+
+function savePlayerRoster() { localStorage.setItem('5e-players', JSON.stringify(playerRoster)); }
+function saveNpcRoster()    { localStorage.setItem('5e-npcs',    JSON.stringify(npcRoster)); }
+
+function rosterFormHTML(d) {
+  d = d || {};
+  return `<div class="roster-form">
+    <div class="roster-form-grid">
+      <div class="field-group"><label>Name *</label><input class="enc-input" id="rfName" placeholder="Aragorn" value="${d.name||''}"></div>
+      <div class="field-group"><label>Class / Role</label><input class="enc-input" id="rfCls" placeholder="Ranger" value="${d.cls||''}"></div>
+      <div class="field-group"><label>Level / CR</label><input class="enc-input" id="rfLevel" type="number" min="0" placeholder="5" value="${d.level||''}"></div>
+      <div class="field-group"><label>Max HP</label><input class="enc-input" id="rfHp" type="number" min="1" placeholder="52" value="${d.maxHp||''}"></div>
+      <div class="field-group"><label>AC</label><input class="enc-input" id="rfAc" type="number" min="0" placeholder="16" value="${d.ac||''}"></div>
+      <div class="field-group"><label>Init Bonus</label><input class="enc-input" id="rfInit" type="number" placeholder="0" value="${d.initMod != null ? d.initMod : ''}"></div>
+    </div>
+    <div class="roster-form-actions">
+      <button class="btn sm" id="rfSave">Save</button>
+      <button class="btn secondary sm" id="rfCancel">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function readRosterForm(existing) {
+  const name = document.getElementById('rfName').value.trim();
+  if (!name) return null;
+  return {
+    id: existing ? existing.id : Date.now() + '_' + Math.random(),
+    name,
+    cls:     document.getElementById('rfCls').value.trim(),
+    level:   parseInt(document.getElementById('rfLevel').value) || null,
+    maxHp:   parseInt(document.getElementById('rfHp').value)    || null,
+    ac:      parseInt(document.getElementById('rfAc').value)    || null,
+    initMod: parseInt(document.getElementById('rfInit').value)  || 0,
+  };
+}
+
+function openRosterForm(wrap, existing, onSave) {
+  wrap.style.display = '';
+  wrap.innerHTML = rosterFormHTML(existing);
+  document.getElementById('rfSave').addEventListener('click', () => {
+    const entry = readRosterForm(existing);
+    if (!entry) return;
+    onSave(entry);
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+  });
+  document.getElementById('rfCancel').addEventListener('click', () => {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+  });
+}
+
+function renderRosterCards(roster, gridId, formWrapId, onDelete, onEdit) {
+  const grid = document.getElementById(gridId);
+  if (!roster.length) {
+    grid.innerHTML = '<p class="stat-empty">None yet.</p>';
+    return;
+  }
+  grid.innerHTML = roster.map((p, i) => `
+    <div class="roster-card">
+      <div class="roster-card-actions">
+        <button data-edit="${i}" title="Edit">✎</button>
+        <button class="del" data-del="${i}" title="Delete">✕</button>
+      </div>
+      <div class="roster-card-name">${p.name}</div>
+      <div class="roster-card-sub">${[p.cls, p.level ? 'Level '+p.level : ''].filter(Boolean).join(' · ') || '&nbsp;'}</div>
+      <div class="roster-card-stats">
+        ${p.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${p.maxHp}</span>` : ''}
+        ${p.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${p.ac}</span>`    : ''}
+        <span class="stat-pill"><strong>Init</strong> ${p.initMod >= 0 ? '+' : ''}${p.initMod}</span>
+      </div>
+    </div>`).join('');
+  grid.querySelectorAll('[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => onDelete(+btn.dataset.del)));
+  grid.querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => onEdit(+btn.dataset.edit)));
+}
+
+function renderPlayerRoster() {
+  const wrap = document.getElementById('playerFormWrap');
+  renderRosterCards(playerRoster, 'playerGrid', 'playerFormWrap',
+    i => { playerRoster.splice(i, 1); savePlayerRoster(); renderPlayerRoster(); },
+    i => openRosterForm(wrap, playerRoster[i], entry => {
+      playerRoster[i] = entry; savePlayerRoster(); renderPlayerRoster();
+    })
+  );
+}
+
+function renderNpcRoster() {
+  const wrap = document.getElementById('npcFormWrap');
+  renderRosterCards(npcRoster, 'npcGrid', 'npcFormWrap',
+    i => { npcRoster.splice(i, 1); saveNpcRoster(); renderNpcRoster(); },
+    i => openRosterForm(wrap, npcRoster[i], entry => {
+      npcRoster[i] = entry; saveNpcRoster(); renderNpcRoster();
+    })
+  );
+}
+
+document.getElementById('btnAddPlayer').addEventListener('click', () =>
+  openRosterForm(document.getElementById('playerFormWrap'), null, entry => {
+    playerRoster.push(entry); savePlayerRoster(); renderPlayerRoster();
+  })
+);
+document.getElementById('btnAddNpc').addEventListener('click', () =>
+  openRosterForm(document.getElementById('npcFormWrap'), null, entry => {
+    npcRoster.push(entry); saveNpcRoster(); renderNpcRoster();
+  })
+);
+
 // ─── INITIALISE ──────────────────────────────────────────────────────────────
 buildNarrative();
 renderAll();
 renderSavedLists();
+renderPlayerRoster();
+renderNpcRoster();
 
 (async function init() {
   try {
@@ -1378,6 +1055,3 @@ renderSavedLists();
     buildWeaponsTable([]);
   }
 })();
-</script>
-</body>
-</html>

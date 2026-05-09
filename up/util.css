@@ -1,0 +1,57 @@
+/* ── Util page shared styles ────────────────────────────────────────────────
+   Included by all util pages. Requires ../style.css (theme variables).
+   Override --page-max-width in a page's own <style> block to adjust width.
+   ────────────────────────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+.page-wrap {
+    max-width: var(--page-max-width, 960px);
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+}
+
+/* ── Top bar ── */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.back-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.back-link:hover { text-decoration: underline; }
+
+.theme-toggle {
+    background: none;
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    min-width: 40px;
+    height: 28px;
+    padding: 0 10px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 0.85rem;
+    transition: border-color 0.15s;
+}
+.theme-toggle:hover { border-color: var(--accent-soft); }
+
+/* ── Page heading ── */
+h1.page-title { font-size: 1.7rem; margin: 0 0 0.2rem; color: var(--text); }
+.page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.25rem; }
+
+/* ── Spinner ── */
+.spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

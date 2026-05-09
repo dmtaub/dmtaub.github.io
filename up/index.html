@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utils — Daniel M. Taub</title>
-    <link type="text/css" rel="stylesheet" href="style.css">
+    <link type="text/css" rel="stylesheet" href="../style.css">
+    <link type="text/css" rel="stylesheet" href="./util.css">
     <style>
         .utils-page {
             max-width: 700px;
@@ -67,39 +68,12 @@
             line-height: 1.5;
         }
 
-        .back-link {
-            display: inline-block;
-            margin-bottom: 2rem;
-            color: var(--accent);
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
         .utils-topbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
         }
-
-        .theme-toggle {
-            background: none;
-            border: 1px solid var(--accent);
-            border-radius: 20px;
-            min-width: 40px;
-            min-height: 40px;
-            height: 28px;
-            padding: 0 10px;
-            cursor: pointer;
-            color: var(--nav-text);
-            font-size: 0.8rem;
-            transition: border-color 0.3s, color 0.3s;
-        }
-        .theme-toggle:hover { border-color: var(--accent-soft); }
     </style>
 </head>
 <body><script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
@@ -112,10 +86,10 @@
         <p class="subtitle">Small tools and experiments.</p>
 
         <div class="utils-grid">
-            <a class="util-card" href="melody-spark/">
-                <div class="util-card-icon">🎵</div>
-                <h2>Melody Spark</h2>
-                <p>Browser-based music composition tool built with React and Tone.js.</p>
+            <a class="util-card" href="weather.html">
+                <div class="util-card-icon">🌤</div>
+                <h2>Weather</h2>
+                <p>Hourly forecasts for saved zip codes — temperature, precipitation, wind, and humidity charts via the free NWS API.</p>
             </a>
 
             <a class="util-card" href="coin.html">
@@ -124,28 +98,19 @@
                 <p>Flip a US quarter with realistic 3D physics using Three.js and Rapier.</p>
             </a>
 
-            <a class="util-card" href="5e.html">
+            <a class="util-card" href="dnd/">
                 <div class="util-card-icon">🎲</div>
                 <h2>5e Tools</h2>
                 <p>Personal DnD 5e assistant — stat blocks, roll tables, narrative roll patterns, and an encounter builder with localStorage save.</p>
             </a>
 
-            <a class="util-card" href="weather.html">
-                <div class="util-card-icon">🌤</div>
-                <h2>Weather</h2>
-                <p>Hourly forecasts for saved zip codes — temperature, precipitation, wind, and humidity charts via the free NWS API.</p>
+            <a class="util-card" href="melody-spark/">
+                <div class="util-card-icon">🎵</div>
+                <h2>Melody Spark</h2>
+                <p>Browser-based music composition tool built with React and Tone.js.</p>
             </a>
         </div>
     </div>
-    <script>
-        const btn = document.getElementById('themeToggle');
-        function setDark(dark, save) {
-            document.body.classList.toggle('dark', dark);
-            if (save) localStorage.setItem('theme', dark ? 'dark' : 'light');
-            btn.textContent = dark ? '🌙' : '☀';
-        }
-        setDark(document.body.classList.contains('dark'));
-        btn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
-    </script>
+    <script src="./util.js"></script>
 </body>
 </html>

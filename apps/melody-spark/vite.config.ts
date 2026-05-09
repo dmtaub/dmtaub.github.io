@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/melody-spark/',
+  base: '/up/melody-spark/',
   build: {
-    outDir: '../../melody-spark',
+    outDir: '../../up/melody-spark',
     emptyOutDir: true,
   },
 });

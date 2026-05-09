@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Flipper</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="./util.css">
     <script type="importmap">
     {
         "imports": {
@@ -55,6 +56,14 @@
             font-family: inherit; transition: color 0.2s, border-color 0.2s;
         }
         .back-link:hover { color: var(--text); border-color: var(--accent); }
+        .theme-toggle {
+            position: fixed; top: 1rem; right: 1rem; pointer-events: all;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 0.35rem 0.9rem; font-size: 0.85rem;
+            color: var(--text); cursor: pointer; font-family: inherit;
+            transition: border-color 0.15s;
+        }
+        .theme-toggle:hover { border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -64,8 +73,10 @@
         <div id="result"></div>
         <button id="flip-btn" disabled>Loading…</button>
     </div>
-    <a class="back-link" href="utils.html">← Utils</a>
+    <a class="back-link" href="./">← Utils</a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☀</button>
 
+    <script src="./util.js"></script>
     <script type="module">
         import * as THREE from 'three';
         import { USDLoader } from 'three/addons/loaders/USDLoader.js';
@@ -254,7 +265,7 @@
 
         let coinModel;
         try {
-            coinModel = await new USDLoader().loadAsync('files/US_quarter.usdz');
+            coinModel = await new USDLoader().loadAsync('../files/US_quarter.usdz');
             // Normalise size: scale so the widest XZ extent equals the target diameter.
             const box  = new THREE.Box3().setFromObject(coinModel);
             const size = box.getSize(new THREE.Vector3());

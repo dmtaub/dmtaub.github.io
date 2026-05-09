@@ -4,19 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather — Daniel M. Taub</title>
-    <link type="text/css" rel="stylesheet" href="style.css">
+    <link type="text/css" rel="stylesheet" href="../style.css">
+    <link type="text/css" rel="stylesheet" href="./util.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        .page-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-
-        .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
-        .back-link { color:var(--accent); text-decoration:none; font-size:0.9rem; }
-        .back-link:hover { text-decoration:underline; }
-        .theme-toggle { background:none; border:1px solid var(--accent); border-radius:20px; min-width:40px; height:28px; padding:0 10px; cursor:pointer; color:var(--text); font-size:0.85rem; }
-
-        h1.page-title { font-size:1.7rem; margin:0 0 0.2rem; color:var(--text); }
-        .page-subtitle { color:var(--text-muted); font-size:0.95rem; margin:0 0 1.25rem; }
+        :root { --page-max-width: 900px; }
 
         /* ── Location tabs ── */
         .loc-tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:0.85rem; }
@@ -55,8 +47,6 @@
         .status-banner { display:flex; align-items:center; gap:0.6rem; background:var(--accent); color:#fff; padding:0.5rem 1rem; border-radius:6px; margin-bottom:1rem; font-size:0.88rem; }
         .status-banner.err { background:#c0392b; }
         .status-banner.hidden { display:none; }
-        .spinner { width:13px; height:13px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
-        @keyframes spin { to { transform:rotate(360deg); } }
 
         /* ── Forecast header ── */
         .forecast-header { margin-bottom:1rem; }
@@ -98,7 +88,7 @@
 <body><script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
 <div class="page-wrap">
     <div class="topbar">
-        <a class="back-link" href="utils.html">← Utils</a>
+        <a class="back-link" href="./">← Utils</a>
         <button class="theme-toggle" id="themeToggle">☀</button>
     </div>
     <h1 class="page-title">Weather</h1>
@@ -124,15 +114,6 @@
 </div>
 
 <script>
-// ─── Theme ───────────────────────────────────────────────────────────────────
-const themeBtn = document.getElementById('themeToggle');
-function setDark(dark, save) {
-  document.body.classList.toggle('dark', dark);
-  if (save) localStorage.setItem('theme', dark ? 'dark' : 'light');
-  themeBtn.textContent = dark ? '🌙' : '☀';
-}
-setDark(document.body.classList.contains('dark'));
-themeBtn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
 
 // ─── Preset locations ────────────────────────────────────────────────────────
 // bold:true  → shown by default; bold:false → hidden behind "..."
@@ -554,5 +535,6 @@ document.querySelectorAll('.loc-tab-btn').forEach(b => b.classList.toggle('activ
 renderLocBar();
 if (activeKey) loadForecast(activeKey); else renderEmpty();
 </script>
+<script src="./util.js"></script>
 </body>
 </html>
