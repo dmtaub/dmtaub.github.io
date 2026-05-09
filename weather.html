@@ -32,6 +32,8 @@
         .loc-link.active { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
         .loc-link.bold-loc { font-weight:700; color:var(--text); }
         .loc-link.bold-loc.active { color:var(--accent); }
+        .loc-link.loc-expand { color:var(--text-muted); letter-spacing:0.05em; font-size:0.8rem; }
+        .loc-link.loc-expand:hover { color:var(--accent); }
         .loc-bar-empty { font-size:0.88rem; color:var(--text-muted); font-style:italic; }
 
         /* ── Custom tab chips + form ── */
@@ -103,10 +105,11 @@
     <p class="page-subtitle">Hourly forecasts — data from the National Weather Service.</p>
 
     <div class="loc-tabs" id="locTabs">
-        <button class="loc-tab-btn active" data-tab="east">East</button>
         <button class="loc-tab-btn" data-tab="west">West</button>
-        <button class="loc-tab-btn" data-tab="europe">Europe</button>
-        <button class="loc-tab-btn" data-tab="asia">Asia</button>
+        <button class="loc-tab-btn" data-tab="rockies">Rockies</button>
+        <button class="loc-tab-btn" data-tab="plains">Plains</button>
+        <button class="loc-tab-btn" data-tab="appalachians">Appalachians</button>
+        <button class="loc-tab-btn active" data-tab="east">East</button>
         <button class="loc-tab-btn" data-tab="custom">Custom</button>
     </div>
 
@@ -132,101 +135,101 @@ setDark(document.body.classList.contains('dark'));
 themeBtn.addEventListener('click', () => setDark(!document.body.classList.contains('dark'), true));
 
 // ─── Preset locations ────────────────────────────────────────────────────────
-// US entries: { key, zip, label, bold, default? }
-// Intl entries: { key, lat, lng, label, bold, default? }  (NWS US-only — intl shows error)
+// bold:true  → shown by default; bold:false → hidden behind "..."
+// default:true → selected on tab switch
 const PRESETS = {
   east: [
-    { key:'04609', zip:'04609', label:'Acadia',       bold:true  },
-    { key:'04538', zip:'04538', label:'Booth Bay',    bold:false },
-    { key:'05301', zip:'05301', label:'Brattleboro',  bold:false },
-    { key:'02139', zip:'02139', label:'Cambridge',    bold:true, default:true },
-    { key:'29577', zip:'29577', label:'Myrtle Beach', bold:false },
-    { key:'10001', zip:'10001', label:'NYC',           bold:false },
-    { key:'08226', zip:'08226', label:'Ocean City NJ',bold:true  },
-    { key:'19103', zip:'19103', label:'Phili',         bold:true  },
-    { key:'02903', zip:'02903', label:'Providence',    bold:false },
-    { key:'23220', zip:'23220', label:'Richmond',      bold:true  },
-    { key:'34236', zip:'34236', label:'Sarasota',      bold:false },
-    { key:'20001', zip:'20001', label:'Wash DC',       bold:false },
-    { key:'28401', zip:'28401', label:'Wilmington NC', bold:true  },
+    { key:'04609', zip:'04609', label:'Acadia',        bold:true  },
+    { key:'04538', zip:'04538', label:'Booth Bay',     bold:false },
+    { key:'05301', zip:'05301', label:'Brattleboro',   bold:false },
+    { key:'02139', zip:'02139', label:'Cambridge',     bold:true, default:true },
+    { key:'29577', zip:'29577', label:'Myrtle Beach',  bold:false },
+    { key:'10001', zip:'10001', label:'NYC',            bold:false },
+    { key:'08226', zip:'08226', label:'Ocean City NJ', bold:true  },
+    { key:'19103', zip:'19103', label:'Phili',          bold:true  },
+    { key:'02903', zip:'02903', label:'Providence',     bold:false },
+    { key:'23220', zip:'23220', label:'Richmond',       bold:true  },
+    { key:'34236', zip:'34236', label:'Sarasota',       bold:false },
+    { key:'20001', zip:'20001', label:'Wash DC',        bold:false },
+    { key:'28401', zip:'28401', label:'Wilmington NC',  bold:true  },
+  ],
+  appalachians: [
+    { key:'28801', zip:'28801', label:'Asheville',      bold:true, default:true },
+    { key:'28607', zip:'28607', label:'Boone NC',       bold:false },
+    { key:'05401', zip:'05401', label:'Burlington VT',  bold:true  },
+    { key:'12498', zip:'12498', label:'Catskills',      bold:false },
+    { key:'37401', zip:'37401', label:'Chattanooga',    bold:false },
+    { key:'37738', zip:'37738', label:'Gatlinburg',     bold:true  },
+    { key:'17101', zip:'17101', label:'Harrisburg',     bold:false },
+    { key:'24011', zip:'24011', label:'Roanoke',        bold:false },
+    { key:'22835', zip:'22835', label:'Shenandoah',     bold:true  },
+    { key:'05672', zip:'05672', label:'Stowe',          bold:false },
+  ],
+  plains: [
+    { key:'78701', zip:'78701', label:'Austin',         bold:true  },
+    { key:'58501', zip:'58501', label:'Bismarck',       bold:false },
+    { key:'75201', zip:'75201', label:'Dallas',         bold:false },
+    { key:'58102', zip:'58102', label:'Fargo',          bold:false },
+    { key:'77001', zip:'77001', label:'Houston',        bold:false },
+    { key:'64101', zip:'64101', label:'Kansas City',    bold:true  },
+    { key:'55401', zip:'55401', label:'Minneapolis',    bold:true, default:true },
+    { key:'73101', zip:'73101', label:'Oklahoma City',  bold:true  },
+    { key:'68101', zip:'68101', label:'Omaha',          bold:false },
+    { key:'67201', zip:'67201', label:'Wichita',        bold:false },
+  ],
+  rockies: [
+    { key:'83701', zip:'83701', label:'Boise',          bold:false },
+    { key:'59715', zip:'59715', label:'Bozeman',        bold:false },
+    { key:'80202', zip:'80202', label:'Denver',         bold:true  },
+    { key:'59937', zip:'59937', label:'Glacier NP',     bold:true  },
+    { key:'83001', zip:'83001', label:'Grand Teton',    bold:true, default:true },
+    { key:'84532', zip:'84532', label:'Moab',           bold:true  },
+    { key:'84101', zip:'84101', label:'Salt Lake City', bold:false },
+    { key:'87501', zip:'87501', label:'Santa Fe',       bold:false },
+    { key:'87571', zip:'87571', label:'Taos',           bold:false },
+    { key:'81435', zip:'81435', label:'Telluride',      bold:false },
   ],
   west: [
-    { key:'59715', zip:'59715', label:'Bozeman',       bold:false },
     { key:'97701', zip:'97701', label:'Bend',           bold:false },
-    { key:'80202', zip:'80202', label:'Denver',         bold:true  },
     { key:'93920', zip:'93920', label:'Big Sur',        bold:false },
     { key:'90001', zip:'90001', label:'Los Angeles',    bold:true, default:true },
     { key:'98362', zip:'98362', label:'Olympic NP',     bold:true  },
     { key:'85001', zip:'85001', label:'Phoenix',        bold:false },
     { key:'97201', zip:'97201', label:'Portland',       bold:false },
-    { key:'87501', zip:'87501', label:'Santa Fe',       bold:false },
     { key:'92101', zip:'92101', label:'San Diego',      bold:false },
     { key:'94102', zip:'94102', label:'San Francisco',  bold:true  },
     { key:'98101', zip:'98101', label:'Seattle',        bold:true  },
     { key:'86336', zip:'86336', label:'Sedona',         bold:false },
   ],
-  europe: [
-    { key:'52.37,4.90',   lat:52.37,  lng:4.90,   label:'Amsterdam',  bold:false },
-    { key:'41.39,2.17',   lat:41.39,  lng:2.17,   label:'Barcelona',  bold:false },
-    { key:'52.52,13.41',  lat:52.52,  lng:13.41,  label:'Berlin',     bold:false },
-    { key:'55.68,12.57',  lat:55.68,  lng:12.57,  label:'Copenhagen', bold:false },
-    { key:'55.95,-3.19',  lat:55.95,  lng:-3.19,  label:'Edinburgh',  bold:false },
-    { key:'51.51,-0.13',  lat:51.51,  lng:-0.13,  label:'London',     bold:true, default:true },
-    { key:'38.72,-9.14',  lat:38.72,  lng:-9.14,  label:'Lisbon',     bold:false },
-    { key:'48.86,2.35',   lat:48.86,  lng:2.35,   label:'Paris',      bold:true  },
-    { key:'50.08,14.44',  lat:50.08,  lng:14.44,  label:'Prague',     bold:false },
-    { key:'64.15,-21.94', lat:64.15,  lng:-21.94, label:'Reykjavik',  bold:false },
-    { key:'41.90,12.50',  lat:41.90,  lng:12.50,  label:'Rome',       bold:false },
-    { key:'48.21,16.37',  lat:48.21,  lng:16.37,  label:'Vienna',     bold:false },
-    { key:'47.38,8.54',   lat:47.38,  lng:8.54,   label:'Zurich',     bold:false },
-  ],
-  asia: [
-    { key:'-8.34,115.09', lat:-8.34,  lng:115.09, label:'Bali',       bold:false },
-    { key:'39.90,116.41', lat:39.90,  lng:116.41, label:'Beijing',    bold:false },
-    { key:'18.79,98.98',  lat:18.79,  lng:98.98,  label:'Chiang Mai', bold:false },
-    { key:'22.32,114.17', lat:22.32,  lng:114.17, label:'Hong Kong',  bold:false },
-    { key:'27.72,85.32',  lat:27.72,  lng:85.32,  label:'Kathmandu',  bold:false },
-    { key:'35.01,135.77', lat:35.01,  lng:135.77, label:'Kyoto',      bold:true, default:true },
-    { key:'28.61,77.21',  lat:28.61,  lng:77.21,  label:'Delhi',      bold:false },
-    { key:'19.08,72.88',  lat:19.08,  lng:72.88,  label:'Mumbai',     bold:false },
-    { key:'37.57,126.98', lat:37.57,  lng:126.98, label:'Seoul',      bold:true  },
-    { key:'31.23,121.47', lat:31.23,  lng:121.47, label:'Shanghai',   bold:false },
-    { key:'1.35,103.82',  lat:1.35,   lng:103.82, label:'Singapore',  bold:false },
-    { key:'13.76,100.50', lat:13.76,  lng:100.50, label:'Bangkok',    bold:false },
-    { key:'35.68,139.65', lat:35.68,  lng:139.65, label:'Tokyo',      bold:true  },
-  ],
+  // hidden for now:
+  europe: [],
+  asia:   [],
 };
 
 // ─── State ───────────────────────────────────────────────────────────────────
 const ZIPS_KEY = 'weather-zips';
 const GEO_KEY  = 'weather-geo';
-let savedZips = (() => { try { return JSON.parse(localStorage.getItem(ZIPS_KEY) || '[]'); } catch(e) { return []; } })();
-let geoCache  = (() => { try { return JSON.parse(localStorage.getItem(GEO_KEY)  || '{}'); } catch(e) { return {}; } })();
+let savedZips  = (() => { try { return JSON.parse(localStorage.getItem(ZIPS_KEY) || '[]'); } catch(e) { return []; } })();
+let geoCache   = (() => { try { return JSON.parse(localStorage.getItem(GEO_KEY)  || '{}'); } catch(e) { return {}; } })();
 
-// pre-seed geoCache with international preset lat/lng
-Object.values(PRESETS).flat().forEach(p => {
-  if (p.lat !== undefined && !geoCache[p.key]) {
-    geoCache[p.key] = { key: p.key, lat: p.lat, lng: p.lng, city: p.label, state: '' };
-  }
-});
-
-let activeTab = 'east';
-let activeKey = PRESETS.east.find(p => p.default)?.key || PRESETS.east[0]?.key || null;
+let activeTab    = 'east';
+let activeKey    = PRESETS.east.find(p => p.default)?.key || PRESETS.east[0]?.key || null;
+const expandedTabs = new Set();
 const forecastCache = new Map();
-let chart      = null;
-let showHours  = 24;
-const metrics  = { temp: true, precip: true, wind: false, humid: false };
+let chart       = null;
+let showHours   = 24;
+const metrics   = { temp: true, precip: true, wind: false, humid: false };
 let lastPeriods = null;
 
 function saveZips()     { localStorage.setItem(ZIPS_KEY, JSON.stringify(savedZips)); }
 function saveGeoCache() { localStorage.setItem(GEO_KEY,  JSON.stringify(geoCache));  }
 
-// ─── Unified geo lookup ───────────────────────────────────────────────────────
+// ─── Geo lookup ───────────────────────────────────────────────────────────────
 async function getGeo(key) {
   if (geoCache[key]) return geoCache[key];
   const custom = savedZips.find(z => z.zip === key);
   if (custom) { geoCache[key] = custom; saveGeoCache(); return custom; }
-  const geo = await fetchGeo(key); // key is zip for US
+  const geo = await fetchGeo(key);
   geoCache[key] = geo;
   saveGeoCache();
   return geo;
@@ -264,7 +267,6 @@ function renderLocBar() {
   container.innerHTML = '';
 
   if (activeTab === 'custom') {
-    // chip-style bar with remove buttons + add form
     const bar = document.createElement('div');
     bar.className = 'zip-bar';
     savedZips.forEach(z => {
@@ -294,49 +296,67 @@ function renderLocBar() {
     container.appendChild(bar);
     document.getElementById('btnAddZip').addEventListener('click', addZip);
     document.getElementById('zipInput').addEventListener('keydown', e => { if (e.key === 'Enter') addZip(); });
-
-  } else {
-    // flat link bar
-    const list = PRESETS[activeTab] || [];
-    if (!list.length) {
-      container.innerHTML = `<div class="loc-bar"><span class="loc-bar-empty">No locations yet.</span></div>`;
-      return;
-    }
-    const bar = document.createElement('div');
-    bar.className = 'loc-bar';
-    list.forEach(p => {
-      const btn = document.createElement('button');
-      btn.className = 'loc-link' + (p.key === activeKey ? ' active' : '') + (p.bold ? ' bold-loc' : '');
-      btn.textContent = p.label;
-      btn.addEventListener('click', () => { activeKey = p.key; renderLocBar(); loadForecast(p.key); });
-      bar.appendChild(btn);
-    });
-    container.appendChild(bar);
+    return;
   }
+
+  // ── Preset tab ──
+  const list = PRESETS[activeTab] || [];
+  if (!list.length) {
+    container.innerHTML = `<div class="loc-bar"><span class="loc-bar-empty">No locations yet.</span></div>`;
+    return;
+  }
+
+  const isExpanded = expandedTabs.has(activeTab);
+  const toShow     = isExpanded ? list : list.filter(p => p.bold);
+  const hasHidden  = list.some(p => !p.bold);
+
+  const bar = document.createElement('div');
+  bar.className = 'loc-bar';
+
+  toShow.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'loc-link' + (p.key === activeKey ? ' active' : '') + (p.bold ? ' bold-loc' : '');
+    btn.textContent = p.label;
+    btn.addEventListener('click', () => { activeKey = p.key; renderLocBar(); loadForecast(p.key); });
+    bar.appendChild(btn);
+  });
+
+  if (hasHidden) {
+    const toggle = document.createElement('button');
+    toggle.className = 'loc-link loc-expand';
+    if (!isExpanded) {
+      toggle.textContent = '···';
+      toggle.title = 'Show all';
+      toggle.addEventListener('click', () => { expandedTabs.add(activeTab); renderLocBar(); });
+    } else {
+      toggle.textContent = '«';
+      toggle.title = 'Show fewer';
+      toggle.addEventListener('click', () => { expandedTabs.delete(activeTab); renderLocBar(); });
+    }
+    bar.appendChild(toggle);
+  }
+
+  container.appendChild(bar);
 }
 
-// ─── Add zip (custom tab) ────────────────────────────────────────────────────
+// ─── Add zip (custom) ────────────────────────────────────────────────────────
 async function addZip() {
   const input = document.getElementById('zipInput');
   const zip = input.value.replace(/\D/g, '').slice(0, 5);
   if (zip.length !== 5) { showStatus('Enter a 5-digit US zip code.', true); return; }
   if (savedZips.find(z => z.zip === zip)) {
-    input.value = '';
-    activeKey = zip; renderLocBar(); loadForecast(zip); return;
+    input.value = ''; activeKey = zip; renderLocBar(); loadForecast(zip); return;
   }
   showStatus(`Looking up ${zip}…`);
   try {
     const geo = await fetchGeo(zip);
-    savedZips.push(geo);
-    saveZips();
-    activeKey = zip;
-    input.value = '';
-    renderLocBar();
-    await loadForecast(zip);
+    savedZips.push(geo); saveZips();
+    activeKey = zip; input.value = '';
+    renderLocBar(); await loadForecast(zip);
   } catch(e) { showStatus(e.message, true); }
 }
 
-// ─── Geocoding (zippopotam.us) ────────────────────────────────────────────────
+// ─── Geocoding ────────────────────────────────────────────────────────────────
 async function fetchGeo(zip) {
   const r = await fetch(`https://api.zippopotam.us/us/${zip}`);
   if (!r.ok) throw new Error(`Zip code ${zip} not found — must be a valid US zip.`);
@@ -362,9 +382,9 @@ async function loadForecast(key) {
   }
   showStatus(`Fetching forecast…`);
   try {
-    const z = await getGeo(key);
-    const pts  = await fetch(`https://api.weather.gov/points/${z.lat},${z.lng}`, { headers: NWS_UA });
-    if (!pts.ok) throw new Error('NWS only covers US locations.');
+    const z   = await getGeo(key);
+    const pts = await fetch(`https://api.weather.gov/points/${z.lat},${z.lng}`, { headers: NWS_UA });
+    if (!pts.ok) throw new Error('NWS lookup failed — location may lack NWS coverage.');
     const ptsJ = await pts.json();
     const hr   = await fetch(ptsJ.properties.forecastHourly, { headers: NWS_UA });
     if (!hr.ok) throw new Error('Could not load hourly forecast data.');
@@ -399,7 +419,7 @@ function renderForecast(key, periods) {
       </div>
     </div>
     <div class="chart-controls">
-      <div class="toggle-group" id="rangeGroup">
+      <div class="toggle-group">
         <button class="toggle-btn ${showHours===24?'active':''}" data-hours="24">24h</button>
         <button class="toggle-btn ${showHours===48?'active':''}" data-hours="48">48h</button>
         <button class="toggle-btn ${showHours===96?'active':''}" data-hours="96">4d</button>
@@ -433,10 +453,10 @@ function cssVar(name) {
 
 function drawChart(labels, temps, precip, wind, humid) {
   if (chart) { chart.destroy(); chart = null; }
-  const ctx  = document.getElementById('wxChart').getContext('2d');
-  const grid = cssVar('--border')     || 'rgba(128,128,128,.2)';
-  const muted= cssVar('--text-muted') || '#888';
-  const acc  = cssVar('--accent')     || '#7c6ccd';
+  const ctx   = document.getElementById('wxChart').getContext('2d');
+  const grid  = cssVar('--border')     || 'rgba(128,128,128,.2)';
+  const muted = cssVar('--text-muted') || '#888';
+  const acc   = cssVar('--accent')     || '#7c6ccd';
 
   const datasets = [];
   if (metrics.temp) datasets.push({
