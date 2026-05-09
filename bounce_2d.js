@@ -26,7 +26,7 @@ function setupUIStyle() {
         cursor: pointer;
         border: 2px solid var(--border, #ccc);
         line-height: 1;
-        border-radius: 5px;
+        border-radius: var(--pill-radius, 5px);
         user-select: none;
         font-family: sans-serif;
         transition: background-color 0.3s, color 0.3s, border-color 0.3s;

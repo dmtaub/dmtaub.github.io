@@ -40,7 +40,7 @@
 
         #flip-btn {
             pointer-events: all; background: none;
-            border: 1px solid var(--accent); border-radius: 20px;
+            border: 1px solid var(--accent); border-radius: var(--pill-radius);
             padding: 0.6rem 2.5rem; font-size: 1rem;
             color: var(--accent); cursor: pointer; font-family: inherit;
             transition: border-color 0.2s, color 0.2s;
@@ -52,14 +52,14 @@
             position: fixed; top: 1rem; left: 1rem; pointer-events: all;
             color: var(--accent); text-decoration: none; font-size: 0.9rem;
             background: var(--surface); padding: 0.35rem 0.9rem;
-            border-radius: 20px; border: 1px solid var(--border);
+            border-radius: var(--pill-radius); border: 1px solid var(--border);
             font-family: inherit; transition: color 0.2s, border-color 0.2s;
         }
         .back-link:hover { color: var(--text); border-color: var(--accent); }
         .theme-toggle {
             position: fixed; top: 1rem; right: 1rem; pointer-events: all;
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 20px; padding: 0.35rem 0.9rem; font-size: 0.85rem;
+            border-radius: var(--pill-radius); padding: 0.35rem 0.9rem; font-size: 0.85rem;
             color: var(--text); cursor: pointer; font-family: inherit;
             transition: border-color 0.15s;
         }

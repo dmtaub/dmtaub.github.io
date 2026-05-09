@@ -1,38 +1,4 @@
-/* =====================
-   Theme variables
-   ===================== */
-:root {
-    --nav-edge: 20px;
-    --card-img-size: 85%;
-    --card-img-dim:  0; /* 0 = fully visible, 1 = fully hidden */
-    --bg:           #F4F0F4;
-    --surface:      #ffffff;
-    --text:         #333333;
-    --text-muted:   #666666;
-    --accent:       #8A7B9F;
-    --accent-soft:  #b0a0c4;
-    --header-bg:    #8A7B9F;
-    --header-text:  #ffffff;
-    --border:       rgba(0,0,0,0.1);
-    --shadow:       rgba(0,0,0,0.12);
-    --nav-text:     #555555;
-    --nav-hover:    #8A7B9F;
-}
-
-body.dark {
-    --bg:           #100f1a;
-    --surface:      #1c1b2a;
-    --text:         #e8e4f0;
-    --text-muted:   #9b96ae;
-    --accent:       #9b8bbb;
-    --accent-soft:  #7b6e9a;
-    --header-bg:    #1e1b2e;
-    --header-text:  #e8e4f0;
-    --border:       rgba(155,139,187,0.2);
-    --shadow:       rgba(0,0,0,0.4);
-    --nav-text:     #9b96ae;
-    --nav-hover:    #c4b8d8;
-}
+@import './theme.css';
 
 /* =====================
    Global transitions
@@ -177,7 +143,7 @@ body.projects-section .header-title .showy {
     height: 28px;
     padding: 0 10px;
     border: 1px solid var(--accent);
-    border-radius: 20px;
+    border-radius: var(--title-btn-radius);
     color: var(--accent);
     font-size: 13px;
     box-sizing: border-box;

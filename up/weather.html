@@ -30,7 +30,7 @@
 
         /* ── Custom tab chips + form ── */
         .zip-bar { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
-        .zip-chip { display:inline-flex; align-items:center; gap:0.25rem; padding:0.3rem 0.65rem; border-radius:20px; border:1px solid var(--border); background:var(--surface); font-size:0.85rem; cursor:pointer; color:var(--text-muted); transition:all .15s; white-space:nowrap; }
+        .zip-chip { display:inline-flex; align-items:center; gap:0.25rem; padding:0.3rem 0.65rem; border-radius:var(--pill-radius); border:1px solid var(--border); background:var(--surface); font-size:0.85rem; cursor:pointer; color:var(--text-muted); transition:all .15s; white-space:nowrap; }
         .zip-chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
         .zip-chip:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
         .chip-label { pointer-events:none; }
