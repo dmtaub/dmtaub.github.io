@@ -48,22 +48,18 @@
         #flip-btn:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
         #flip-btn:disabled { opacity: 0.4; cursor: default; }
 
-        .back-link {
-            position: fixed; top: 1rem; left: 1rem; pointer-events: all;
-            color: var(--accent); text-decoration: none; font-size: 0.9rem;
-            background: var(--surface); padding: 0.35rem 0.9rem;
-            border-radius: var(--pill-radius); border: 1px solid var(--border);
-            font-family: inherit; transition: color 0.2s, border-color 0.2s;
-        }
-        .back-link:hover { color: var(--text); border-color: var(--accent); }
-        .theme-toggle {
-            position: fixed; top: 1rem; right: 1rem; pointer-events: all;
+        /* Shared: floating pill buttons (back-link + theme-toggle) */
+        .back-link, .theme-toggle {
+            position: fixed; top: 1rem; pointer-events: all;
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: var(--pill-radius); padding: 0.35rem 0.9rem; font-size: 0.85rem;
-            color: var(--text); cursor: pointer; font-family: inherit;
-            transition: border-color 0.15s;
+            border-radius: var(--title-btn-radius); padding: 0.35rem 0.9rem;
+            font-size: 0.9rem; font-family: inherit; cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
         }
-        .theme-toggle:hover { border-color: var(--accent); }
+        .back-link { left: 1rem; color: var(--accent); text-decoration: none; }
+        .theme-toggle { right: 1rem; color: var(--text); }
+        .back-link:hover, .theme-toggle:hover { border-color: var(--accent); }
+        .back-link:hover { color: var(--text); }
     </style>
 </head>
 <body>

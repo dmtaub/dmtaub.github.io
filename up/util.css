@@ -29,7 +29,7 @@
 .theme-toggle {
     background: none;
     border: 1px solid var(--accent);
-    border-radius: var(--pill-radius);
+    border-radius: var(--title-btn-radius);
     min-width: 40px;
     height: 28px;
     padding: 0 10px;

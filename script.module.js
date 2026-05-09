@@ -16,10 +16,11 @@ function initFade() {
     showNext();
 }
 
-// ── Scroll: shrink header (projects only) ───────────────────────────────────
+// ── Scroll: shrink header on any section ────────────────────────────────────
 function updateScrolled() {
-    const projectsActive = document.getElementById('projects')?.style.display !== 'none';
-    document.body.classList.toggle('scrolled', projectsActive && window.scrollY > 60);
+    const past = window.scrollY > 60;
+    document.body.classList.toggle('scrolled', past);
+    if (past) document.body.classList.add('ever-scrolled');
 }
 function initScrollShrink() {
     window.addEventListener('scroll', updateScrolled, { passive: true });
@@ -39,9 +40,11 @@ export function showSection(sectionId) {
         targetSection.style.display = 'block';
     }
     document.body.classList.toggle('projects-section', sectionId === 'projects');
+    document.body.dataset.section = sectionId;
     if (sectionId === 'projects') {
         _savedDark = document.body.classList.contains('dark');
         document.body.classList.add('dark');
+        document.body.classList.add('scrolled');
         requestAnimationFrame(() => { if (_updateProjects) _updateProjects(); });
     } else if (wasInProjects) {
         document.body.classList.toggle('dark', _savedDark);
@@ -49,8 +52,10 @@ export function showSection(sectionId) {
         if (btn) btn.innerHTML = _savedDark
             ? '<span class="toggle-icon">🌙</span><span class="toggle-text"> Dark</span>'
             : '<span class="toggle-icon">☀</span><span class="toggle-text"> Light</span>';
+        updateScrolled();
+    } else {
+        updateScrolled();
     }
-    updateScrolled();
 }
 export function init(){
     // get default from data tag on body
