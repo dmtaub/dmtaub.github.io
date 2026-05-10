@@ -60,7 +60,7 @@ header .main-robot { transform: scaleX(-1); margin: 10px auto 10px 30px; }
 header .last-robot  { margin: 10px 30px 10px auto; }
 
 body.scrolled header .header-robot {
-    opacity: 0;
+    opacity: 0.5;
     max-width: 0;
     margin: 0;
     pointer-events: none;
@@ -140,7 +140,7 @@ body.ever-scrolled .header-subtitle {
 .header-title .showy:hover { color: rgba(255,255,255,0.7); }
 body.scrolled .header-title .subtle,
 body.scrolled .header-title .showy {
-    opacity: 0;
+    opacity: 0.5;
     pointer-events: none;
     transition: opacity 0.3s ease, font-size 0.3s ease;
 }
