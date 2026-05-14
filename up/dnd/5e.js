@@ -572,6 +572,8 @@ const BUILTIN_ROLL_TABLES = [
   { name:'Terrain Feature', die:'d8', tab:'environment', entries:['A natural stone arch spanning the path — older than anyone can say','A dry riverbed, clearly once ran strong','An old road, overgrown but unmistakably constructed','A grove of trees all leaning the same direction','A large flat boulder scarred with old fire marks — a regular campsite once','A steep ridge offering a clear vantage point, and full exposure','A narrow ravine the party must cross — not dangerous, but slow','A clearing with no undergrowth; soil disturbed, something buried or recently dug up'] },
   { name:'Night Watch', die:'d8', tab:'environment', entries:['An animal watches from the treeline, then retreats','A distant fire on the horizon — unmistakably a campfire','Voices on the wind, too faint and garbled to make out','Something approaches camp, investigates, then leaves without incident','Weather shifts — temperature drops sharply before dawn','A figure passes on the road, hurrying, doesn\'t acknowledge the camp','Sounds of a struggle, distant — over quickly','All quiet. Unnervingly so.'] },
   { name:'Dungeon Atmosphere', die:'d10', tab:'environment', entries:['Faint echo of dripping water — rhythmic, distant','The air is still and stale — nothing has moved here in a long time','A faint draft; air is moving from somewhere ahead','The temperature drops noticeably in this corridor','The walls are damp and slightly warm to the touch','A smell of something sweet — not food, not flowers. Hard to place.','Sound of settling stone — the structure is alive the way old things are','Faint bioluminescent growth on the walls, barely enough to navigate by','The floor has a barely perceptible slope downward','Scratch marks on the walls at roughly the same height — old, but consistent'] },
+  { name:'Invitation Context', die:'d8', tab:'inviting', entries:['A sealed letter bearing an unfamiliar crest — the sender\'s name is not on it','A verbal message passed through a third party — "they ask that you come alone"','A public proclamation that specifically names the party','A gift delivered first, with an implied obligation attached','An intermediary who won\'t reveal who they represent','An open invitation to a public event with a private note tucked inside','An urgent summons — someone claims the party\'s presence is required immediately','A standing invitation, offered once, with no stated expiration'] },
+  { name:'Social Event Complication', die:'d6', tab:'inviting', entries:['A rival or enemy of the party is also in attendance','Someone recognizes a party member from a previous identity or job','The host is being watched — by whom and why is unclear','A guest goes missing mid-event','The party\'s invitation was actually meant for someone else','The event is a cover for a negotiation that hasn\'t started yet'] },
   { name:'Foraging', die:'d6', tab:'environment', playerRoll:true, entries:['Nothing edible — this area has been picked clean or is barren','Enough for one person for a day','Basic provisions — a day\'s food for the party','Good find — two days of food plus something useful: kindling, cordage, or clean water','A cache of preserved food, deliberately left by someone','Ample provisions and a medicinal herb a healer would recognize'] },
 ];
 
@@ -582,6 +584,7 @@ const ROLL_TABLE_CONTAINER = {
   npcs:        'rollTablesNpcsContainer',
   encounters:  'rollTablesEncountersContainer',
   environment: 'rollTablesEnvironmentContainer',
+  inviting:    'rollTablesInvitingContainer',
 };
 
 function buildRollTablesInto(entries, containerId) {
@@ -732,6 +735,23 @@ const NARRATIVE_DATA = [
       { check:'Perception', note:'spot what\'s causing it upstream' },
     ]},
   ]},
+  { icon:'🎭', category:'Formal Occasions', scenarios:[
+    { name:'Navigating a Formal Occasion', sub:'dinners, galas, guild meetings', steps:[
+      { check:'Insight', note:'read the room — who has power here, who is nervous, who is watching you' },
+      { check:'Persuasion or Performance', note:'make a favorable impression on the right people' },
+      { check:'Perception', note:'spot the undercurrent — what\'s actually being negotiated tonight' },
+    ]},
+    { name:'Uninvited Entry', sub:'infiltrating an exclusive event', steps:[
+      { check:'Deception or Disguise Kit', note:'establish a cover identity at the door' },
+      { check:'Insight', note:'read the social rules quickly — what\'s expected, who enforces it' },
+      { check:'Sleight of Hand or Persuasion', note:'hold cover when someone looks too closely' },
+    ]},
+    { name:'Receiving a Pitch', sub:'faction courting, patron offers, recruitment', steps:[
+      { check:'Insight', note:'is this offer genuine, desperate, or a setup?' },
+      { check:'History or Investigation', note:'assess the credibility of the party making the offer' },
+      { check:'Insight (second read)', note:'how much do they actually know about you?' },
+    ]},
+  ]},
   { icon:'🏕️', category:'Downtime / Camp Scenes', scenarios:[
     { name:'Making Camp in Dangerous Territory', sub:'hostile wilderness, enemy-controlled region', steps:[
       { check:'Survival', note:'find a defensible spot' },
@@ -755,6 +775,7 @@ const NARRATIVE_CATEGORY_TAB = {
   'Environmental Hazards':              'environment',
   'Water / Spirit Encounters':          'environment',
   'Downtime / Camp Scenes':             'environment',
+  'Formal Occasions':                   'inviting',
 };
 
 function buildNarrativeSection(sections, containerId, idPrefix) {
@@ -795,7 +816,7 @@ function buildNarrativeSection(sections, containerId, idPrefix) {
 }
 
 function buildNarrative() {
-  const byTab = { npcs: [], encounters: [], environment: [] };
+  const byTab = { npcs: [], encounters: [], environment: [], inviting: [] };
   NARRATIVE_DATA.forEach(section => {
     const tab = NARRATIVE_CATEGORY_TAB[section.category];
     if (tab && byTab[tab]) byTab[tab].push(section);
@@ -803,6 +824,7 @@ function buildNarrative() {
   buildNarrativeSection(byTab.npcs,        'narrativeNpcsContainer',         'nbnpc');
   buildNarrativeSection(byTab.encounters,  'narrativeEncountersContainer',    'nbenc');
   buildNarrativeSection(byTab.environment, 'narrativeEnvironmentContainer',   'nbenv');
+  buildNarrativeSection(byTab.inviting,    'narrativeInvitingContainer',      'nbinv');
 }
 
 // ─── REFERENCE — WEAPONS ─────────────────────────────────────────────────────
@@ -1150,7 +1172,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Rival Party Lead',
+    die: 'D4', tab: 'encounters', title: 'Rival Party Lead',
     context: 'When the players are racing another group to the same destination or prize.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many hours ahead the rivals are."',
     outcomes: [
@@ -1161,7 +1183,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D6', title: 'Reputation Precedes You',
+    die: 'D6', tab: 'npcs', title: 'Reputation Precedes You',
     context: 'When the party arrives in a new settlement where their name may have traveled ahead.',
     prompt: 'Ask the player: "Roll a D6 — how widely known is the party here?"',
     outcomes: [
@@ -1174,7 +1196,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Poison Progression',
+    die: 'D4', tab: 'encounters', title: 'Poison Progression',
     context: 'When a character is poisoned and the timeline of worsening matters.',
     prompt: 'Ask the player: "Roll a D4 — you have that many hours before the next stage hits."',
     outcomes: [
@@ -1185,7 +1207,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Rumor Accuracy',
+    die: 'D4', tab: 'npcs', title: 'Rumor Accuracy',
     context: 'After the party receives a batch of tips or rumors from locals.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many of the rumors turn out to be true."',
     outcomes: [
@@ -1196,7 +1218,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D6', title: 'Hired Hand Loyalty',
+    die: 'D6', tab: 'npcs', title: 'Hired Hand Loyalty',
     context: 'When a hired NPC faces something dangerous or personally costly.',
     prompt: 'Ask the player when hiring: "Roll a D6 — that\'s their loyalty threshold."',
     outcomes: [
@@ -1209,7 +1231,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Corruption Spread',
+    die: 'D4', tab: 'environment', title: 'Corruption Spread',
     context: 'When a blight, curse, or dark influence is spreading through a location.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many more areas are already affected."',
     outcomes: [
@@ -1220,7 +1242,31 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Trap Reset Timer',
+    die: 'D6', tab: 'inviting', title: 'Notable Guests',
+    context: 'When the party arrives at a social event and prior connections matter.',
+    prompt: 'Ask the player: "Roll a D6 — that\'s how many attendees have prior history with the party."',
+    outcomes: [
+      'Nobody here knows you. Fresh ground.',
+      'One person recognizes a party member — a minor acquaintance, nothing loaded.',
+      'Two faces from the past — one friendly, one complicated.',
+      'Three people know the party. At least one has a reason to keep an eye on them.',
+      'Several guests have opinions about the party already. The room has been talking.',
+      'The party is well known here. Eyes find them the moment they walk in.',
+    ],
+  },
+  {
+    die: 'D4', tab: 'inviting', title: 'Prior Knowledge',
+    context: 'When meeting a host or powerful NPC who may have done their homework on the party.',
+    prompt: 'Ask the player: "Roll a D4 — the host already knows that many things about the party."',
+    outcomes: [
+      'Almost nothing — they know the party exists and little else.',
+      'A couple of public facts — recent jobs, general reputation.',
+      'Specific details — things the party didn\'t publicize.',
+      'More than they should. Someone talked, or someone has been watching.',
+    ],
+  },
+  {
+    die: 'D4', tab: 'encounters', title: 'Trap Reset Timer',
     context: 'After a trap triggers or is disarmed, if it might reset or be re-armed.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many rounds until the trap is live again."',
     outcomes: [
@@ -1233,26 +1279,6 @@ const PLAYER_ROLL_PROMPTS = [
 ];
 
 function buildPlayerRolls() {
-  const container = document.getElementById('playerRollsContainer');
-  if (!container) return;
-  container.innerHTML = PLAYER_ROLL_PROMPTS.map((p, i) => `
-    <div class="roll-section">
-      <div class="roll-header" data-pr-idx="${i}">
-        <h3 data-ctx="${p.context}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title}</h3>
-        <span class="roll-result-text" id="prresult-${i}" style="flex:1;text-align:center;padding:0 0.75rem;opacity:0"></span>
-        <button class="btn-roll btn-roll-player" data-pr-idx="${i}">(Player) Roll ${p.die}</button>
-      </div>
-      <div class="roll-body" id="prbody-${i}">
-        <div class="narrative-tip" style="margin:0.75rem 1rem 0.4rem">${p.context}</div>
-        <div style="padding:0.4rem 1rem 0.6rem;border-bottom:1px solid var(--border)">
-          <strong style="font-size:0.85rem;color:var(--accent)">${p.prompt}</strong>
-        </div>
-        <table class="ref-table"><thead><tr><th style="width:3rem">Roll</th><th>Result</th></tr></thead><tbody>
-          ${p.outcomes.map((o, j) => `<tr><td style="font-weight:700;color:var(--accent)">${j+1}</td><td>${o}</td></tr>`).join('')}
-        </tbody></table>
-      </div>
-    </div>`).join('');
-
   let prTooltip = document.getElementById('prTooltip');
   if (!prTooltip) {
     prTooltip = document.createElement('div');
@@ -1274,62 +1300,97 @@ function buildPlayerRolls() {
       prTooltip.style.left = (window.innerWidth - tr.width - 12) + 'px';
   };
 
-  container.querySelectorAll('.roll-header[data-pr-idx]').forEach(h => {
-    h.addEventListener('click', () => {
-      const body = document.getElementById('prbody-' + h.dataset.prIdx);
-      body.classList.toggle('open');
-      clearTimeout(prTipTimer);
-      prTooltip.classList.remove('visible');
-      if (!body.classList.contains('open'))
-        prTipTimer = setTimeout(() => showPrTooltip(h), 100);
-    });
-    h.addEventListener('mousemove', e => { prMouseX = e.clientX; prMouseY = e.clientY; });
-    h.addEventListener('mouseenter', () => {
-      prTipTimer = setTimeout(() => {
+  const wireContainer = (container) => {
+    container.querySelectorAll('.roll-header[data-pr-idx]').forEach(h => {
+      h.addEventListener('click', () => {
         const body = document.getElementById('prbody-' + h.dataset.prIdx);
-        if (body?.classList.contains('open')) return;
-        showPrTooltip(h);
-      }, 100);
-    });
-    h.addEventListener('mouseleave', () => {
-      clearTimeout(prTipTimer);
-      prTooltip.classList.remove('visible');
-    });
-    const btn = h.querySelector('.btn-roll');
-    if (btn) {
-      btn.addEventListener('mouseenter', () => {
+        body.classList.toggle('open');
+        clearTimeout(prTipTimer);
+        prTooltip.classList.remove('visible');
+        if (!body.classList.contains('open'))
+          prTipTimer = setTimeout(() => showPrTooltip(h), 100);
+      });
+      h.addEventListener('mousemove', e => { prMouseX = e.clientX; prMouseY = e.clientY; });
+      h.addEventListener('mouseenter', () => {
+        prTipTimer = setTimeout(() => {
+          const body = document.getElementById('prbody-' + h.dataset.prIdx);
+          if (body?.classList.contains('open')) return;
+          showPrTooltip(h);
+        }, 100);
+      });
+      h.addEventListener('mouseleave', () => {
         clearTimeout(prTipTimer);
         prTooltip.classList.remove('visible');
       });
-      btn.addEventListener('mouseleave', e => {
-        if (h.contains(e.relatedTarget)) {
-          prTipTimer = setTimeout(() => {
-            const body = document.getElementById('prbody-' + h.dataset.prIdx);
-            if (body?.classList.contains('open')) return;
-            showPrTooltip(h);
-          }, 100);
-        }
-      });
-    }
-  });
-
-  container.querySelectorAll('.btn-roll[data-pr-idx]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const i = btn.dataset.prIdx;
-      const p = PLAYER_ROLL_PROMPTS[i];
-      const el = document.getElementById('prresult-' + i);
-      el.textContent = p.outcomes[Math.floor(Math.random() * p.outcomes.length)];
-      clearTimeout(rollFadeTimers['pr-' + i]);
-      el.style.transition = 'none';
-      el.style.opacity = '1';
-      void el.offsetWidth;
-      rollFadeTimers['pr-' + i] = setTimeout(() => {
-        el.style.transition = 'opacity 10s linear';
-        el.style.opacity = '0';
-      }, 800);
+      const btn = h.querySelector('.btn-roll');
+      if (btn) {
+        btn.addEventListener('mouseenter', () => {
+          clearTimeout(prTipTimer);
+          prTooltip.classList.remove('visible');
+        });
+        btn.addEventListener('mouseleave', e => {
+          if (h.contains(e.relatedTarget)) {
+            prTipTimer = setTimeout(() => {
+              const body = document.getElementById('prbody-' + h.dataset.prIdx);
+              if (body?.classList.contains('open')) return;
+              showPrTooltip(h);
+            }, 100);
+          }
+        });
+      }
     });
-  });
+    container.querySelectorAll('.btn-roll[data-pr-idx]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const i = btn.dataset.prIdx;
+        const p = PLAYER_ROLL_PROMPTS[i];
+        const el = document.getElementById('prresult-' + i);
+        el.textContent = p.outcomes[Math.floor(Math.random() * p.outcomes.length)];
+        clearTimeout(rollFadeTimers['pr-' + i]);
+        el.style.transition = 'none';
+        el.style.opacity = '1';
+        void el.offsetWidth;
+        rollFadeTimers['pr-' + i] = setTimeout(() => {
+          el.style.transition = 'opacity 10s linear';
+          el.style.opacity = '0';
+        }, 800);
+      });
+    });
+  };
+
+  const rowHTML = (p, i) => `
+    <div class="roll-section">
+      <div class="roll-header" data-pr-idx="${i}">
+        <h3 data-ctx="${p.context}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title}</h3>
+        <span class="roll-result-text" id="prresult-${i}" style="flex:1;text-align:center;padding:0 0.75rem;opacity:0"></span>
+        <button class="btn-roll btn-roll-player" data-pr-idx="${i}">(Player) Roll ${p.die}</button>
+      </div>
+      <div class="roll-body" id="prbody-${i}">
+        <div class="narrative-tip" style="margin:0.75rem 1rem 0.4rem">${p.context}</div>
+        <div style="padding:0.4rem 1rem 0.6rem;border-bottom:1px solid var(--border)">
+          <strong style="font-size:0.85rem;color:var(--accent)">${p.prompt}</strong>
+        </div>
+        <table class="ref-table"><thead><tr><th style="width:3rem">Roll</th><th>Result</th></tr></thead><tbody>
+          ${p.outcomes.map((o, j) => `<tr><td style="font-weight:700;color:var(--accent)">${j+1}</td><td>${o}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+
+  const containerMap = {
+    npcs:        'playerRollsNpcsContainer',
+    encounters:  'playerRollsEncountersContainer',
+    environment: 'playerRollsEnvironmentContainer',
+    inviting:    'playerRollsInvitingContainer',
+  };
+  const byTab = { npcs: [], encounters: [], environment: [], inviting: [] };
+  PLAYER_ROLL_PROMPTS.forEach((p, i) => { if (byTab[p.tab]) byTab[p.tab].push({ p, i }); });
+
+  for (const [tab, entries] of Object.entries(byTab)) {
+    const container = document.getElementById(containerMap[tab]);
+    if (!container || !entries.length) continue;
+    container.innerHTML = entries.map(({ p, i }) => rowHTML(p, i)).join('');
+    wireContainer(container);
+  }
 }
 
 // ─── INITIALISE ──────────────────────────────────────────────────────────────
