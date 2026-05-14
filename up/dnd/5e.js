@@ -565,10 +565,10 @@ const BUILTIN_ROLL_TABLES = [
   { name:'Random NPC Trait', die:'d20', tab:'npcs', entries:['Speaks in a constant whisper','Missing an ear','Hums tunelessly while thinking','Never makes eye contact','Constantly fidgets with a ring','Has a noticeable regional accent','Distrusts magic deeply','Carries a faded letter they won\'t explain','Laughs at inappropriate times','Smells strongly of pine or herbs','Has a glass eye','Quotes proverbs that don\'t quite fit','Excessively formal in all speech','Treats their horse better than people','Scars from an obvious old fire','Wears mismatched boots','Twitches when someone mentions a specific city','Speaks to animals as if they understand','Keeps a detailed journal, writes after every conversation','Claims to have met someone famous under dubious circumstances'] },
   { name:'NPC Motivation', die:'d12', tab:'npcs', entries:['Survival — desperate, running out of options','Loyalty — protecting someone they love','Greed — always weighing what\'s in it for them','Duty — bound by oath, law, or station','Fear — something threatens them or their secret','Ambition — on the rise, using everyone as a step','Grief — a recent loss is driving their choices','Curiosity — can\'t leave a mystery alone','Revenge — a specific wrong consumes them','Guilt — atoning for something real or imagined','Idealism — truly believes in a cause, however naively','Manipulation — lying about all of the above'] },
   { name:'Random Human Name', die:'d12', tab:'npcs', entries:['Aldric Vane','Seren Holt','Mira Ashwood','Torben Gull','Isolde Crane','Daveth Marsh','Lysa Fenn','Corwin Slate','Nessa Briar','Edric Hale','Wynn Caldwell','Petra Dusk'] },
-  { name:'Urban Encounter', die:'d12', tab:'encounters', entries:['A pickpocket fleeing through the crowd','Two merchants in heated dispute, gathering an audience','A street healer hawking dubious remedies','A guard looking for someone matching one PC\'s description','A hooded figure drops a sealed letter and disappears','A public flogging drawing a crowd','A beggar who knows more than they let on','A cart overturns spilling exotic goods','A bard who\'s heard of the party — and has the details wrong','A fire breaks out in a nearby building','Two rival gang members eyeing each other across the market','A child following the party convinced one of them is their lost parent'] },
-  { name:'Wilderness Encounter', die:'d12', tab:'encounters', entries:['Tracks of something large — recent','An abandoned campsite, still-warm coals','A wounded traveler, alone on the road','A merchant caravan stopped for a broken wheel','Strange fog that doesn\'t lift till midday','Territorial predator blocking the path','A standing stone with faded script','Goblin or bandit ambush, poorly executed','An old shrine with a fresh offering','A flooded river crossing — needs another route','Another adventuring party, going the opposite direction','Evidence of a battle — no survivors, but recent'] },
-  { name:'Dungeon Event', die:'d10', tab:'encounters', entries:['Distant scraping stone','A light source ahead that shouldn\'t be there','Water seeping through the ceiling','Smell of something rotting','Graffiti in a language nobody recognizes','A tripwire, already disarmed','Sounds of arguing creatures in the next room','A door opens from the other side as the party approaches','A section of floor gives slightly underfoot','Something small scurries away from the torchlight'] },
-  { name:'Treasure Flavor', die:'d12', tab:'encounters', entries:['Gold coins with an unfamiliar mint mark','A gem wrapped in oilcloth and hidden in a boot','A small statue of a deity — valuable to the right buyer','A letter of credit from a distant bank','Fine jewelry, clearly a set — one piece missing','A vial of perfume worth more than it looks','A small locked box with no key','Military medals from a disbanded order','A pouch of spell components — one rare ingredient included','A hand-drawn map with no labels, only landmarks','Promissory notes signed by a local noble','An antique weapon — no magic, but historically significant'] },
+  { name:'Urban Encounter', die:'d12', tab:'enc-setup', entries:['A pickpocket fleeing through the crowd','Two merchants in heated dispute, gathering an audience','A street healer hawking dubious remedies','A guard looking for someone matching one PC\'s description','A hooded figure drops a sealed letter and disappears','A public flogging drawing a crowd','A beggar who knows more than they let on','A cart overturns spilling exotic goods','A bard who\'s heard of the party — and has the details wrong','A fire breaks out in a nearby building','Two rival gang members eyeing each other across the market','A child following the party convinced one of them is their lost parent'] },
+  { name:'Wilderness Encounter', die:'d12', tab:'enc-setup', entries:['Tracks of something large — recent','An abandoned campsite, still-warm coals','A wounded traveler, alone on the road','A merchant caravan stopped for a broken wheel','Strange fog that doesn\'t lift till midday','Territorial predator blocking the path','A standing stone with faded script','Goblin or bandit ambush, poorly executed','An old shrine with a fresh offering','A flooded river crossing — needs another route','Another adventuring party, going the opposite direction','Evidence of a battle — no survivors, but recent'] },
+  { name:'Dungeon Event', die:'d10', tab:'enc-setup', entries:['Distant scraping stone','A light source ahead that shouldn\'t be there','Water seeping through the ceiling','Smell of something rotting','Graffiti in a language nobody recognizes','A tripwire, already disarmed','Sounds of arguing creatures in the next room','A door opens from the other side as the party approaches','A section of floor gives slightly underfoot','Something small scurries away from the torchlight'] },
+  { name:'Treasure Flavor', die:'d12', tab:'enc-after', entries:['Gold coins with an unfamiliar mint mark','A gem wrapped in oilcloth and hidden in a boot','A small statue of a deity — valuable to the right buyer','A letter of credit from a distant bank','Fine jewelry, clearly a set — one piece missing','A vial of perfume worth more than it looks','A small locked box with no key','Military medals from a disbanded order','A pouch of spell components — one rare ingredient included','A hand-drawn map with no labels, only landmarks','Promissory notes signed by a local noble','An antique weapon — no magic, but historically significant'] },
   { name:'Weather', die:'d8', tab:'environment', entries:['Clear and still — unnaturally quiet','Light rain, comfortable for travel','Heavy rain — visibility halved, tracks wash away','Thunderstorm — Perception at disadvantage','Thick fog — 60 ft max visibility','Scorching heat — DC 10 Con per hour or 1 exhaustion','Bitter cold — unprotected: 1d4 cold damage per hour','Unseasonal snow or hail — difficult terrain outdoors'] },
   { name:'Terrain Feature', die:'d8', tab:'environment', entries:['A natural stone arch spanning the path — older than anyone can say','A dry riverbed, clearly once ran strong','An old road, overgrown but unmistakably constructed','A grove of trees all leaning the same direction','A large flat boulder scarred with old fire marks — a regular campsite once','A steep ridge offering a clear vantage point, and full exposure','A narrow ravine the party must cross — not dangerous, but slow','A clearing with no undergrowth; soil disturbed, something buried or recently dug up'] },
   { name:'Night Watch', die:'d8', tab:'environment', entries:['An animal watches from the treeline, then retreats','A distant fire on the horizon — unmistakably a campfire','Voices on the wind, too faint and garbled to make out','Something approaches camp, investigates, then leaves without incident','Weather shifts — temperature drops sharply before dawn','A figure passes on the road, hurrying, doesn\'t acknowledge the camp','Sounds of a struggle, distant — over quickly','All quiet. Unnervingly so.'] },
@@ -583,7 +583,9 @@ const rollFadeTimers = {};
 
 const ROLL_TABLE_CONTAINER = {
   npcs:        'rollTablesNpcsContainer',
-  encounters:  'rollTablesEncountersContainer',
+  'enc-setup':  'rollTablesEncSetupContainer',
+  'enc-active': 'rollTablesEncActiveContainer',
+  'enc-after':  'rollTablesEncAfterContainer',
   environment: 'rollTablesEnvironmentContainer',
   inviting:    'rollTablesInvitingContainer',
 };
@@ -768,9 +770,9 @@ const NARRATIVE_DATA = [
 
 const NARRATIVE_CATEGORY_TAB = {
   'Social Encounters':                  'npcs',
-  'Chase Sequences':                    'encounters',
+  'Chase Sequences':                    'enc-active',
   'Investigation Scenes':               'environment',
-  'Combat with Environmental Pressure': 'encounters',
+  'Combat with Environmental Pressure': 'enc-active',
   'Puzzles / Ancient Mechanisms':       'environment',
   'Group Dynamics':                     'environment',
   'Environmental Hazards':              'environment',
@@ -817,15 +819,15 @@ function buildNarrativeSection(sections, containerId, idPrefix) {
 }
 
 function buildNarrative() {
-  const byTab = { npcs: [], encounters: [], environment: [], inviting: [] };
+  const byTab = { npcs: [], 'enc-setup': [], 'enc-active': [], 'enc-after': [], environment: [], inviting: [] };
   NARRATIVE_DATA.forEach(section => {
     const tab = NARRATIVE_CATEGORY_TAB[section.category];
     if (tab && byTab[tab]) byTab[tab].push(section);
   });
-  buildNarrativeSection(byTab.npcs,        'narrativeNpcsContainer',         'nbnpc');
-  buildNarrativeSection(byTab.encounters,  'narrativeEncountersContainer',    'nbenc');
-  buildNarrativeSection(byTab.environment, 'narrativeEnvironmentContainer',   'nbenv');
-  buildNarrativeSection(byTab.inviting,    'narrativeInvitingContainer',      'nbinv');
+  buildNarrativeSection(byTab.npcs,              'narrativeNpcsContainer',         'nbnpc');
+  buildNarrativeSection(byTab['enc-active'],     'narrativeEncActiveContainer',     'nbenca');
+  buildNarrativeSection(byTab.environment,       'narrativeEnvironmentContainer',   'nbenv');
+  buildNarrativeSection(byTab.inviting,          'narrativeInvitingContainer',      'nbinv');
 }
 
 // ─── REFERENCE — WEAPONS ─────────────────────────────────────────────────────
@@ -1114,7 +1116,7 @@ document.getElementById('btnAddNpc').addEventListener('click', () =>
 // ─── PLAYER ROLL PROMPTS ─────────────────────────────────────────────────────
 const PLAYER_ROLL_PROMPTS = [
   {
-    die: 'D4', tab: 'encounters', title: 'Swarm Reinforcements',
+    die: 'D4', tab: 'enc-active', title: 'Swarm Reinforcements',
     context: 'Use mid-battle when enemies are arriving in waves and the scale is uncertain.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many enemies push through this round."',
     outcomes: [
@@ -1125,7 +1127,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D6', tab: 'encounters', title: 'Reinforcement Timer',
+    die: 'D6', tab: 'enc-active', title: 'Reinforcement Timer',
     context: 'When the party knows enemy backup is coming and needs to finish quickly.',
     prompt: 'Ask the player at the start of combat: "Roll a D6 — that\'s how many rounds you have."',
     outcomes: [
@@ -1173,7 +1175,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', tab: 'encounters', title: 'Rival Party Lead',
+    die: 'D4', tab: 'enc-setup', title: 'Rival Party Lead',
     context: 'When the players are racing another group to the same destination or prize.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many hours ahead the rivals are."',
     outcomes: [
@@ -1197,7 +1199,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', tab: 'encounters', title: 'Poison Progression',
+    die: 'D4', tab: 'enc-active', title: 'Poison Progression',
     context: 'When a character is poisoned and the timeline of worsening matters.',
     prompt: 'Ask the player: "Roll a D4 — you have that many hours before the next stage hits."',
     outcomes: [
@@ -1267,7 +1269,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', tab: 'encounters', title: 'Trap Reset Timer',
+    die: 'D4', tab: 'enc-active', title: 'Trap Reset Timer',
     context: 'After a trap triggers or is disarmed, if it might reset or be re-armed.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many rounds until the trap is live again."',
     outcomes: [
@@ -1378,12 +1380,14 @@ function buildPlayerRolls() {
     </div>`;
 
   const containerMap = {
-    npcs:        'playerRollsNpcsContainer',
-    encounters:  'playerRollsEncountersContainer',
-    environment: 'playerRollsEnvironmentContainer',
-    inviting:    'playerRollsInvitingContainer',
+    npcs:         'playerRollsNpcsContainer',
+    'enc-setup':  'playerRollsEncSetupContainer',
+    'enc-active': 'playerRollsEncActiveContainer',
+    'enc-after':  'playerRollsEncAfterContainer',
+    environment:  'playerRollsEnvironmentContainer',
+    inviting:     'playerRollsInvitingContainer',
   };
-  const byTab = { npcs: [], encounters: [], environment: [], inviting: [] };
+  const byTab = { npcs: [], 'enc-setup': [], 'enc-active': [], 'enc-after': [], environment: [], inviting: [] };
   PLAYER_ROLL_PROMPTS.forEach((p, i) => { if (byTab[p.tab]) byTab[p.tab].push({ p, i }); });
 
   for (const [tab, entries] of Object.entries(byTab)) {
