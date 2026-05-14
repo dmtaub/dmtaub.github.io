@@ -951,6 +951,10 @@
             setMelody(cur => cur.map(item => syncItemNoteToDegree(item, keyRoot, scale)));
         }, [keyRoot, scale]);
 
+        useEffect(() => {
+            if (isPlaying) Tone.Transport.bpm.value = tempo;
+        }, [tempo]);
+
         const stats     = useMemo(() => pitchStats(melody, chordMode, keyRoot, scale), [melody, chordMode, keyRoot, scale]);
         const progLabel = useMemo(() => getProgressionLabel(melody, scale), [melody, scale]);
 
