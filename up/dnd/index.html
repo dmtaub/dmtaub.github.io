@@ -103,6 +103,14 @@
         #selectionBar .btn-sel:hover { background:rgba(255,255,255,.35); }
         #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
 
+        /* ── Inner Tabs (within Rolls panel) ── */
+        .inner-tabs { display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:1.25rem; border-bottom:1px solid var(--border); padding-bottom:0.6rem; }
+        .inner-tab-btn { background:none; border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.65rem; cursor:pointer; font-size:0.82rem; color:var(--text-muted); transition:all .15s; }
+        .inner-tab-btn:hover { border-color:var(--accent-soft); color:var(--text); }
+        .inner-tab-btn.active { background:var(--surface); color:var(--text); border-color:var(--accent-soft); font-weight:600; }
+        .inner-tab-panel { display:none; }
+        .inner-tab-panel.active { display:block; }
+
         /* ── Narrative ── */
         .narrative-section { margin-bottom:0.5rem; }
         .narrative-header { display:flex; align-items:center; gap:0.5rem; cursor:pointer; padding:0.6rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; user-select:none; }
@@ -219,8 +227,7 @@
 
     <div class="tabs">
         <button class="tab-btn active" data-tab="statblocks">Stat Blocks</button>
-        <button class="tab-btn" data-tab="rolltables">Roll Tables</button>
-        <button class="tab-btn" data-tab="narrative">Narrative Rolls</button>
+        <button class="tab-btn" data-tab="rolls">Rolls</button>
         <button class="tab-btn" data-tab="roster">Roster</button>
         <button class="tab-btn" data-tab="reference">Reference</button>
     </div>
@@ -249,19 +256,45 @@
         </div>
     </div>
 
-    <!-- ══ ROLL TABLES ══════════════════════════════════════════════════════ -->
-    <div id="tab-rolltables" class="tab-panel">
-        <div id="rollTablesContainer"></div>
-    </div>
-
-    <!-- ══ NARRATIVE ════════════════════════════════════════════════════════ -->
-    <div id="tab-narrative" class="tab-panel">
-        <div class="card" style="margin-bottom:1rem">
-            <h2>Narrative Roll Pattern Library</h2>
-            <p style="font-size:0.88rem;color:var(--text-muted);margin:0">Common "roll packages" — sequences of checks that fit recurring story situations. Adapt DCs to your party level.</p>
-            <div class="narrative-tip" style="margin-top:0.75rem">General principle: 2–3 rolls per situation feels satisfying. More than 3 starts to feel like dice tax. One good roll with a creative interpretation often beats a chain of mediocre ones.</div>
+    <!-- ══ ROLLS ═══════════════════════════════════════════════════════════ -->
+    <div id="tab-rolls" class="tab-panel">
+        <div class="inner-tabs">
+            <button class="inner-tab-btn active" data-inner-tab="npcs">NPCs</button>
+            <button class="inner-tab-btn" data-inner-tab="encounters">Encounters</button>
+            <button class="inner-tab-btn" data-inner-tab="environment">Environment</button>
+            <button class="inner-tab-btn" data-inner-tab="inviting">Inviting</button>
+            <button class="inner-tab-btn" data-inner-tab="playerrolls">Player Rolls</button>
         </div>
-        <div id="narrativeContainer"></div>
+
+        <div id="inner-tab-npcs" class="inner-tab-panel active">
+            <div id="rollTablesNpcsContainer"></div>
+            <div id="narrativeNpcsContainer"></div>
+        </div>
+
+        <div id="inner-tab-encounters" class="inner-tab-panel">
+            <div id="rollTablesEncountersContainer"></div>
+            <div id="narrativeEncountersContainer"></div>
+        </div>
+
+        <div id="inner-tab-environment" class="inner-tab-panel">
+            <div id="rollTablesEnvironmentContainer"></div>
+            <div id="narrativeEnvironmentContainer"></div>
+        </div>
+
+        <div id="inner-tab-inviting" class="inner-tab-panel">
+            <div class="card">
+                <h2>Inviting</h2>
+                <p style="font-size:0.88rem;color:var(--text-muted);margin:0">Coming soon — social invitation and welcome scenarios.</p>
+            </div>
+        </div>
+
+        <div id="inner-tab-playerrolls" class="inner-tab-panel">
+            <div class="card" style="margin-bottom:1rem">
+                <h2>Player Roll Prompts</h2>
+                <p style="font-size:0.88rem;color:var(--text-muted);margin:0">Moments to hand the dice to the player. The result determines a world-state fact — not a pass/fail, but a quantity or outcome that shapes what happens next.</p>
+            </div>
+            <div id="playerRollsContainer"></div>
+        </div>
     </div>
 
     <!-- ══ ROSTER ═══════════════════════════════════════════════════════════ -->
