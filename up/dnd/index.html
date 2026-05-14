@@ -68,6 +68,8 @@
         .btn-roll-player { background:transparent; color:var(--accent); border:1px solid var(--accent); }
         .btn-roll-player:hover { background:var(--accent); color:#fff; opacity:1; }
         .roll-result-text { font-size:0.9rem; color:var(--text); font-style:italic; }
+        .roll-section-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:0.3rem; margin:0.25rem 0 0.6rem; }
+        .roll-section-label + * { margin-top:0; }
         #prTooltip { position:fixed; z-index:999; max-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; font-size:0.82rem; color:var(--text-muted); box-shadow:0 4px 12px var(--shadow); pointer-events:none; display:none; line-height:1.45; }
         #prTooltip.visible { display:block; }
 
@@ -263,16 +265,20 @@
     <!-- ══ ROLLS ═══════════════════════════════════════════════════════════ -->
     <div id="tab-rolls" class="tab-panel">
         <div class="inner-tabs">
-            <button class="inner-tab-btn active" data-inner-tab="npcs">NPCs</button>
+            <button class="inner-tab-btn active" data-inner-tab="social">Social</button>
             <button class="inner-tab-btn" data-inner-tab="encounters">Encounters</button>
             <button class="inner-tab-btn" data-inner-tab="environment">Environment</button>
-            <button class="inner-tab-btn" data-inner-tab="inviting">Social Event</button>
         </div>
 
-        <div id="inner-tab-npcs" class="inner-tab-panel active">
+        <div id="inner-tab-social" class="inner-tab-panel active">
+            <div class="roll-section-label">One</div>
             <div id="rollTablesNpcsContainer"></div>
             <div id="playerRollsNpcsContainer"></div>
             <div id="narrativeNpcsContainer"></div>
+            <div class="roll-section-label" style="margin-top:1.5rem">Many</div>
+            <div id="rollTablesInvitingContainer"></div>
+            <div id="playerRollsInvitingContainer"></div>
+            <div id="narrativeInvitingContainer"></div>
         </div>
 
         <div id="inner-tab-encounters" class="inner-tab-panel">
@@ -285,12 +291,6 @@
             <div id="rollTablesEnvironmentContainer"></div>
             <div id="playerRollsEnvironmentContainer"></div>
             <div id="narrativeEnvironmentContainer"></div>
-        </div>
-
-        <div id="inner-tab-inviting" class="inner-tab-panel">
-            <div id="rollTablesInvitingContainer"></div>
-            <div id="playerRollsInvitingContainer"></div>
-            <div id="narrativeInvitingContainer"></div>
         </div>
     </div>
 

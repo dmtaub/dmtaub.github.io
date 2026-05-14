@@ -253,7 +253,8 @@ document.querySelectorAll('.inner-tab-btn').forEach(btn => {
 (function restoreInnerTab() {
   const last = localStorage.getItem(LAST_INNER_TAB_KEY);
   if (!last) return;
-  const btn = document.querySelector(`.inner-tab-btn[data-inner-tab="${last}"]`);
+  const key = last === 'npcs' || last === 'inviting' ? 'social' : last;
+  const btn = document.querySelector(`.inner-tab-btn[data-inner-tab="${key}"]`);
   if (btn) btn.click();
 })();
 
