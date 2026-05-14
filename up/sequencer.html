@@ -88,7 +88,7 @@
             font: inherit;
             font-size: 12px;
         }
-        .seq-select.small { padding: 1px 2px; font-size: 10px; }
+        .seq-select.small { padding: 1px 2px; font-size: 8px; }
 
         .btn {
             cursor: pointer;
@@ -116,8 +116,9 @@
             gap: 10px;
             grid-template-columns: repeat(4, minmax(0, 1fr));
         }
-        @media (max-width: 1100px) { .tile-grid { grid-template-columns: repeat(8, 1fr); } }
-        @media (max-width: 500px)  { .tile-grid { grid-template-columns: 1fr; } }
+        .tile-grid.cols-8 { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+        @media (max-width: 900px)  { .tile-grid.cols-8 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        @media (max-width: 500px)  { .tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
         .tile {
             border: 1px solid rgba(148, 163, 184, 0.18);
@@ -138,6 +139,9 @@
         .tile-actions {
             display: flex; gap: 5px; flex-wrap: wrap;
             justify-content: center; margin-top: 6px;
+        }
+        .tile-actions .oct-btns {
+            display: flex; gap: 5px; flex-shrink: 0;
         }
 
         .small-btn {
@@ -838,13 +842,13 @@
                 <div class="tile-controls">
                     <div class="field">
                         <label class="tile-tiny">Progression</label>
-                        <select class="seq-select" value=${item.degree} onChange=${e => onDegree(index, parseInt(e.target.value, 10))}>
+                        <select class="seq-select small" value=${item.degree} onChange=${e => onDegree(index, parseInt(e.target.value, 10))}>
                             ${progOpts.map(o => html`<option key=${o.degree} value=${o.degree}>${o.label}</option>`)}
                         </select>
                     </div>
                     <div class="field">
                         <label class="tile-tiny">Chord</label>
-                        <select class="seq-select" value=${item.chordVariant} onChange=${e => onChordVariant(index, e.target.value)}>
+                        <select class="seq-select small" value=${item.chordVariant} onChange=${e => onChordVariant(index, e.target.value)}>
                             ${Object.entries(CHORD_VARIANTS).map(([v, cfg]) => html`<option key=${v} value=${v}>${cfg.label}</option>`)}
                         </select>
                     </div>
@@ -859,9 +863,11 @@
                     </div>
                 </div>
                 <div class="tile-actions">
-                    <button class="small-btn" onClick=${() => onPreview(index)}>Test</button>
-                    <button class="small-btn" onClick=${() => onOctDown(index)}>-8va</button>
-                    <button class="small-btn" onClick=${() => onOctUp(index)}>+8va</button>
+                    <button class="small-btn" style="flex:2;min-width:0" onClick=${() => onPreview(index)}>🔊</button>
+                    <span class="oct-btns">
+                        <button class="small-btn" onClick=${() => onOctDown(index)}>-8</button>
+                        <button class="small-btn" onClick=${() => onOctUp(index)}>+8</button>
+                    </span>
                 </div>
                 <div class="tile-tiny">Inversion ${(item.inversion || 0) + 1}/${invCount} · Octave ${formatOctaveShift(item.octaveShift || 0)}</div>
             </div>`;
@@ -1054,7 +1060,7 @@
                             </div>
                         </div>
 
-                        <div class="tile-grid">
+                        <div class=${`tile-grid${melody.length > 8 ? ' cols-8' : ''}`}>
                             ${melody.map((item, index) => html`
                                 <${Tile} key=${index}
                                     item=${item} index=${index} melody=${melody}
