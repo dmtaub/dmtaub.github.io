@@ -239,6 +239,39 @@
             background: rgba(30, 41, 59, 0.85);
         }
 
+        .transport-float {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 200;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148,163,184,0.15);
+            border-radius: 12px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
+        }
+        .transport-float .action-row { margin-bottom: 0; flex-wrap: nowrap; }
+        .transport-float .status-dot {
+            background: transparent;
+            border-color: rgba(148,163,184,0.25);
+        }
+        .transport-minimize {
+            background: none; border: none; color: #64748b;
+            cursor: pointer; font-size: 11px; padding: 0;
+            align-self: flex-end; line-height: 1;
+        }
+        .transport-minimize:hover { color: #eef2ff; }
+        .transport-mini {
+            display: flex; gap: 5px;
+        }
+        .transport-mini .btn {
+            padding: 5px 8px; font-size: 14px; min-width: 0;
+        }
+
         .card h2 { color: #eef2ff; margin: 0 0 4px; font-size: 16px; }
         .page-title    { color: var(--text); }
         .page-subtitle { color: var(--text-muted); }
@@ -259,7 +292,7 @@
 
     <script type="module">
     // @ts-check
-    import { h, render } from 'preact';
+    import { h, render, Fragment } from 'preact';
     import { useState, useEffect, useMemo, useRef } from 'preact/hooks';
     import htm from 'htm';
     const html = htm.bind(h);
@@ -771,14 +804,15 @@
          * @param {boolean} [loop]
          * @returns {Promise<number>}
          */
-        async play(melody, chordMode, keyRoot, scale, bpm, loop = false) {
+        async play(melody, chordMode, keyRoot, scale, bpm, loop = false, onIndex = null) {
             await Tone.start();
             this.stop();
             const events = melodyToEvents(melody, chordMode, keyRoot, scale);
             Tone.Transport.bpm.value = bpm;
             this.part = new Tone.Part((time, /** @type {any} */ value) => {
                 this.synth.triggerAttackRelease(value.notes, value.duration, time, chordMode ? 0.65 : 0.85);
-            }, events).start(0);
+                if (onIndex) Tone.getDraw().schedule(() => onIndex(value.index), time);
+            }, events.map((ev, i) => ({ ...ev, index: i }))).start(0);
             this.part.loop    = loop;
             this.part.loopEnd = totalBeats(melody);
             Tone.Transport.start();
@@ -921,6 +955,33 @@
 
     /* ── App ─────────────────────────────────────────────────────────────────── */
 
+    function TransportFloat({ isPlaying, loopEnabled, onPlay, onStop, onLoop }) {
+        const [mini, setMini] = useState(false);
+        return html`
+            <div class="transport-float">
+                <button class="transport-minimize" onClick=${() => setMini(m => !m)}>
+                    ${mini ? '▾ expand' : '▴ collapse'}
+                </button>
+                ${mini
+                    ? html`<div class="transport-mini">
+                        <button class="btn primary"   onClick=${onPlay}>▶</button>
+                        <button class="btn danger"    onClick=${onStop}>■</button>
+                        <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${onLoop}>⟳</button>
+                    </div>`
+                    : html`<${Fragment}>
+                        <div class="action-row">
+                            <button class="btn primary" onClick=${onPlay}>▶ Play</button>
+                            <button class="btn danger"  onClick=${onStop}>■ Stop</button>
+                            <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${onLoop}>
+                                ⟳ ${loopEnabled ? 'Looping' : 'Loop Off'}
+                            </button>
+                        </div>
+                        <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
+                    <//>`
+                }
+            </div>`;
+    }
+
     function App() {
         const [keyRoot,           setKeyRoot]           = useState('C');
         const [scale,             setScale]             = useState(/** @type {ScaleName} */('minor'));
@@ -929,6 +990,7 @@
         const [surprise,          setSurprise]          = useState(28);
         const [loopEnabled,       setLoopEnabled]       = useState(false);
         const [isPlaying,         setIsPlaying]         = useState(false);
+        const [playingIndex,      setPlayingIndex]      = useState(-1);
         const [chordMode,         setChordMode]         = useState(false);
         const [globalChordVariant, setGlobalChordVariant] = useState(/** @type {ChordVariantName} */('triad'));
         const [melody,            setMelody]            = useState(() =>
@@ -952,7 +1014,7 @@
         }, [keyRoot, scale]);
 
         useEffect(() => {
-            if (isPlaying) Tone.Transport.bpm.value = tempo;
+            Tone.Transport.bpm.value = tempo;
         }, [tempo]);
 
         const stats     = useMemo(() => pitchStats(melody, chordMode, keyRoot, scale), [melody, chordMode, keyRoot, scale]);
@@ -962,12 +1024,13 @@
             playerRef.current?.stop();
             if (stopTimerRef.current !== null) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
             setIsPlaying(false);
+            setPlayingIndex(-1);
         };
 
         const play = async () => {
             if (!playerRef.current) return;
             stopPlayback();
-            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled);
+            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled, setPlayingIndex);
             setIsPlaying(true);
             if (!loopEnabled) {
                 const ms = (60 / tempo) * beats * 1000 + 250;
@@ -1031,6 +1094,10 @@
         };
 
         return html`
+            <${TransportFloat}
+                isPlaying=${isPlaying} loopEnabled=${loopEnabled}
+                onPlay=${play} onStop=${stopPlayback}
+                onLoop=${() => setLoopEnabled(v => !v)} />
             <div class="panel-grid">
                 <section class="card">
                     <div class="card-header">
@@ -1072,7 +1139,7 @@
                             <div style="display:grid;gap:10px">
                                 <div class="field">
                                     <label>Tempo: ${tempo}</label>
-                                    <input type="range" min="50" max="180" step="1" value=${tempo}
+                                    <input type="range" min="50" max="360" step="1" value=${tempo}
                                            onChange=${e => setTempo(parseInt(e.target.value, 10))} />
                                 </div>
                                 <div class="field">
@@ -1085,15 +1152,9 @@
                                 <div class="action-row" style="margin-bottom:0">
                                     <button class="btn primary" onClick=${regenerate}>✦ Generate</button>
                                     <button class="btn secondary" onClick=${vary}>↻ Variation</button>
-                                    <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${() => setLoopEnabled(v => !v)}>
-                                        ⟳ ${loopEnabled ? 'Looping' : 'Loop Off'}
-                                    </button>
                                 </div>
                                 <div class="action-row" style="margin-bottom:0">
-                                    <button class="btn primary"   onClick=${play}>▶ Play</button>
-                                    <button class="btn danger"    onClick=${stopPlayback}>■ Stop</button>
                                     <button class="btn secondary" onClick=${exportMidi}>↓ Export MIDI</button>
-                                    <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
                                 </div>
                             </div>
                         </div>
@@ -1105,7 +1166,11 @@
                                         onClick=${() => setChordMode(v => !v)}>
                                     ⊞ ${chordMode ? 'Phrase Mode' : 'Chord Mode'}
                                 </button>
-                                <div class="progression-label">Progression: ${progLabel}</div>
+                                <div class="progression-label">
+                                    Progression:${melody.map((item, i) => html`
+                                        <span key=${i} style=${i === playingIndex ? 'color:#818cf8;font-weight:700' : ''}> ${getRomanNumeral(scale, item.degree)}</span>${i < melody.length - 1 ? ' –' : ''}
+                                    `)}
+                                </div>
                             </div>
                             <div class="progression-label">
                                 Range: ${midiToNoteName(stats.min)} → ${midiToNoteName(stats.max)}
