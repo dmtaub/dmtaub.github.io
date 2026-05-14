@@ -572,7 +572,7 @@ const BUILTIN_ROLL_TABLES = [
   { name:'Terrain Feature', die:'d8', tab:'environment', entries:['A natural stone arch spanning the path — older than anyone can say','A dry riverbed, clearly once ran strong','An old road, overgrown but unmistakably constructed','A grove of trees all leaning the same direction','A large flat boulder scarred with old fire marks — a regular campsite once','A steep ridge offering a clear vantage point, and full exposure','A narrow ravine the party must cross — not dangerous, but slow','A clearing with no undergrowth; soil disturbed, something buried or recently dug up'] },
   { name:'Night Watch', die:'d8', tab:'environment', entries:['An animal watches from the treeline, then retreats','A distant fire on the horizon — unmistakably a campfire','Voices on the wind, too faint and garbled to make out','Something approaches camp, investigates, then leaves without incident','Weather shifts — temperature drops sharply before dawn','A figure passes on the road, hurrying, doesn\'t acknowledge the camp','Sounds of a struggle, distant — over quickly','All quiet. Unnervingly so.'] },
   { name:'Dungeon Atmosphere', die:'d10', tab:'environment', entries:['Faint echo of dripping water — rhythmic, distant','The air is still and stale — nothing has moved here in a long time','A faint draft; air is moving from somewhere ahead','The temperature drops noticeably in this corridor','The walls are damp and slightly warm to the touch','A smell of something sweet — not food, not flowers. Hard to place.','Sound of settling stone — the structure is alive the way old things are','Faint bioluminescent growth on the walls, barely enough to navigate by','The floor has a barely perceptible slope downward','Scratch marks on the walls at roughly the same height — old, but consistent'] },
-  { name:'Foraging', die:'d6', tab:'environment', entries:['Nothing edible — this area has been picked clean or is barren','Enough for one person for a day','Basic provisions — a day\'s food for the party','Good find — two days of food plus something useful: kindling, cordage, or clean water','A cache of preserved food, deliberately left by someone','Ample provisions and a medicinal herb a healer would recognize'] },
+  { name:'Foraging', die:'d6', tab:'environment', playerRoll:true, entries:['Nothing edible — this area has been picked clean or is barren','Enough for one person for a day','Basic provisions — a day\'s food for the party','Good find — two days of food plus something useful: kindling, cordage, or clean water','A cache of preserved food, deliberately left by someone','Ample provisions and a medicinal herb a healer would recognize'] },
 ];
 
 let ALL_ROLL_TABLES = [];
@@ -593,7 +593,7 @@ function buildRollTablesInto(entries, containerId) {
       <div class="roll-header" data-idx="${i}">
         <h3>${t.name}${isHB}</h3>
         <span class="roll-result-text" id="rtresult-${i}" style="flex:1;text-align:center;padding:0 0.75rem;opacity:0"></span>
-        <button class="btn-roll" data-idx="${i}">Roll ${t.die}</button>
+        <button class="btn-roll${t.playerRoll ? ' btn-roll-player' : ''}" data-idx="${i}">${t.playerRoll ? `(Player) Roll ${t.die}` : `Roll ${t.die}`}</button>
       </div>
       <div class="roll-body" id="rtbody-${i}">
         <table class="ref-table"><thead><tr><th>#</th><th>Result</th></tr></thead><tbody>
@@ -1240,7 +1240,7 @@ function buildPlayerRolls() {
       <div class="roll-header" data-pr-idx="${i}">
         <h3 data-ctx="${p.context}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title}</h3>
         <span class="roll-result-text" id="prresult-${i}" style="flex:1;text-align:center;padding:0 0.75rem;opacity:0"></span>
-        <button class="btn-roll" data-pr-idx="${i}">Roll ${p.die}</button>
+        <button class="btn-roll btn-roll-player" data-pr-idx="${i}">(Player) Roll ${p.die}</button>
       </div>
       <div class="roll-body" id="prbody-${i}">
         <div class="narrative-tip" style="margin:0.75rem 1rem 0.4rem">${p.context}</div>
