@@ -13,9 +13,8 @@
         .panel-grid {
             display: grid;
             gap: 24px;
-            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+            grid-template-columns: 1fr;
         }
-        @media (max-width: 1100px) { .panel-grid { grid-template-columns: 1fr; } }
 
         .card {
             background: rgba(17, 24, 39, 0.92);
@@ -78,6 +77,11 @@
             color: #eef2ff;
             padding: 1px 2px;
             font: inherit;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .small {
+            padding: 1px 2px;
             font-size: 8px;
         }
 
@@ -133,7 +137,7 @@
 
         .small-btn {
             padding: 3px 8px;
-            font-size: 11px;
+            font-size: 10px;
             border-radius: 7px;
             border: 1px solid rgba(148, 163, 184, 0.22);
             background: rgba(15, 23, 42, 1);
@@ -142,6 +146,7 @@
             font: inherit;
             font-size: 11px;
         }
+
         .small-btn:hover { opacity: 0.8; }
 
         .note-bar {
@@ -996,11 +1001,11 @@
                 <div class="tile-controls">
                     <div class="field">
                         <label class="tile-tiny">Progression</label>
-                        <select class="seq-select" data-action="degree" data-index="${index}">${progOpts_html}</select>
+                        <select class="seq-select small" data-action="degree" data-index="${index}">${progOpts_html}</select>
                     </div>
                     <div class="field">
                         <label class="tile-tiny">Chord</label>
-                        <select class="seq-select" data-action="chord-variant" data-index="${index}">${variantOpts_html}</select>
+                        <select class="seq-select small" data-action="chord-variant" data-index="${index}">${variantOpts_html}</select>
                     </div>
                     <div class="field">
                         <label class="tile-tiny">Duration: ${item.duration}</label>
@@ -1009,9 +1014,9 @@
                     </div>
                 </div>
                 <div class="tile-actions">
-                    <button class="small-btn" data-action="preview"  data-index="${index}">Test</button>
-                    <button class="small-btn" data-action="oct-down" data-index="${index}">-8va</button>
-                    <button class="small-btn" data-action="oct-up"   data-index="${index}">+8va</button>
+                    <button class="small-btn" data-action="preview"  data-index="${index}">🔊</button>
+                    <button class="small-btn" data-action="oct-down" data-index="${index}">-8</button>
+                    <button class="small-btn" data-action="oct-up"   data-index="${index}">+8</button>
                 </div>
                 <div class="tile-tiny">Inversion ${(item.inversion || 0) + 1}/${invCount} · Octave ${formatOctaveShift(item.octaveShift || 0)}</div>
             </div>`;
