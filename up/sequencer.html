@@ -89,6 +89,8 @@
             font-size: 12px;
         }
         .seq-select.small { padding: 1px 2px; font-size: 8px; }
+        @container (min-width: 140px) { .seq-select.small { font-size: 10px; } }
+        @container (min-width: 200px) { .seq-select.small { font-size: 12px; padding: 2px 4px; } }
 
         .btn {
             cursor: pointer;
@@ -121,6 +123,7 @@
         @media (max-width: 500px)  { .tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
         .tile {
+            container-type: inline-size;
             border: 1px solid rgba(148, 163, 184, 0.18);
             border-radius: 14px;
             padding: 10px;
@@ -133,7 +136,8 @@
             to   { opacity: 1; transform: none; }
         }
 
-        .tile-title { text-align: center; font-size: 12px; font-weight: 600; margin: 6px 0 2px; }
+        .tile-numeral { text-align: center; font-size: 16px; font-weight: 700; margin: 0 0 4px; color: #eef2ff; }
+        .tile-title { text-align: center; font-size: 11px; color: #94a3b8; margin: 4px 0 2px; }
         .tile-tiny  { text-align: center; font-size: 11px; color: #94a3b8; }
         .tile-controls { display: grid; gap: 7px; margin-top: 7px; }
         .tile-actions {
@@ -823,9 +827,8 @@
                     onCycleInv, onOctUp, onOctDown, onPreview, onDegree, onChordVariant, onDuration }) {
         const chord    = buildChordFromDegree(keyRoot, scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
         const midis    = chordMode ? chord.notes : [noteNameToMidi(item.note) + (item.octaveShift || 0) * 12];
-        const label    = chordMode
-            ? `${getRomanNumeral(scale, item.degree)} · ${chord.label}`
-            : `${getRomanNumeral(scale, item.degree)} · ${midiToNoteName(midis[0])}`;
+        const numeral  = getRomanNumeral(scale, item.degree);
+        const name     = chordMode ? chord.label : midiToNoteName(midis[0]);
         const progOpts = getProgressionOptions(melody, index, keyRoot, scale, item.chordVariant);
         const invCount = buildChordFromDegree(keyRoot, scale, item.degree, 0, item.octaveShift || 0, item.chordVariant).notes.length;
         const range    = Math.max(1, stats.max - stats.min);
@@ -833,12 +836,13 @@
 
         return html`
             <div class="tile">
+                <div class="tile-numeral">${numeral}</div>
                 ${chordMode
                     ? html`<${StaffChordView} notes=${midis} onClick=${() => onCycleInv(index)} />`
                     : html`<button class="note-bar" onClick=${() => onCycleInv(index)} title="Click to cycle inversion">
                                <div class="note-bar-fill" style=${{ height: `${pct.toFixed(1)}%` }}></div>
                            </button>`}
-                <div class="tile-title">${label}</div>
+                <div class="tile-title">${name}</div>
                 <div class="tile-controls">
                     <div class="field">
                         <label class="tile-tiny">Progression</label>
