@@ -1234,12 +1234,13 @@ function buildPlayerRolls() {
   container.innerHTML = PLAYER_ROLL_PROMPTS.map((p, i) => `
     <div class="roll-section">
       <div class="roll-header" data-pr-idx="${i}">
-        <h3>${p.title}</h3>
-        <span class="roll-meta">${p.die}</span>
+        <h3 data-ctx="${p.context}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title}</h3>
+        <span class="roll-result-text" id="prresult-${i}" style="flex:1;text-align:center;padding:0 0.75rem;opacity:0"></span>
+        <button class="btn-roll" data-pr-idx="${i}">Roll ${p.die}</button>
       </div>
       <div class="roll-body" id="prbody-${i}">
-        <div class="narrative-tip" style="margin:0.75rem 1rem 0.5rem">${p.context}</div>
-        <div style="padding:0.55rem 1rem 0.6rem;border-bottom:1px solid var(--border)">
+        <div class="narrative-tip" style="margin:0.75rem 1rem 0.4rem">${p.context}</div>
+        <div style="padding:0.4rem 1rem 0.6rem;border-bottom:1px solid var(--border)">
           <strong style="font-size:0.85rem;color:var(--accent)">${p.prompt}</strong>
         </div>
         <table class="ref-table"><thead><tr><th style="width:3rem">Roll</th><th>Result</th></tr></thead><tbody>
@@ -1248,9 +1249,66 @@ function buildPlayerRolls() {
       </div>
     </div>`).join('');
 
-  container.querySelectorAll('[data-pr-idx]').forEach(h => {
-    h.addEventListener('click', () =>
-      document.getElementById('prbody-' + h.dataset.prIdx).classList.toggle('open'));
+  let prTooltip = document.getElementById('prTooltip');
+  if (!prTooltip) {
+    prTooltip = document.createElement('div');
+    prTooltip.id = 'prTooltip';
+    document.body.appendChild(prTooltip);
+  }
+  let prTipTimer = null;
+  let prMouseX = 0, prMouseY = 0;
+
+  const showPrTooltip = (h) => {
+    const ctx = h.querySelector('[data-ctx]')?.dataset.ctx;
+    if (!ctx) return;
+    prTooltip.textContent = ctx;
+    prTooltip.style.left = prMouseX + 12 + 'px';
+    prTooltip.style.top  = prMouseY + 14 + 'px';
+    prTooltip.classList.add('visible');
+    const tr = prTooltip.getBoundingClientRect();
+    if (tr.right > window.innerWidth - 12)
+      prTooltip.style.left = (window.innerWidth - tr.width - 12) + 'px';
+  };
+
+  container.querySelectorAll('.roll-header[data-pr-idx]').forEach(h => {
+    h.addEventListener('click', () => {
+      const body = document.getElementById('prbody-' + h.dataset.prIdx);
+      body.classList.toggle('open');
+      clearTimeout(prTipTimer);
+      prTooltip.classList.remove('visible');
+      if (!body.classList.contains('open'))
+        prTipTimer = setTimeout(() => showPrTooltip(h), 100);
+    });
+    h.addEventListener('mousemove', e => { prMouseX = e.clientX; prMouseY = e.clientY; });
+    h.addEventListener('mouseenter', () => {
+      prTipTimer = setTimeout(() => {
+        const body = document.getElementById('prbody-' + h.dataset.prIdx);
+        if (body?.classList.contains('open')) return;
+        showPrTooltip(h);
+      }, 100);
+    });
+    h.addEventListener('mouseleave', () => {
+      clearTimeout(prTipTimer);
+      prTooltip.classList.remove('visible');
+    });
+  });
+
+  container.querySelectorAll('.btn-roll[data-pr-idx]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const i = btn.dataset.prIdx;
+      const p = PLAYER_ROLL_PROMPTS[i];
+      const el = document.getElementById('prresult-' + i);
+      el.textContent = p.outcomes[Math.floor(Math.random() * p.outcomes.length)];
+      clearTimeout(rollFadeTimers['pr-' + i]);
+      el.style.transition = 'none';
+      el.style.opacity = '1';
+      void el.offsetWidth;
+      rollFadeTimers['pr-' + i] = setTimeout(() => {
+        el.style.transition = 'opacity 10s linear';
+        el.style.opacity = '0';
+      }, 800);
+    });
   });
 }
 

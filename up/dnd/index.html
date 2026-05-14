@@ -66,6 +66,8 @@
         .btn-roll { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem; }
         .btn-roll:hover { opacity:.85; }
         .roll-result-text { font-size:0.9rem; color:var(--text); font-style:italic; }
+        #prTooltip { position:fixed; z-index:999; max-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; font-size:0.82rem; color:var(--text-muted); box-shadow:0 4px 12px var(--shadow); pointer-events:none; display:none; line-height:1.45; }
+        #prTooltip.visible { display:block; }
 
         /* ── Stat blocks ── */
         .stat-controls-bar { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
