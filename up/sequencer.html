@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="./util.css">
     <script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "preact":       "https://esm.sh/preact@10",
+            "preact/hooks": "https://esm.sh/preact@10/hooks",
+            "htm":          "https://esm.sh/htm@3"
+        }
+    }
+    </script>
     <style>
         :root { --page-max-width: 1400px; }
 
@@ -75,15 +84,11 @@
             border: 1px solid rgba(148, 163, 184, 0.25);
             background: rgba(15, 23, 42, 1);
             color: #eef2ff;
-            padding: 1px 2px;
-            font: inherit;
             padding: 4px 8px;
+            font: inherit;
             font-size: 12px;
         }
-        .small {
-            padding: 1px 2px;
-            font-size: 8px;
-        }
+        .seq-select.small { padding: 1px 2px; font-size: 10px; }
 
         .btn {
             cursor: pointer;
@@ -137,16 +142,14 @@
 
         .small-btn {
             padding: 3px 8px;
-            font-size: 10px;
+            font-size: 11px;
             border-radius: 7px;
             border: 1px solid rgba(148, 163, 184, 0.22);
             background: rgba(15, 23, 42, 1);
             color: #eef2ff;
             cursor: pointer;
             font: inherit;
-            font-size: 11px;
         }
-
         .small-btn:hover { opacity: 0.8; }
 
         .note-bar {
@@ -209,11 +212,8 @@
             background: rgba(30, 41, 59, 0.85);
         }
 
-        /* Override util.css typography for the dark card content */
         .card h2 { color: #eef2ff; margin: 0 0 4px; font-size: 16px; }
-        .card .muted { color: #94a3b8; font-size: 13px; }
-
-        .page-title   { color: var(--text); }
+        .page-title    { color: var(--text); }
         .page-subtitle { color: var(--text-muted); }
     </style>
 </head>
@@ -225,93 +225,17 @@
             <a class="back-link" href="./">← Utils</a>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☀</button>
         </div>
-
         <h1 class="page-title">Sequencer</h1>
         <p class="page-subtitle">Generate melodic ideas, flip into chord mode, audition inversions, and export as MIDI.</p>
-
-        <div class="panel-grid">
-            <section class="card">
-                <div class="card-header">
-                    <div class="badges">
-                        <span class="badge" id="badge-key">C Natural Minor</span>
-                        <span class="badge" id="badge-tempo">100 BPM</span>
-                        <span class="badge" id="badge-mode">Single Notes</span>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="controls-grid">
-                        <div class="field">
-                            <label for="ctrl-key">Key</label>
-                            <select class="seq-select" id="ctrl-key"></select>
-                        </div>
-                        <div class="field">
-                            <label for="ctrl-scale">Scale</label>
-                            <select class="seq-select" id="ctrl-scale"></select>
-                        </div>
-                        <div class="field">
-                            <label for="ctrl-length">Phrase Length</label>
-                            <select class="seq-select" id="ctrl-length"></select>
-                        </div>
-                        <div class="field">
-                            <label for="ctrl-chord-family">Chord Family</label>
-                            <select class="seq-select" id="ctrl-chord-family"></select>
-                        </div>
-                        <div class="field">
-                            <label for="ctrl-tempo">Tempo: <span id="lbl-tempo">100</span></label>
-                            <input type="range" id="ctrl-tempo" min="50" max="180" step="1" value="100">
-                        </div>
-                    </div>
-
-                    <div class="toolbar-row">
-                        <div class="field">
-                            <label for="ctrl-surprise">Surprise: <span id="lbl-surprise">28</span>%</label>
-                            <input type="range" id="ctrl-surprise" min="0" max="100" step="1" value="28">
-                        </div>
-                        <div class="action-row" style="margin-bottom:0">
-                            <button class="btn primary"   id="btn-generate">✦ Generate</button>
-                            <button class="btn secondary" id="btn-vary">↻ Variation</button>
-                            <button class="btn secondary" id="btn-loop">⟳ Loop Off</button>
-                            <button class="btn secondary" id="btn-chord-mode">⊞ Chord Mode</button>
-                        </div>
-                    </div>
-
-                    <div class="action-row">
-                        <button class="btn primary"   id="btn-play">▶ Play</button>
-                        <button class="btn danger"    id="btn-stop">■ Stop</button>
-                        <button class="btn secondary" id="btn-export">↓ Export MIDI</button>
-                        <span class="status-dot" id="status-dot">Ready</span>
-                    </div>
-
-                    <div class="progression-bar">
-                        <div>
-                            <div style="font-size:16px;font-weight:700;color:#eef2ff" id="phrase-mode-label">Phrase</div>
-                            <div class="progression-label">Progression: <span id="progression-label"></span></div>
-                        </div>
-                        <div class="progression-label">Range: <span id="range-label"></span></div>
-                    </div>
-
-                    <div class="tile-grid" id="tile-grid"></div>
-
-                    <p class="tile-tiny" style="margin-top:12px;text-align:left">
-                        Progression overlap shows percentages based on the number of notes in the currently selected chord variant, including loop wraparound.
-                    </p>
-                </div>
-            </section>
-
-            <section class="card">
-                <div class="card-content sidebar-list">
-                    <div class="sidebar-item">Use single-note mode to hear hook contour first, then switch to chord mode to see whether the harmony suggests a verse or chorus.</div>
-                    <div class="sidebar-item">Try higher-overlap choices for smoother voice leading, then change the chord variant per tile to hear how sevenths, ninths, and altered fifths change the overlap ranking.</div>
-                    <div class="sidebar-item">Longer durations can turn a busy phrase into something hooky. Shorter durations can make the same harmony feel like a riff instead of a pad.</div>
-                    <div class="sidebar-item">Use the top-level Chord Family control when you want music-theory-based harmony across the whole phrase, then override individual tiles when one chord wants to break the pattern.</div>
-                    <div class="sidebar-item">Export MIDI when something clicks, then drag it into your DAW and layer bass, drums, or a pad under it.</div>
-                </div>
-            </section>
-        </div>
+        <div id="app"></div>
     </div>
 
-    <script>
+    <script type="module">
     // @ts-check
+    import { h, render } from 'preact';
+    import { useState, useEffect, useMemo, useRef } from 'preact/hooks';
+    import htm from 'htm';
+    const html = htm.bind(h);
 
     /* ── Types (JSDoc) ───────────────────────────────────────────────────────── */
 
@@ -602,8 +526,7 @@
     function generateMelody(args) {
         const contour  = generateContour();
         const motifLen = Math.min(4, Math.max(3, Math.floor(args.length / 4)));
-        /** @type {number[]} */
-        const motif    = [];
+        /** @type {number[]} */ const motif = [];
         let degree = weightedChoice([{ value: 0, weight: 6 }, { value: 2, weight: 4 }, { value: 4, weight: 4 }]);
 
         for (let i = 0; i < motifLen; i++) {
@@ -626,25 +549,21 @@
             { value: /** @type {DurationName} */('2n'), weight: 3 },
             { value: /** @type {DurationName} */('1n'), weight: 1 },
         ];
-        /** @type {MelodyItem[]} */
-        const phrase = [];
+        /** @type {MelodyItem[]} */ const phrase = [];
         for (let i = 0; i < args.length; i++) {
             let d = motif[i % motifLen];
             if (i >= motifLen && Math.random() < 0.35)
                 d += weightedChoice([{ value: 0, weight: 5 }, { value: 1, weight: 2 }, { value: -1, weight: 2 }]);
             d = clamp(d, 0, 11);
             phrase.push({
-                degree: d,
-                note:   midiToNoteName(scaleDegreeToMidi(args.key, args.scale, d, 4)),
-                duration: weightedChoice(durWeights),
-                inversion: 0, octaveShift: 0,
+                degree: d, note: midiToNoteName(scaleDegreeToMidi(args.key, args.scale, d, 4)),
+                duration: weightedChoice(durWeights), inversion: 0, octaveShift: 0,
                 chordVariant: /** @type {ChordVariantName} */('triad'),
             });
         }
         const cadence = weightedChoice([{ value: 0, weight: 7 }, { value: 2, weight: 3 }, { value: 4, weight: 4 }]);
         phrase[phrase.length - 1] = {
-            degree: cadence,
-            note:   midiToNoteName(scaleDegreeToMidi(args.key, args.scale, cadence, 4)),
+            degree: cadence, note: midiToNoteName(scaleDegreeToMidi(args.key, args.scale, cadence, 4)),
             duration: '2n', inversion: 0, octaveShift: 0, chordVariant: 'triad',
         };
         return phrase;
@@ -720,9 +639,7 @@
      */
     function countShared(a, b) {
         if (!a || !b) return 0;
-        let n = 0;
-        a.forEach(v => { if (b.has(v)) n++; });
-        return n;
+        let n = 0; a.forEach(v => { if (b.has(v)) n++; }); return n;
     }
 
     /**
@@ -735,20 +652,19 @@
      */
     function getProgressionOptions(melody, index, keyRoot, scale, chordVariant) {
         const scaleLen = SCALES[scale].intervals.length;
-        const len      = melody.length;
+        const len = melody.length;
         const prevItem = melody[(index - 1 + len) % len];
         const nextItem = melody[(index + 1) % len];
-        const prev     = prevItem ? getPitchClassSet(keyRoot, scale, prevItem.degree, prevItem.chordVariant) : undefined;
-        const next     = nextItem ? getPitchClassSet(keyRoot, scale, nextItem.degree, nextItem.chordVariant) : undefined;
-
+        const prev = prevItem ? getPitchClassSet(keyRoot, scale, prevItem.degree, prevItem.chordVariant) : undefined;
+        const next = nextItem ? getPitchClassSet(keyRoot, scale, nextItem.degree, nextItem.chordVariant) : undefined;
         return Array.from({ length: scaleLen }, (_, degree) => {
             const candidate = getPitchClassSet(keyRoot, scale, degree, chordVariant);
-            const size      = candidate.size;
-            const prevSh    = countShared(candidate, prev);
-            const nextSh    = countShared(candidate, next);
-            const numeral   = getRomanNumeral(scale, degree);
-            const prevPct   = size ? Math.round((prevSh / size) * 100) : 0;
-            const nextPct   = size ? Math.round((nextSh / size) * 100) : 0;
+            const size = candidate.size;
+            const prevSh = countShared(candidate, prev);
+            const nextSh = countShared(candidate, next);
+            const numeral = getRomanNumeral(scale, degree);
+            const prevPct = size ? Math.round((prevSh / size) * 100) : 0;
+            const nextPct = size ? Math.round((nextSh / size) * 100) : 0;
             return { degree, label: `${numeral}  ←${prevPct}% ${nextPct}%→`, prevShared: prevSh, nextShared: nextSh, totalShared: prevSh + nextSh, prevPercent: prevPct, nextPercent: nextPct };
         }).sort((a, b) => b.totalShared - a.totalShared || b.prevPercent - a.prevPercent || b.nextPercent - a.nextPercent || a.degree - b.degree);
     }
@@ -773,11 +689,10 @@
      * @returns {Blob}
      */
     function makeMidiFile(melody, chordMode, keyRoot, scale, tempo) {
-        const tpq    = 480;
-        const micro  = Math.round(60000000 / tempo);
+        const tpq   = 480;
+        const micro = Math.round(60000000 / tempo);
         /** @type {Array<{tick:number, bytes:number[]}>} */
         const events = [{ tick: 0, bytes: [0xff, 0x51, 0x03, (micro >> 16) & 0xff, (micro >> 8) & 0xff, micro & 0xff] }];
-
         melodyToEvents(melody, chordMode, keyRoot, scale).forEach(ev => {
             const start = Math.round(ev.time * tpq);
             const dur   = Math.round((DURATION_TO_BEATS[ev.duration] ?? 1) * tpq);
@@ -786,63 +701,14 @@
                 events.push({ tick: start + dur, bytes: [0x80, midi, 0]   });
             });
         });
-
         events.sort((a, b) => a.tick - b.tick || a.bytes[0] - b.bytes[0]);
         let last = 0;
-        /** @type {number[]} */
-        const track = [];
-        for (const ev of events) {
-            track.push(...encodeVarLen(ev.tick - last), ...ev.bytes);
-            last = ev.tick;
-        }
+        /** @type {number[]} */ const track = [];
+        for (const ev of events) { track.push(...encodeVarLen(ev.tick - last), ...ev.bytes); last = ev.tick; }
         track.push(0x00, 0xff, 0x2f, 0x00);
-
         const header = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, (tpq >> 8) & 0xff, tpq & 0xff];
-        const trkHdr = [0x4d, 0x54, 0x72, 0x6b,
-            (track.length >> 24) & 0xff, (track.length >> 16) & 0xff,
-            (track.length >>  8) & 0xff,  track.length        & 0xff];
+        const trkHdr = [0x4d, 0x54, 0x72, 0x6b, (track.length >> 24) & 0xff, (track.length >> 16) & 0xff, (track.length >> 8) & 0xff, track.length & 0xff];
         return new Blob([new Uint8Array([...header, ...trkHdr, ...track])], { type: 'audio/midi' });
-    }
-
-    /* ── Staff SVG ───────────────────────────────────────────────────────────── */
-
-    /**
-     * Returns the inner HTML of an SVG showing notes on a staff.
-     * @param {number[]} midiNotes
-     * @returns {string}
-     */
-    function staffSVG(midiNotes) {
-        const noteNames      = [...midiNotes].sort((a, b) => a - b).map(midiToNoteName);
-        const staffLineSteps = [30, 32, 34, 36, 38];
-        const bottomStep     = 28;
-        /** @param {number} step @returns {number} */
-        const getY = step => 88 - (step - bottomStep) * 4;
-
-        const staffLines = staffLineSteps.map(s =>
-            `<line x1="12" y1="${getY(s)}" x2="108" y2="${getY(s)}" stroke="currentColor" stroke-opacity="0.25" stroke-width="2"/>`
-        ).join('');
-
-        const noteElems = noteNames.map((name, idx) => {
-            const step = noteNameToStaffStep(name);
-            const y    = getY(step);
-            const acc  = getAccidentalForNote(name);
-            const x    = 30 + idx * 30;
-            const ledgers = [];
-            if (step < staffLineSteps[0])
-                for (let s = staffLineSteps[0] - 2; s >= step; s -= 2) ledgers.push(s);
-            if (step > staffLineSteps[staffLineSteps.length - 1])
-                for (let s = staffLineSteps[staffLineSteps.length - 1] + 2; s <= step; s += 2) ledgers.push(s);
-
-            const ledgerSVG = ledgers.map(ls =>
-                `<line x1="${x - 12}" y1="${getY(ls)}" x2="${x + 12}" y2="${getY(ls)}" stroke="currentColor" stroke-width="2"/>`
-            ).join('');
-            const accSVG = acc
-                ? `<text x="${x - 14}" y="${y + 4}" font-size="14" text-anchor="middle" fill="currentColor">${acc}</text>`
-                : '';
-            return `<g>${ledgerSVG}${accSVG}<ellipse cx="${x}" cy="${y}" rx="7" ry="5.5" fill="currentColor" fill-opacity="0.9" transform="rotate(-18 ${x} ${y})"/><line x1="${x+7}" y1="${y}" x2="${x+7}" y2="${y-28}" stroke="currentColor" stroke-width="2"/></g>`;
-        }).join('');
-
-        return `<svg viewBox="0 0 120 100" style="width:100%;height:100%;overflow:visible" aria-hidden="true">${staffLines}${noteElems}</svg>`;
     }
 
     /* ── Player ──────────────────────────────────────────────────────────────── */
@@ -899,295 +765,324 @@
         dispose() { this.stop(); this.synth.dispose(); }
     }
 
-    /* ── State ───────────────────────────────────────────────────────────────── */
+    /* ── Components ──────────────────────────────────────────────────────────── */
 
-    const state = {
-        keyRoot:           'C',
-        /** @type {ScaleName} */      scale:             'minor',
-        length:            16,
-        tempo:             100,
-        surprise:          28,
-        loopEnabled:       false,
-        isPlaying:         false,
-        chordMode:         false,
-        /** @type {ChordVariantName} */ globalChordVariant: 'triad',
-        /** @type {MelodyItem[]} */   melody:            /** @type {MelodyItem[]} */([]),
-    };
-    state.melody = generateMelody({ key: state.keyRoot, scale: state.scale, length: state.length, surprise: state.surprise });
+    /**
+     * @param {{ notes: number[], onClick: () => void }} props
+     */
+    function StaffChordView({ notes, onClick }) {
+        const noteNames      = [...notes].sort((a, b) => a - b).map(midiToNoteName);
+        const staffLineSteps = [30, 32, 34, 36, 38];
+        const bottomStep     = 28;
+        /** @param {number} step @returns {number} */
+        const getY = step => 88 - (step - bottomStep) * 4;
 
-    const player = new MelodyPlayer();
-    /** @type {ReturnType<typeof setTimeout>|null} */
-    let stopTimer = null;
-
-    /* ── Populate selects ────────────────────────────────────────────────────── */
-
-    const ctrlKey         = /** @type {HTMLSelectElement} */(document.getElementById('ctrl-key'));
-    const ctrlScale       = /** @type {HTMLSelectElement} */(document.getElementById('ctrl-scale'));
-    const ctrlLength      = /** @type {HTMLSelectElement} */(document.getElementById('ctrl-length'));
-    const ctrlChordFamily = /** @type {HTMLSelectElement} */(document.getElementById('ctrl-chord-family'));
-    const ctrlTempo       = /** @type {HTMLInputElement}  */(document.getElementById('ctrl-tempo'));
-    const ctrlSurprise    = /** @type {HTMLInputElement}  */(document.getElementById('ctrl-surprise'));
-
-    KEYS.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; ctrlKey.appendChild(o); });
-    Object.entries(SCALES).forEach(([v, cfg]) => { const o = document.createElement('option'); o.value = v; o.textContent = cfg.label; ctrlScale.appendChild(o); });
-    LENGTHS.forEach(n => { const o = document.createElement('option'); o.value = String(n); o.textContent = `${n} notes`; ctrlLength.appendChild(o); });
-    Object.entries(CHORD_VARIANTS).forEach(([v, cfg]) => { const o = document.createElement('option'); o.value = v; o.textContent = cfg.label; ctrlChordFamily.appendChild(o); });
-
-    ctrlKey.value         = state.keyRoot;
-    ctrlScale.value       = state.scale;
-    ctrlLength.value      = String(state.length);
-    ctrlChordFamily.value = state.globalChordVariant;
-
-    /* ── Helpers ─────────────────────────────────────────────────────────────── */
-
-    /** @param {string} s @returns {string} */
-    function escHtml(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        return html`
+            <button class="staff-btn" onClick=${onClick} title="Click to cycle inversion">
+                <svg viewBox="0 0 120 100" style="width:100%;height:100%;overflow:visible" aria-hidden="true">
+                    ${staffLineSteps.map(s => html`
+                        <line key=${s} x1="12" y1=${getY(s)} x2="108" y2=${getY(s)}
+                              stroke="currentColor" stroke-opacity="0.25" stroke-width="2" />`)}
+                    ${noteNames.map((name, idx) => {
+                        const step = noteNameToStaffStep(name);
+                        const y    = getY(step);
+                        const acc  = getAccidentalForNote(name);
+                        const x    = 30 + idx * 30;
+                        const ledgers = [];
+                        if (step < staffLineSteps[0])
+                            for (let s = staffLineSteps[0] - 2; s >= step; s -= 2) ledgers.push(s);
+                        if (step > staffLineSteps[staffLineSteps.length - 1])
+                            for (let s = staffLineSteps[staffLineSteps.length - 1] + 2; s <= step; s += 2) ledgers.push(s);
+                        return html`
+                            <g key=${`${name}-${idx}`}>
+                                ${ledgers.map(ls => html`<line key=${ls} x1=${x-12} y1=${getY(ls)} x2=${x+12} y2=${getY(ls)} stroke="currentColor" stroke-width="2" />`)}
+                                ${acc && html`<text x=${x-14} y=${y+4} font-size="14" text-anchor="middle" fill="currentColor">${acc}</text>`}
+                                <ellipse cx=${x} cy=${y} rx="7" ry="5.5" fill="currentColor" fill-opacity="0.9" transform=${`rotate(-18 ${x} ${y})`} />
+                                <line x1=${x+7} y1=${y} x2=${x+7} y2=${y-28} stroke="currentColor" stroke-width="2" />
+                            </g>`;
+                    })}
+                </svg>
+            </button>`;
     }
 
-    function updateBadges() {
-        const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-        set('badge-key',   `${state.keyRoot} ${SCALES[state.scale].label}`);
-        set('badge-tempo', `${state.tempo} BPM`);
-        set('badge-mode',  state.chordMode ? 'Chord Mode' : 'Single Notes');
-        set('lbl-tempo',   String(state.tempo));
-        set('lbl-surprise', String(state.surprise));
-    }
+    /**
+     * @param {{
+     *   item: MelodyItem, index: number, melody: MelodyItem[],
+     *   keyRoot: string, scale: ScaleName, chordMode: boolean,
+     *   stats: {min:number, max:number},
+     *   onCycleInv: (i:number)=>void, onOctUp: (i:number)=>void, onOctDown: (i:number)=>void,
+     *   onPreview: (i:number)=>void, onDegree: (i:number, d:number)=>void,
+     *   onChordVariant: (i:number, v:ChordVariantName)=>void, onDuration: (i:number, d:DurationName)=>void
+     * }} props
+     */
+    function Tile({ item, index, melody, keyRoot, scale, chordMode, stats,
+                    onCycleInv, onOctUp, onOctDown, onPreview, onDegree, onChordVariant, onDuration }) {
+        const chord    = buildChordFromDegree(keyRoot, scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
+        const midis    = chordMode ? chord.notes : [noteNameToMidi(item.note) + (item.octaveShift || 0) * 12];
+        const label    = chordMode
+            ? `${getRomanNumeral(scale, item.degree)} · ${chord.label}`
+            : `${getRomanNumeral(scale, item.degree)} · ${midiToNoteName(midis[0])}`;
+        const progOpts = getProgressionOptions(melody, index, keyRoot, scale, item.chordVariant);
+        const invCount = buildChordFromDegree(keyRoot, scale, item.degree, 0, item.octaveShift || 0, item.chordVariant).notes.length;
+        const range    = Math.max(1, stats.max - stats.min);
+        const pct      = ((midis[0] - stats.min) / range) * 80 + 20;
 
-    function updateProgression() {
-        const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-        set('progression-label', getProgressionLabel(state.melody, state.scale));
-        const stats = pitchStats(state.melody, state.chordMode, state.keyRoot, state.scale);
-        set('range-label',       `${midiToNoteName(stats.min)} → ${midiToNoteName(stats.max)}`);
-        set('phrase-mode-label', state.chordMode ? 'Chord Staff' : 'Phrase');
-        updateBadges();
-    }
-
-    /* ── Render tiles ────────────────────────────────────────────────────────── */
-
-    function renderTiles() {
-        const grid = document.getElementById('tile-grid');
-        if (!grid) return;
-        const stats = pitchStats(state.melody, state.chordMode, state.keyRoot, state.scale);
-        const range = Math.max(1, stats.max - stats.min);
-
-        grid.innerHTML = state.melody.map((item, index) => {
-            const chord     = buildChordFromDegree(state.keyRoot, state.scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
-            const noteMidis = state.chordMode ? chord.notes : [noteNameToMidi(item.note) + (item.octaveShift || 0) * 12];
-            const label     = state.chordMode
-                ? `${getRomanNumeral(state.scale, item.degree)} · ${chord.label}`
-                : `${getRomanNumeral(state.scale, item.degree)} · ${midiToNoteName(noteMidis[0])}`;
-            const progOpts = getProgressionOptions(state.melody, index, state.keyRoot, state.scale, item.chordVariant);
-            const invCount = buildChordFromDegree(state.keyRoot, state.scale, item.degree, 0, item.octaveShift || 0, item.chordVariant).notes.length;
-            const pct      = ((noteMidis[0] - stats.min) / range) * 80 + 20;
-
-            const noteDisplay = state.chordMode
-                ? `<button class="staff-btn" data-action="cycle-inv" data-index="${index}" title="Click to cycle inversion">${staffSVG(noteMidis)}</button>`
-                : `<button class="note-bar"  data-action="cycle-inv" data-index="${index}" title="Click to cycle inversion"><div class="note-bar-fill" style="height:${pct.toFixed(1)}%"></div></button>`;
-
-            const progOpts_html = progOpts.map(o =>
-                `<option value="${o.degree}"${o.degree === item.degree ? ' selected' : ''}>${escHtml(o.label)}</option>`
-            ).join('');
-
-            const variantOpts_html = Object.entries(CHORD_VARIANTS).map(([v, cfg]) =>
-                `<option value="${v}"${v === item.chordVariant ? ' selected' : ''}>${cfg.label}</option>`
-            ).join('');
-
-            const durIdx = durationToSliderIndex(item.duration);
-
-            return `<div class="tile" style="animation-delay:${(index * 0.018).toFixed(3)}s">
-                ${noteDisplay}
-                <div class="tile-title">${escHtml(label)}</div>
+        return html`
+            <div class="tile">
+                ${chordMode
+                    ? html`<${StaffChordView} notes=${midis} onClick=${() => onCycleInv(index)} />`
+                    : html`<button class="note-bar" onClick=${() => onCycleInv(index)} title="Click to cycle inversion">
+                               <div class="note-bar-fill" style=${{ height: `${pct.toFixed(1)}%` }}></div>
+                           </button>`}
+                <div class="tile-title">${label}</div>
                 <div class="tile-controls">
                     <div class="field">
                         <label class="tile-tiny">Progression</label>
-                        <select class="seq-select small" data-action="degree" data-index="${index}">${progOpts_html}</select>
+                        <select class="seq-select" value=${item.degree} onChange=${e => onDegree(index, parseInt(e.target.value, 10))}>
+                            ${progOpts.map(o => html`<option key=${o.degree} value=${o.degree}>${o.label}</option>`)}
+                        </select>
                     </div>
                     <div class="field">
                         <label class="tile-tiny">Chord</label>
-                        <select class="seq-select small" data-action="chord-variant" data-index="${index}">${variantOpts_html}</select>
+                        <select class="seq-select" value=${item.chordVariant} onChange=${e => onChordVariant(index, e.target.value)}>
+                            ${Object.entries(CHORD_VARIANTS).map(([v, cfg]) => html`<option key=${v} value=${v}>${cfg.label}</option>`)}
+                        </select>
                     </div>
                     <div class="field">
                         <label class="tile-tiny">Duration: ${item.duration}</label>
-                        <input type="range" min="0" max="${DURATION_OPTIONS.length - 1}" step="1" value="${durIdx}" data-action="duration" data-index="${index}">
-                        <div class="tile-tiny" style="display:flex;justify-content:space-between"><span>1n</span><span>2n</span><span>4n</span><span>8n</span></div>
+                        <input type="range" min="0" max=${DURATION_OPTIONS.length - 1} step="1"
+                               value=${durationToSliderIndex(item.duration)}
+                               onChange=${e => onDuration(index, sliderIndexToDuration(parseInt(e.target.value, 10)))} />
+                        <div class="tile-tiny" style="display:flex;justify-content:space-between">
+                            <span>1n</span><span>2n</span><span>4n</span><span>8n</span>
+                        </div>
                     </div>
                 </div>
                 <div class="tile-actions">
-                    <button class="small-btn" data-action="preview"  data-index="${index}">🔊</button>
-                    <button class="small-btn" data-action="oct-down" data-index="${index}">-8</button>
-                    <button class="small-btn" data-action="oct-up"   data-index="${index}">+8</button>
+                    <button class="small-btn" onClick=${() => onPreview(index)}>Test</button>
+                    <button class="small-btn" onClick=${() => onOctDown(index)}>-8va</button>
+                    <button class="small-btn" onClick=${() => onOctUp(index)}>+8va</button>
                 </div>
                 <div class="tile-tiny">Inversion ${(item.inversion || 0) + 1}/${invCount} · Octave ${formatOctaveShift(item.octaveShift || 0)}</div>
             </div>`;
-        }).join('');
-
-        updateProgression();
     }
 
-    /* ── Event delegation: tile grid ─────────────────────────────────────────── */
+    /* ── App ─────────────────────────────────────────────────────────────────── */
 
-    const grid = /** @type {HTMLElement} */(document.getElementById('tile-grid'));
+    function App() {
+        const [keyRoot,           setKeyRoot]           = useState('C');
+        const [scale,             setScale]             = useState(/** @type {ScaleName} */('minor'));
+        const [length,            setLength]            = useState(16);
+        const [tempo,             setTempo]             = useState(100);
+        const [surprise,          setSurprise]          = useState(28);
+        const [loopEnabled,       setLoopEnabled]       = useState(false);
+        const [isPlaying,         setIsPlaying]         = useState(false);
+        const [chordMode,         setChordMode]         = useState(false);
+        const [globalChordVariant, setGlobalChordVariant] = useState(/** @type {ChordVariantName} */('triad'));
+        const [melody,            setMelody]            = useState(() =>
+            generateMelody({ key: 'C', scale: 'minor', length: 16, surprise: 28 }));
 
-    grid.addEventListener('click', e => {
-        const target = /** @type {HTMLElement} */(e.target).closest('[data-action]');
-        if (!target) return;
-        const action = target.getAttribute('data-action');
-        const index  = parseInt(target.getAttribute('data-index') ?? '0', 10);
-        const item   = state.melody[index];
-        if (!item) return;
+        /** @type {{ current: MelodyPlayer|null }} */
+        const playerRef   = useRef(null);
+        /** @type {{ current: ReturnType<typeof setTimeout>|null }} */
+        const stopTimerRef = useRef(null);
 
-        if (action === 'cycle-inv') {
-            const count = buildChordFromDegree(state.keyRoot, state.scale, item.degree, 0, item.octaveShift || 0, item.chordVariant).notes.length;
-            state.melody = state.melody.map((m, i) =>
-                i === index ? { ...m, inversion: ((m.inversion || 0) + 1) % Math.max(1, count) } : m);
-            renderTiles();
-        } else if (action === 'preview') {
-            previewItem(index);
-        } else if (action === 'oct-up') {
-            state.melody = state.melody.map((m, i) => i === index ? { ...m, octaveShift: (m.octaveShift || 0) + 1 } : m);
-            renderTiles();
-        } else if (action === 'oct-down') {
-            state.melody = state.melody.map((m, i) => i === index ? { ...m, octaveShift: (m.octaveShift || 0) - 1 } : m);
-            renderTiles();
-        }
-    });
+        useEffect(() => {
+            playerRef.current = new MelodyPlayer();
+            return () => {
+                playerRef.current?.dispose();
+                if (stopTimerRef.current !== null) clearTimeout(stopTimerRef.current);
+            };
+        }, []);
 
-    grid.addEventListener('change', e => {
-        const target = /** @type {HTMLElement} */(e.target);
-        const action = target.getAttribute('data-action');
-        const index  = parseInt(target.getAttribute('data-index') ?? '0', 10);
-        const item   = state.melody[index];
-        if (!action || !item) return;
+        useEffect(() => {
+            setMelody(cur => cur.map(item => syncItemNoteToDegree(item, keyRoot, scale)));
+        }, [keyRoot, scale]);
 
-        if (action === 'degree') {
-            const next = parseInt(/** @type {HTMLSelectElement} */(target).value, 10);
-            state.melody = state.melody.map((m, i) => i === index ? syncItemNoteToDegree(m, state.keyRoot, state.scale, next) : m);
-            renderTiles();
-        } else if (action === 'chord-variant') {
-            const next = /** @type {ChordVariantName} */(/** @type {HTMLSelectElement} */(target).value);
-            state.melody = state.melody.map((m, i) => {
-                if (i !== index) return m;
-                const count = buildChordFromDegree(state.keyRoot, state.scale, m.degree, 0, m.octaveShift || 0, next).notes.length;
-                return { ...m, chordVariant: next, inversion: (m.inversion || 0) % Math.max(1, count) };
-            });
-            renderTiles();
-        } else if (action === 'duration') {
-            const next = sliderIndexToDuration(parseInt(/** @type {HTMLInputElement} */(target).value, 10));
-            state.melody = state.melody.map((m, i) => i === index ? { ...m, duration: next } : m);
-            renderTiles();
-        }
-    });
+        const stats     = useMemo(() => pitchStats(melody, chordMode, keyRoot, scale), [melody, chordMode, keyRoot, scale]);
+        const progLabel = useMemo(() => getProgressionLabel(melody, scale), [melody, scale]);
 
-    /* ── Top control events ──────────────────────────────────────────────────── */
+        const stopPlayback = () => {
+            playerRef.current?.stop();
+            if (stopTimerRef.current !== null) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
+            setIsPlaying(false);
+        };
 
-    ctrlKey.addEventListener('change', () => {
-        state.keyRoot = ctrlKey.value;
-        state.melody  = state.melody.map(item => syncItemNoteToDegree(item, state.keyRoot, state.scale));
-        renderTiles();
-    });
+        const play = async () => {
+            if (!playerRef.current) return;
+            stopPlayback();
+            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled);
+            setIsPlaying(true);
+            if (!loopEnabled) {
+                const ms = (60 / tempo) * beats * 1000 + 250;
+                stopTimerRef.current = setTimeout(() => { setIsPlaying(false); stopTimerRef.current = null; }, ms);
+            }
+        };
 
-    ctrlScale.addEventListener('change', () => {
-        state.scale  = /** @type {ScaleName} */(ctrlScale.value);
-        state.melody = state.melody.map(item => syncItemNoteToDegree(item, state.keyRoot, state.scale));
-        renderTiles();
-    });
+        const regenerate = () => setMelody(
+            generateMelody({ key: keyRoot, scale, length, surprise }).map(item => ({ ...item, chordVariant: globalChordVariant })));
 
-    ctrlLength.addEventListener('change', () => { state.length = parseInt(ctrlLength.value, 10); });
+        const vary = () => setMelody(cur => mutateMelody(cur));
 
-    ctrlChordFamily.addEventListener('change', () => {
-        state.globalChordVariant = /** @type {ChordVariantName} */(ctrlChordFamily.value);
-        state.melody = state.melody.map(m => {
-            const count = buildChordFromDegree(state.keyRoot, state.scale, m.degree, 0, m.octaveShift || 0, state.globalChordVariant).notes.length;
-            return { ...m, chordVariant: state.globalChordVariant, inversion: (m.inversion || 0) % Math.max(1, count) };
-        });
-        renderTiles();
-    });
+        const cycleInversion = (/** @type {number} */ index) => setMelody(cur => cur.map((item, i) => {
+            if (i !== index) return item;
+            const count = buildChordFromDegree(keyRoot, scale, item.degree, 0, item.octaveShift || 0, item.chordVariant).notes.length;
+            return { ...item, inversion: ((item.inversion || 0) + 1) % Math.max(1, count) };
+        }));
 
-    ctrlTempo.addEventListener('input', () => { state.tempo = parseInt(ctrlTempo.value, 10); updateBadges(); });
-    ctrlSurprise.addEventListener('input', () => { state.surprise = parseInt(ctrlSurprise.value, 10); updateBadges(); });
+        const shiftOctaveUp   = (/** @type {number} */ index) => setMelody(cur => cur.map((item, i) => i === index ? { ...item, octaveShift: (item.octaveShift || 0) + 1 } : item));
+        const shiftOctaveDown = (/** @type {number} */ index) => setMelody(cur => cur.map((item, i) => i === index ? { ...item, octaveShift: (item.octaveShift || 0) - 1 } : item));
 
-    /* ── Button events ───────────────────────────────────────────────────────── */
+        const updateDuration = (/** @type {number} */ index, /** @type {DurationName} */ next) =>
+            setMelody(cur => cur.map((item, i) => i === index ? { ...item, duration: next } : item));
 
-    document.getElementById('btn-generate')?.addEventListener('click', () => {
-        state.melody = generateMelody({ key: state.keyRoot, scale: state.scale, length: state.length, surprise: state.surprise })
-            .map(item => ({ ...item, chordVariant: state.globalChordVariant }));
-        renderTiles();
-    });
+        const updateDegree = (/** @type {number} */ index, /** @type {number} */ next) =>
+            setMelody(cur => cur.map((item, i) => i === index ? syncItemNoteToDegree(item, keyRoot, scale, next) : item));
 
-    document.getElementById('btn-vary')?.addEventListener('click', () => {
-        state.melody = mutateMelody(state.melody);
-        renderTiles();
-    });
+        const updateChordVariant = (/** @type {number} */ index, /** @type {ChordVariantName} */ next) =>
+            setMelody(cur => cur.map((item, i) => {
+                if (i !== index) return item;
+                const count = buildChordFromDegree(keyRoot, scale, item.degree, 0, item.octaveShift || 0, next).notes.length;
+                return { ...item, chordVariant: next, inversion: (item.inversion || 0) % Math.max(1, count) };
+            }));
 
-    document.getElementById('btn-loop')?.addEventListener('click', () => {
-        state.loopEnabled = !state.loopEnabled;
-        const btn = /** @type {HTMLButtonElement} */(document.getElementById('btn-loop'));
-        btn.textContent = state.loopEnabled ? '⟳ Looping' : '⟳ Loop Off';
-        btn.className   = state.loopEnabled ? 'btn active'  : 'btn secondary';
-    });
+        const updateAllChordVariants = (/** @type {ChordVariantName} */ next) => {
+            setGlobalChordVariant(next);
+            setMelody(cur => cur.map(item => {
+                const count = buildChordFromDegree(keyRoot, scale, item.degree, 0, item.octaveShift || 0, next).notes.length;
+                return { ...item, chordVariant: next, inversion: (item.inversion || 0) % Math.max(1, count) };
+            }));
+        };
 
-    document.getElementById('btn-chord-mode')?.addEventListener('click', () => {
-        state.chordMode = !state.chordMode;
-        const btn = /** @type {HTMLButtonElement} */(document.getElementById('btn-chord-mode'));
-        btn.textContent = state.chordMode ? '⊞ Chord Mode On' : '⊞ Chord Mode';
-        btn.className   = state.chordMode ? 'btn active'       : 'btn secondary';
-        renderTiles();
-    });
+        const previewItem = async (/** @type {number} */ index) => {
+            const item = melody[index];
+            if (!item || !playerRef.current) return;
+            if (chordMode) {
+                const chord = buildChordFromDegree(keyRoot, scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
+                await playerRef.current.preview(chord.notes.map(midiToNoteName), item.duration);
+            } else {
+                const midi = noteNameToMidi(item.note) + (item.octaveShift || 0) * 12;
+                await playerRef.current.preview(midiToNoteName(midi), item.duration);
+            }
+        };
 
-    function stopPlayback() {
-        player.stop();
-        if (stopTimer !== null) { clearTimeout(stopTimer); stopTimer = null; }
-        state.isPlaying = false;
-        const dot = document.getElementById('status-dot');
-        if (dot) dot.textContent = 'Ready';
+        const exportMidi = () => {
+            const blob = makeMidiFile(melody, chordMode, keyRoot, scale, tempo);
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = `sequencer-${keyRoot}-${scale}-${chordMode ? 'chords' : 'melody'}.mid`;
+            a.click(); URL.revokeObjectURL(url);
+        };
+
+        return html`
+            <div class="panel-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <div class="badges">
+                            <span class="badge">${keyRoot} ${SCALES[scale].label}</span>
+                            <span class="badge">${tempo} BPM</span>
+                            <span class="badge">${chordMode ? 'Chord Mode' : 'Single Notes'}</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="controls-grid">
+                            <div class="field">
+                                <label>Key</label>
+                                <select class="seq-select" value=${keyRoot} onChange=${e => setKeyRoot(e.target.value)}>
+                                    ${KEYS.map(k => html`<option key=${k} value=${k}>${k}</option>`)}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Scale</label>
+                                <select class="seq-select" value=${scale} onChange=${e => setScale(e.target.value)}>
+                                    ${Object.entries(SCALES).map(([v, cfg]) => html`<option key=${v} value=${v}>${cfg.label}</option>`)}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Phrase Length</label>
+                                <select class="seq-select" value=${length} onChange=${e => setLength(parseInt(e.target.value, 10))}>
+                                    ${LENGTHS.map(n => html`<option key=${n} value=${n}>${n} notes</option>`)}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Chord Family</label>
+                                <select class="seq-select" value=${globalChordVariant} onChange=${e => updateAllChordVariants(e.target.value)}>
+                                    ${Object.entries(CHORD_VARIANTS).map(([v, cfg]) => html`<option key=${v} value=${v}>${cfg.label}</option>`)}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Tempo: ${tempo}</label>
+                                <input type="range" min="50" max="180" step="1" value=${tempo}
+                                       onChange=${e => setTempo(parseInt(e.target.value, 10))} />
+                            </div>
+                        </div>
+
+                        <div class="toolbar-row">
+                            <div class="field">
+                                <label>Surprise: ${surprise}%</label>
+                                <input type="range" min="0" max="100" step="1" value=${surprise}
+                                       onChange=${e => setSurprise(parseInt(e.target.value, 10))} />
+                            </div>
+                            <div class="action-row" style="margin-bottom:0">
+                                <button class="btn primary" onClick=${regenerate}>✦ Generate</button>
+                                <button class="btn secondary" onClick=${vary}>↻ Variation</button>
+                                <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${() => setLoopEnabled(v => !v)}>
+                                    ⟳ ${loopEnabled ? 'Looping' : 'Loop Off'}
+                                </button>
+                                <button class=${chordMode ? 'btn active' : 'btn secondary'} onClick=${() => setChordMode(v => !v)}>
+                                    ⊞ ${chordMode ? 'Chord Mode On' : 'Chord Mode'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="action-row">
+                            <button class="btn primary"   onClick=${play}>▶ Play</button>
+                            <button class="btn danger"    onClick=${stopPlayback}>■ Stop</button>
+                            <button class="btn secondary" onClick=${exportMidi}>↓ Export MIDI</button>
+                            <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
+                        </div>
+
+                        <div class="progression-bar">
+                            <div>
+                                <div style="font-size:16px;font-weight:700;color:#eef2ff">
+                                    ${chordMode ? 'Chord Staff' : 'Phrase'}
+                                </div>
+                                <div class="progression-label">Progression: ${progLabel}</div>
+                            </div>
+                            <div class="progression-label">
+                                Range: ${midiToNoteName(stats.min)} → ${midiToNoteName(stats.max)}
+                            </div>
+                        </div>
+
+                        <div class="tile-grid">
+                            ${melody.map((item, index) => html`
+                                <${Tile} key=${index}
+                                    item=${item} index=${index} melody=${melody}
+                                    keyRoot=${keyRoot} scale=${scale} chordMode=${chordMode} stats=${stats}
+                                    onCycleInv=${cycleInversion} onOctUp=${shiftOctaveUp} onOctDown=${shiftOctaveDown}
+                                    onPreview=${previewItem} onDegree=${updateDegree}
+                                    onChordVariant=${updateChordVariant} onDuration=${updateDuration} />`)}
+                        </div>
+
+                        <p class="tile-tiny" style="margin-top:12px;text-align:left">
+                            Progression overlap shows percentages based on the number of notes in the currently selected chord variant, including loop wraparound.
+                        </p>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-content sidebar-list">
+                        <div class="sidebar-item">Use single-note mode to hear hook contour first, then switch to chord mode to see whether the harmony suggests a verse or chorus.</div>
+                        <div class="sidebar-item">Try higher-overlap choices for smoother voice leading, then change the chord variant per tile to hear how sevenths, ninths, and altered fifths change the overlap ranking.</div>
+                        <div class="sidebar-item">Longer durations can turn a busy phrase into something hooky. Shorter durations can make the same harmony feel like a riff instead of a pad.</div>
+                        <div class="sidebar-item">Use the top-level Chord Family control when you want music-theory-based harmony across the whole phrase, then override individual tiles when one chord wants to break the pattern.</div>
+                        <div class="sidebar-item">Export MIDI when something clicks, then drag it into your DAW and layer bass, drums, or a pad under it.</div>
+                    </div>
+                </section>
+            </div>`;
     }
 
-    document.getElementById('btn-play')?.addEventListener('click', async () => {
-        stopPlayback();
-        const beats = await player.play(state.melody, state.chordMode, state.keyRoot, state.scale, state.tempo, state.loopEnabled);
-        state.isPlaying = true;
-        const dot = document.getElementById('status-dot');
-        if (dot) dot.textContent = 'Now playing';
-        if (!state.loopEnabled) {
-            const ms = (60 / state.tempo) * beats * 1000 + 250;
-            stopTimer = setTimeout(() => {
-                state.isPlaying = false;
-                if (dot) dot.textContent = 'Ready';
-                stopTimer = null;
-            }, ms);
-        }
-    });
-
-    document.getElementById('btn-stop')?.addEventListener('click', stopPlayback);
-
-    document.getElementById('btn-export')?.addEventListener('click', () => {
-        const blob = makeMidiFile(state.melody, state.chordMode, state.keyRoot, state.scale, state.tempo);
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = `sequencer-${state.keyRoot}-${state.scale}-${state.chordMode ? 'chords' : 'melody'}.mid`;
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-    /* ── Preview ─────────────────────────────────────────────────────────────── */
-
-    /** @param {number} index @returns {Promise<void>} */
-    async function previewItem(index) {
-        const item = state.melody[index];
-        if (!item) return;
-        if (state.chordMode) {
-            const chord = buildChordFromDegree(state.keyRoot, state.scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
-            await player.preview(chord.notes.map(midiToNoteName), item.duration);
-        } else {
-            const midi = noteNameToMidi(item.note) + (item.octaveShift || 0) * 12;
-            await player.preview(midiToNoteName(midi), item.duration);
-        }
-    }
-
-    /* ── Init ────────────────────────────────────────────────────────────────── */
-
-    renderTiles();
+    render(html`<${App} />`, document.getElementById('app'));
     </script>
     <script src="./util.js"></script>
 </body>
