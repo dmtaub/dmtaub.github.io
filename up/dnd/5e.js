@@ -1091,7 +1091,7 @@ document.getElementById('btnAddNpc').addEventListener('click', () =>
 // ─── PLAYER ROLL PROMPTS ─────────────────────────────────────────────────────
 const PLAYER_ROLL_PROMPTS = [
   {
-    die: 'D4', title: 'Swarm Reinforcements',
+    die: 'D4', tab: 'encounters', title: 'Swarm Reinforcements',
     context: 'Use mid-battle when enemies are arriving in waves and the scale is uncertain.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how many enemies push through this round."',
     outcomes: [
@@ -1102,7 +1102,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D6', title: 'Reinforcement Timer',
+    die: 'D6', tab: 'encounters', title: 'Reinforcement Timer',
     context: 'When the party knows enemy backup is coming and needs to finish quickly.',
     prompt: 'Ask the player at the start of combat: "Roll a D6 — that\'s how many rounds you have."',
     outcomes: [
@@ -1115,7 +1115,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Witness Memory',
+    die: 'D4', tab: 'npcs', title: 'Witness Memory',
     context: 'When interviewing an NPC about something they saw.',
     prompt: 'Ask the player: "Roll a D4 — that\'s how clearly the witness remembers things."',
     outcomes: [
@@ -1126,7 +1126,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D4', title: 'Storm Duration',
+    die: 'D4', tab: 'environment', title: 'Storm Duration',
     context: 'When weather is a meaningful obstacle or deadline for travel or action.',
     prompt: 'Ask the player: "Roll a D4 — how many hours does the storm last?"',
     outcomes: [
@@ -1137,7 +1137,7 @@ const PLAYER_ROLL_PROMPTS = [
     ],
   },
   {
-    die: 'D6', title: 'Supply Cache',
+    die: 'D6', tab: 'environment', title: 'Supply Cache',
     context: 'When the party finds abandoned supplies, a ransacked camp, or a hidden cache.',
     prompt: 'Ask the player: "Roll a D6 — that\'s how many days of rations (or potion uses) are left."',
     outcomes: [
