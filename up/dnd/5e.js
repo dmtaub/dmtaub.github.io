@@ -1291,6 +1291,22 @@ function buildPlayerRolls() {
       clearTimeout(prTipTimer);
       prTooltip.classList.remove('visible');
     });
+    const btn = h.querySelector('.btn-roll');
+    if (btn) {
+      btn.addEventListener('mouseenter', () => {
+        clearTimeout(prTipTimer);
+        prTooltip.classList.remove('visible');
+      });
+      btn.addEventListener('mouseleave', e => {
+        if (h.contains(e.relatedTarget)) {
+          prTipTimer = setTimeout(() => {
+            const body = document.getElementById('prbody-' + h.dataset.prIdx);
+            if (body?.classList.contains('open')) return;
+            showPrTooltip(h);
+          }, 100);
+        }
+      });
+    }
   });
 
   container.querySelectorAll('.btn-roll[data-pr-idx]').forEach(btn => {
