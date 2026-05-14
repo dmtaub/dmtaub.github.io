@@ -32,7 +32,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         .card-header { padding: 20px 20px 8px; }
-        .card-content { padding: 20px; }
+        .card-content { padding: 20px; container-type: inline-size; }
 
         .badges { display: flex; gap: 8px; flex-wrap: wrap; }
         .badge {
@@ -68,6 +68,7 @@
             flex-wrap: wrap;
             align-items: center;
             margin-bottom: 16px;
+            
         }
 
         .field label {
@@ -138,7 +139,7 @@
         }
         .tile-grid.cols-8 { grid-template-columns: repeat(8, minmax(0, 1fr)); }
         @media (max-width: 900px)  { .tile-grid.cols-8 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (max-width: 500px)  { .tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @container (max-width: 560px) { .tile-grid, .tile-grid.cols-8 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
         .tile {
             container-type: inline-size;
@@ -1055,49 +1056,51 @@
                                     ${LENGTHS.map(n => html`<option key=${n} value=${n}>${n} notes</option>`)}
                                 </select>
                             </div>
-                            <div class="field">
+                            ${chordMode && html`<div class="field">
                                 <label>Chord Family</label>
                                 <select class="seq-select" value=${globalChordVariant} onChange=${e => updateAllChordVariants(e.target.value)}>
                                     ${Object.entries(CHORD_VARIANTS).map(([v, cfg]) => html`<option key=${v} value=${v}>${cfg.label}</option>`)}
                                 </select>
-                            </div>
-                            <div class="field">
-                                <label>Tempo: ${tempo}</label>
-                                <input type="range" min="50" max="180" step="1" value=${tempo}
-                                       onChange=${e => setTempo(parseInt(e.target.value, 10))} />
-                            </div>
+                            </div>`}
                         </div>
 
                         <div class="toolbar-row">
-                            <div class="field">
-                                <label>Surprise: ${surprise}%</label>
-                                <input type="range" min="0" max="100" step="1" value=${surprise}
-                                       onChange=${e => setSurprise(parseInt(e.target.value, 10))} />
+                            <div style="display:grid;gap:10px">
+                                <div class="field">
+                                    <label>Tempo: ${tempo}</label>
+                                    <input type="range" min="50" max="180" step="1" value=${tempo}
+                                           onChange=${e => setTempo(parseInt(e.target.value, 10))} />
+                                </div>
+                                <div class="field">
+                                    <label>Surprise: ${surprise}%</label>
+                                    <input type="range" min="0" max="100" step="1" value=${surprise}
+                                           onChange=${e => setSurprise(parseInt(e.target.value, 10))} />
+                                </div>
                             </div>
-                            <div class="action-row" style="margin-bottom:0">
-                                <button class="btn primary" onClick=${regenerate}>✦ Generate</button>
-                                <button class="btn secondary" onClick=${vary}>↻ Variation</button>
-                                <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${() => setLoopEnabled(v => !v)}>
-                                    ⟳ ${loopEnabled ? 'Looping' : 'Loop Off'}
-                                </button>
-                                <button class=${chordMode ? 'btn active' : 'btn secondary'} onClick=${() => setChordMode(v => !v)}>
-                                    ⊞ ${chordMode ? 'Chord Mode On' : 'Chord Mode'}
-                                </button>
+                            <div style="display:grid;gap:10px">
+                                <div class="action-row" style="margin-bottom:0">
+                                    <button class="btn primary" onClick=${regenerate}>✦ Generate</button>
+                                    <button class="btn secondary" onClick=${vary}>↻ Variation</button>
+                                    <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${() => setLoopEnabled(v => !v)}>
+                                        ⟳ ${loopEnabled ? 'Looping' : 'Loop Off'}
+                                    </button>
+                                </div>
+                                <div class="action-row" style="margin-bottom:0">
+                                    <button class="btn primary"   onClick=${play}>▶ Play</button>
+                                    <button class="btn danger"    onClick=${stopPlayback}>■ Stop</button>
+                                    <button class="btn secondary" onClick=${exportMidi}>↓ Export MIDI</button>
+                                    <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="action-row">
-                            <button class="btn primary"   onClick=${play}>▶ Play</button>
-                            <button class="btn danger"    onClick=${stopPlayback}>■ Stop</button>
-                            <button class="btn secondary" onClick=${exportMidi}>↓ Export MIDI</button>
-                            <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
                         </div>
 
                         <div class="progression-bar">
                             <div>
-                                <div style="font-size:16px;font-weight:700;color:#eef2ff">
-                                    ${chordMode ? 'Chord Staff' : 'Phrase'}
-                                </div>
+                                <button class=${chordMode ? 'btn active' : 'btn secondary'}
+                                        style="display:block;width:90%;margin:0.75rem auto 0.5rem;text-align:center;justify-content:center"
+                                        onClick=${() => setChordMode(v => !v)}>
+                                    ⊞ ${chordMode ? 'Phrase Mode' : 'Chord Mode'}
+                                </button>
                                 <div class="progression-label">Progression: ${progLabel}</div>
                             </div>
                             <div class="progression-label">
