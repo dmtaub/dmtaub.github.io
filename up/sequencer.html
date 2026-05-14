@@ -88,9 +88,27 @@
             font: inherit;
             font-size: 12px;
         }
+        .seq-select { text-align-last: center; }
         .seq-select.small { padding: 1px 2px; font-size: 8px; }
         @container (min-width: 140px) { .seq-select.small { font-size: 10px; } }
         @container (min-width: 200px) { .seq-select.small { font-size: 12px; padding: 2px 4px; } }
+
+        /* ── Custom progression dropdown ── */
+        .prog-select {
+            width: 100%; border: 1px solid rgba(148,163,184,0.25);
+            border-radius: 8px; overflow: hidden; background: rgba(15,23,42,1);
+        }
+        .prog-option {
+            display: grid; grid-template-columns: 2.5rem 1fr 2.5rem;
+            align-items: center; gap: 0;
+            padding: 4px 8px; cursor: pointer; font-size: 11px;
+            color: #cbd5e1; transition: background 0.1s;
+        }
+        .prog-option:hover { background: rgba(99,102,241,0.25); color: #eef2ff; }
+        .prog-option.selected { background: rgba(99,102,241,0.2); color: #eef2ff; }
+        .prog-option .po-left  { text-align: right; color: #64748b; font-size: 10px; }
+        .prog-option .po-mid   { text-align: center; font-weight: 700; font-size: 13px; color: #eef2ff; }
+        .prog-option .po-right { text-align: left;  color: #64748b; font-size: 10px; }
 
         .btn {
             cursor: pointer;
@@ -673,8 +691,11 @@
             const numeral = getRomanNumeral(scale, degree);
             const prevPct = size ? Math.round((prevSh / size) * 100) : 0;
             const nextPct = size ? Math.round((nextSh / size) * 100) : 0;
-            return { degree, label: `${numeral}  ←${prevPct}% ${nextPct}%→`, prevShared: prevSh, nextShared: nextSh, totalShared: prevSh + nextSh, prevPercent: prevPct, nextPercent: nextPct };
-        }).sort((a, b) => b.totalShared - a.totalShared || b.prevPercent - a.prevPercent || b.nextPercent - a.nextPercent || a.degree - b.degree);
+            const lp  = `${prevPct}%`.padStart(4);
+            const rp  = `${nextPct}%`.padEnd(4);
+            const mid = numeral.length >= 3 ? numeral : numeral.padStart(Math.ceil((3 + numeral.length) / 2)).padEnd(3);
+            return { degree, label: `${lp} | ${mid} | ${rp}`, prevShared: prevSh, nextShared: nextSh, totalShared: prevSh + nextSh, prevPercent: prevPct, nextPercent: nextPct };
+        }).sort((a, b) => a.degree - b.degree);
     }
 
     /* ── MIDI export ─────────────────────────────────────────────────────────── */
@@ -778,6 +799,26 @@
     /**
      * @param {{ notes: number[], onClick: () => void }} props
      */
+    /**
+     * @param {{ options: Array<{degree:number,label:string,prevPercent:number,nextPercent:number}>,
+     *            value: number, onChange: (d:number)=>void }} props
+     */
+    function ProgSelect({ options, value, onChange }) {
+        const numeral = (o) => o.label.split('|')[1]?.trim() ?? String(o.degree);
+        return html`
+            <div class="prog-select">
+                ${options.map(o => html`
+                    <div key=${o.degree}
+                         class=${`prog-option${o.degree === value ? ' selected' : ''}`}
+                         onClick=${() => onChange(o.degree)}>
+                        <span class="po-left">${o.prevPercent}%</span>
+                        <span class="po-mid">${numeral(o)}</span>
+                        <span class="po-right">${o.nextPercent}%</span>
+                    </div>
+                `)}
+            </div>`;
+    }
+
     function StaffChordView({ notes, onClick }) {
         const noteNames      = [...notes].sort((a, b) => a - b).map(midiToNoteName);
         const staffLineSteps = [30, 32, 34, 36, 38];
@@ -846,16 +887,14 @@
                 <div class="tile-controls">
                     <div class="field">
                         <label class="tile-tiny">Progression</label>
-                        <select class="seq-select small" value=${item.degree} onChange=${e => onDegree(index, parseInt(e.target.value, 10))}>
-                            ${progOpts.map(o => html`<option key=${o.degree} value=${o.degree}>${o.label}</option>`)}
-                        </select>
+                        <${ProgSelect} options=${progOpts} value=${item.degree} onChange=${d => onDegree(index, d)} />
                     </div>
-                    <div class="field">
+                    ${chordMode && html`<div class="field">
                         <label class="tile-tiny">Chord</label>
                         <select class="seq-select small" value=${item.chordVariant} onChange=${e => onChordVariant(index, e.target.value)}>
                             ${Object.entries(CHORD_VARIANTS).map(([v, cfg]) => html`<option key=${v} value=${v}>${cfg.label}</option>`)}
                         </select>
-                    </div>
+                    </div>`}
                     <div class="field">
                         <label class="tile-tiny">Duration: ${item.duration}</label>
                         <input type="range" min="0" max=${DURATION_OPTIONS.length - 1} step="1"
@@ -873,7 +912,9 @@
                         <button class="small-btn" onClick=${() => onOctUp(index)}>+8</button>
                     </span>
                 </div>
-                <div class="tile-tiny">Inversion ${(item.inversion || 0) + 1}/${invCount} · Octave ${formatOctaveShift(item.octaveShift || 0)}</div>
+                ${chordMode
+                    ? html`<div class="tile-tiny">Inversion ${(item.inversion || 0) + 1}/${invCount} · Octave ${formatOctaveShift(item.octaveShift || 0)}</div>`
+                    : html`<div class="tile-tiny">Octave ${formatOctaveShift(item.octaveShift || 0)}</div>`}
             </div>`;
     }
 
