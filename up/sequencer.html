@@ -261,8 +261,8 @@
         }
         .transport-minimize {
             background: none; border: none; color: #64748b;
-            cursor: pointer; font-size: 11px; padding: 0;
-            align-self: flex-end; line-height: 1;
+            cursor: pointer; font-size: 18px; padding: 0 0 0 8px;
+            line-height: 1; flex-shrink: 0;
         }
         .transport-minimize:hover { color: #eef2ff; }
         .transport-mini {
@@ -978,6 +978,7 @@
                         <button class="btn primary"   onClick=${onPlay}>▶</button>
                         <button class="btn danger"    onClick=${onStop}>■</button>
                         <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${onLoop}>⟳</button>
+                        <button class="transport-minimize" onClick=${() => setMini(m => !m)}>▾</button>
                     </div>`
                     : html`<${Fragment}>
                         <div class="action-row">
@@ -986,13 +987,14 @@
                             <button class=${loopEnabled ? 'btn active' : 'btn secondary'} onClick=${onLoop}>
                                 ⟳ ${loopEnabled ? 'Looping' : 'Loop Off'}
                             </button>
+                            <button class="transport-minimize" onClick=${() => setMini(m => !m)}>▴</button>
+
                         </div>
-                        <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
+                        <div style="display:flex;align-items:center;justify-content:flex-end">
+                            <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
+                        </div>
                     <//>`
                 }
-                <button class="transport-minimize" onClick=${() => setMini(m => !m)}>
-                    ${mini ? '▾' : '▴'}
-                </button>
             </div>`;
     }
 
