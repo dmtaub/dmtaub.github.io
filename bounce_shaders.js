@@ -145,6 +145,122 @@ export function createRippleScene(containerWidth, containerHeight, mainCamera) {
   };
 }
 
+/* -----------------------------
+ * Ball shader materials
+ * -----------------------------
+*/
+
+const BALL_VERTEX_SHADER = /* glsl */`
+  varying vec3 vNormal;
+  varying vec3 vPos;
+  varying vec3 vViewDir;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vViewDir = normalize(-mvPosition.xyz);
+    vPos = position;
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const HSL2RGB_GLSL = /* glsl */`
+  vec3 hsl2rgb(vec3 hsl) {
+    float h = hsl.x, s = hsl.y, l = hsl.z;
+    float c = (1.0 - abs(2.0*l - 1.0)) * s;
+    float x = c * (1.0 - abs(mod(h*6.0,2.0)-1.0));
+    float m = l - c*0.5;
+    vec3 rgb;
+    if      (h < 1.0/6.0) rgb = vec3(c,x,0);
+    else if (h < 2.0/6.0) rgb = vec3(x,c,0);
+    else if (h < 3.0/6.0) rgb = vec3(0,c,x);
+    else if (h < 4.0/6.0) rgb = vec3(0,x,c);
+    else if (h < 5.0/6.0) rgb = vec3(x,0,c);
+    else                  rgb = vec3(c,0,x);
+    return rgb + m;
+  }
+`;
+
+const BALL_FRAGMENT_SHADERS = [
+  // 0: plasma swirl with fresnel highlight
+  /* glsl */`
+    void main() {
+      vec3 p = vPos * 4.0;
+      float v = sin(p.x + u_time) + sin(p.y + u_time*1.3) + sin(p.z + u_time*0.7);
+      v += sin(length(p.xy) - u_time*2.0);
+      float hue = mod(0.55 + 0.12*v, 1.0);
+      vec3 col = hsl2rgb(vec3(hue, 0.95, 0.55));
+      float fres = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 2.0);
+      col += fres * 0.7;
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+  // 1: iridescent oil-slick fresnel
+  /* glsl */`
+    void main() {
+      float fres = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 3.0);
+      float hue = mod(fres * 1.5 + u_time * 0.15, 1.0);
+      vec3 col = hsl2rgb(vec3(hue, 1.0, 0.5));
+      vec3 base = vec3(0.02, 0.02, 0.06);
+      gl_FragColor = vec4(mix(base, col, fres) + col * 0.25, 1.0);
+    }
+  `,
+  // 2: animated interference bands
+  /* glsl */`
+    void main() {
+      float bands = sin(vPos.y*22.0 + u_time*3.0) * sin(vPos.x*22.0 - u_time*2.0);
+      float hue = mod(0.3 + 0.5*bands + u_time*0.05, 1.0);
+      vec3 col = hsl2rgb(vec3(hue, 0.85, 0.5 + 0.2*bands));
+      float fres = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 2.0);
+      col += fres * vec3(0.3, 0.5, 1.0);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+  // 3: molten lava blobs
+  /* glsl */`
+    void main() {
+      vec3 p = vPos * 3.0 + u_time * 0.3;
+      float n = sin(p.x)*sin(p.y)*sin(p.z) + 0.5*sin(p.x*2.0 + u_time)*sin(p.z*2.0);
+      vec3 hot = vec3(1.0, 0.45, 0.0);
+      vec3 cool = vec3(0.35, 0.0, 0.3);
+      vec3 col = mix(cool, hot, smoothstep(-0.5, 0.8, n));
+      col += pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 3.0) * vec3(1.0, 0.8, 0.3);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+];
+
+/**
+ * Creates the set of animated ShaderMaterials used on the ball.
+ * Each material exposes a `u_time` uniform that should be advanced every frame.
+ * @returns {THREE.ShaderMaterial[]}
+ */
+export function createBallShaderMaterials() {
+  return BALL_FRAGMENT_SHADERS.map((body) => new THREE.ShaderMaterial({
+    uniforms: { u_time: { value: 0.0 } },
+    vertexShader: BALL_VERTEX_SHADER,
+    fragmentShader: /* glsl */`
+      precision highp float;
+      varying vec3 vNormal;
+      varying vec3 vPos;
+      varying vec3 vViewDir;
+      uniform float u_time;
+      ${HSL2RGB_GLSL}
+      ${body}
+    `,
+  }));
+}
+
+/**
+ * Advances the `u_time` uniform on any ShaderMaterials in the given list.
+ */
+export function updateBallShaderMaterials(materials, time) {
+  for (const m of materials) {
+    if (m && m.isShaderMaterial && m.uniforms && m.uniforms.u_time) {
+      m.uniforms.u_time.value = time;
+    }
+  }
+}
+
 /**
  * Allows external code to update the ripple shader's uniforms cleanly.
  * Moves more logic here, so the main file can just pass relevant data.

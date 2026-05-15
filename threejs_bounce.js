@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import { setupCSS, addUI, createFloatingContainer } from './bounce_2d.js';
 import {
   createRippleScene,
-  updateRippleShaderUniforms
+  updateRippleShaderUniforms,
+  createBallShaderMaterials,
+  updateBallShaderMaterials
 } from './bounce_shaders.js';
 import { createParticleField, updateParticleField } from './bounce_particles.js';
 
@@ -58,10 +60,15 @@ let particleField;
 // Reflection / secondary camera
 let secondaryCamera;
 let secondaryCameraEnabled = false;
+let accumulationEnabled = false;
+let previewVisible = false;
 let secondaryContainer; // floating container
 let secondaryCanvas;
 let secondaryRenderer;
 let secondaryCameraRenderTarget;
+
+// Accumulation (temporal trail) pass for the secondary camera
+let fadeScene, fadeCamera, fadeMaterial;
 
 /**
  * A Phong material that will use the secondary camera's render target for reflection.
@@ -78,44 +85,79 @@ const reflectionMaterial = new THREE.MeshPhongMaterial({
  * -----------------------------
 */
 let currentMaterialIndex = 0;
+// Animated GLSL shader materials for the ball; every other slot below is one of these.
+const ballShaderMaterials = createBallShaderMaterials();
 const materials = [
+  ballShaderMaterials[0], // plasma swirl
   new THREE.MeshStandardMaterial({ color: 'hsl(200, 100%, 50%)', metalness: 0.9, roughness: 0.2 }),
-  new THREE.MeshStandardMaterial({ color: 'hsl(100, 100%, 50%)', metalness: 0.5, roughness: 0.8 }),
+  ballShaderMaterials[1], // iridescent oil-slick
   new THREE.MeshPhongMaterial({ color: 'hsl(300, 100%, 50%)', shininess: 30 }),
-  new THREE.MeshStandardMaterial({ color: 'hsl(40, 100%, 45%)', metalness: 0.1, roughness: 0.95 }), // spikey/rough
-  new THREE.MeshStandardMaterial({ color: 'hsl(250, 80%, 70%)', metalness: 0.0, roughness: 0.3 }), // soft velvet
+  ballShaderMaterials[2], // interference bands
   new THREE.MeshStandardMaterial({ color: 'hsl(0, 100%, 50%)', metalness: 1.0, roughness: 0.05 }), // shiny red chrome
-  new THREE.MeshStandardMaterial({ color: 'hsl(180, 100%, 40%)', metalness: 0.7, roughness: 0.15, emissive: 'hsl(180, 100%, 50%)', emissiveIntensity: 0.3 }), // glowing cyan
+  ballShaderMaterials[3], // molten lava
   new THREE.MeshStandardMaterial({ color: 'hsl(270, 80%, 30%)', metalness: 0.3, roughness: 0.6 }), // deep purple matte
   reflectionMaterial
 ];
 
 /**
- * Switch material on the ball, skipping reflection if camera is off.
+ * Enables/disables the secondary reflection camera (and its particle field).
  */
-function switchMaterial() {
-  let nextIndex = (currentMaterialIndex + 1) % materials.length;
-  if (/*!secondaryCameraEnabled &&*/ materials[nextIndex] === reflectionMaterial) {
-    nextIndex = (nextIndex + 1) % materials.length;
-  }
-  currentMaterialIndex = nextIndex;
-  ball.material = materials[currentMaterialIndex];
+function setSecondaryCamera(on) {
+  secondaryCameraEnabled = on;
+  reflectionMaterial.envMap = on ? secondaryCameraRenderTarget.texture : null;
+  if (particleField) particleField.visible = on;
 }
 
 /**
- * Toggles reflection and the secondary camera preview window together.
+ * Enables/disables temporal accumulation on the secondary camera render.
  */
-function toggleReflectionAndPreview() {
-  secondaryCameraEnabled = !secondaryCameraEnabled;
-  if (secondaryCameraEnabled) {
-    reflectionMaterial.envMap = secondaryCameraRenderTarget.texture;
-    if (secondaryContainer) secondaryContainer.style.display = 'block';
-    if (particleField) particleField.visible = true;
+function setAccumulation(on) {
+  accumulationEnabled = on;
+}
+
+/**
+ * Shows/hides the floating secondary camera preview window.
+ */
+function setPreviewVisible(on) {
+  previewVisible = on;
+  if (secondaryContainer) secondaryContainer.style.display = on ? 'block' : 'none';
+}
+
+/**
+ * Switch material on the ball. Selecting the reflection material turns on the
+ * secondary camera + accumulation (without revealing the preview); leaving it
+ * turns them back off unless the preview window is being shown explicitly.
+ */
+function switchMaterial() {
+  const wasReflection = ball.material === reflectionMaterial;
+  currentMaterialIndex = (currentMaterialIndex + 1) % materials.length;
+  ball.material = materials[currentMaterialIndex];
+  const isReflection = ball.material === reflectionMaterial;
+
+  if (isReflection) {
+    setSecondaryCamera(true);
+    setAccumulation(true);
+  } else if (wasReflection && !previewVisible) {
+    setSecondaryCamera(false);
+    setAccumulation(false);
+  }
+}
+
+/**
+ * Toggles the secondary camera preview window. Showing it forces the secondary
+ * camera on; hiding it turns the camera back off unless the reflection material
+ * still needs it.
+ */
+function togglePreview() {
+  if (previewVisible) {
+    setPreviewVisible(false);
+    if (ball.material !== reflectionMaterial) {
+      setSecondaryCamera(false);
+      setAccumulation(false);
+    }
   } else {
-    reflectionMaterial.envMap = null;
-    if (ball.material === reflectionMaterial) switchMaterial();
-    if (secondaryContainer) secondaryContainer.style.display = 'none';
-    if (particleField) particleField.visible = false;
+    setPreviewVisible(true);
+    setSecondaryCamera(true);
   }
 }
 
@@ -163,8 +205,8 @@ function addBounceUI() {
     ['Add Attractor', () => addAttractor()],
     ['Clear Attractors', clearAttractors],
     ['Show Preview', (btn) => {
-      toggleReflectionAndPreview();
-      btn.innerText = secondaryCameraEnabled ? 'Hide Preview' : 'Show Preview';
+      togglePreview();
+      btn.innerText = previewVisible ? 'Hide Preview' : 'Show Preview';
     }],
   ];
   addUI(container, buttonDefs);
@@ -269,6 +311,18 @@ function createSecondaryRenderer() {
   secondaryRenderer = new THREE.WebGLRenderer({ canvas: secondaryCanvas, antialias: true });
   secondaryRenderer.setPixelRatio(window.devicePixelRatio);
   secondaryRenderer.setSize(300, 200);
+
+  // Fullscreen fade quad used to accumulate (trail) previous frames
+  fadeScene = new THREE.Scene();
+  fadeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+  fadeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x000000,
+    transparent: true,
+    opacity: 0.2,
+    depthTest: false,
+    depthWrite: false
+  });
+  fadeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fadeMaterial));
 }
 
 /* -----------------------------
@@ -284,6 +338,8 @@ function animate() {
   handleTargets();
   applyGravity();
   handleWallBounce();
+
+  updateBallShaderMaterials(materials, globalTime);
 
   updateParticleField(ball.position, ballVelocity, globalTime);
 
@@ -346,15 +402,32 @@ function animate() {
     // Use ripple texture as a scene background so it shows regardless of camera angle
     scene.background = rippleRenderTarget.texture;
 
-    // Render reflection envMap
+    // Render reflection envMap. With accumulation on, fade the previous frame
+    // instead of clearing it so the reflection leaves temporal trails.
     secondaryRenderer.setRenderTarget(secondaryCameraRenderTarget);
-    secondaryRenderer.clear();
-    secondaryRenderer.render(scene, secondaryCamera);
+    if (accumulationEnabled) {
+      secondaryRenderer.autoClearColor = false;
+      secondaryRenderer.render(fadeScene, fadeCamera);
+      secondaryRenderer.render(scene, secondaryCamera);
+    } else {
+      secondaryRenderer.autoClearColor = true;
+      secondaryRenderer.clear();
+      secondaryRenderer.render(scene, secondaryCamera);
+    }
 
-    // Render preview
-    secondaryRenderer.setRenderTarget(null);
-    secondaryRenderer.clear();
-    secondaryRenderer.render(scene, secondaryCamera);
+    // Render preview only when the preview window is actually visible
+    if (previewVisible) {
+      secondaryRenderer.setRenderTarget(null);
+      if (accumulationEnabled) {
+        secondaryRenderer.autoClearColor = false;
+        secondaryRenderer.render(fadeScene, fadeCamera);
+        secondaryRenderer.render(scene, secondaryCamera);
+      } else {
+        secondaryRenderer.autoClearColor = true;
+        secondaryRenderer.clear();
+        secondaryRenderer.render(scene, secondaryCamera);
+      }
+    }
 
     scene.background = null;
   }
