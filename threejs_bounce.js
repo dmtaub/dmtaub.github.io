@@ -60,7 +60,7 @@ let particleField;
 // Reflection / secondary camera
 let secondaryCamera;
 let secondaryCameraEnabled = false;
-let accumulationEnabled = false;
+let accumulationEnabled = true;
 let previewVisible = false;
 let secondaryContainer; // floating container
 let secondaryCanvas;
@@ -128,9 +128,9 @@ function setPreviewVisible(on) {
  * secondary camera + accumulation (without revealing the preview); leaving it
  * turns them back off unless the preview window is being shown explicitly.
  */
-function switchMaterial() {
+function switchMaterial(dir = 1) {
   const wasReflection = ball.material === reflectionMaterial;
-  currentMaterialIndex = (currentMaterialIndex + 1) % materials.length;
+  currentMaterialIndex = (currentMaterialIndex + dir + materials.length) % materials.length;
   ball.material = materials[currentMaterialIndex];
   const isReflection = ball.material === reflectionMaterial;
 
@@ -201,7 +201,7 @@ export function resume() {
 
 function addBounceUI() {
   const buttonDefs = [
-    ['Switch Material', switchMaterial],
+    ['Switch Material', () => switchMaterial(1), () => switchMaterial(-1)],
     ['Add Attractor', () => addAttractor()],
     ['Clear Attractors', clearAttractors],
     ['Show Preview', (btn) => {
@@ -294,12 +294,18 @@ function createSecondaryCameraContainer(target) {
  * Creates the secondary camera, canvas, and renderer for reflection usage.
  */
 function createSecondaryRenderer() {
-  secondaryCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  // Narrow FOV zooms the reflection view in so it reads as more than a black dot.
+  secondaryCamera = new THREE.PerspectiveCamera(18, 1, 0.1, 100);
 
 
   secondaryCameraRenderTarget = new THREE.WebGLRenderTarget(512, 512);
   secondaryCameraRenderTarget.texture.minFilter = THREE.LinearFilter;
   secondaryCameraRenderTarget.texture.magFilter = THREE.LinearFilter;
+  // Treat the render target as an equirectangular reflection map and sample only
+  // its center quarter, magnifying the brightest part of the view onto the ball.
+  secondaryCameraRenderTarget.texture.mapping = THREE.EquirectangularReflectionMapping;
+  secondaryCameraRenderTarget.texture.repeat.set(0.5, 0.5);
+  secondaryCameraRenderTarget.texture.offset.set(0.25, 0.25);
 
   // Canvas inside the floating container
   secondaryCanvas = document.createElement('canvas');
@@ -402,31 +408,31 @@ function animate() {
     // Use ripple texture as a scene background so it shows regardless of camera angle
     scene.background = rippleRenderTarget.texture;
 
-    // Render reflection envMap. With accumulation on, fade the previous frame
-    // instead of clearing it so the reflection leaves temporal trails.
-    secondaryRenderer.setRenderTarget(secondaryCameraRenderTarget);
+    // Render reflection envMap with the MAIN renderer — the render target must
+    // live in the same WebGL context as the material that samples it. Hide the
+    // ball so it doesn't see the inside of itself (and to avoid RT feedback).
+    ball.visible = false;
+    renderer.setRenderTarget(secondaryCameraRenderTarget);
     if (accumulationEnabled) {
-      secondaryRenderer.autoClearColor = false;
-      secondaryRenderer.render(fadeScene, fadeCamera);
-      secondaryRenderer.render(scene, secondaryCamera);
+      // With accumulation on, fade the previous frame instead of clearing it
+      // so the reflection leaves temporal trails.
+      renderer.autoClearColor = false;
+      renderer.render(fadeScene, fadeCamera);
+      renderer.render(scene, secondaryCamera);
+      renderer.autoClearColor = true;
     } else {
-      secondaryRenderer.autoClearColor = true;
-      secondaryRenderer.clear();
-      secondaryRenderer.render(scene, secondaryCamera);
+      renderer.clear();
+      renderer.render(scene, secondaryCamera);
     }
+    renderer.setRenderTarget(null);
+    ball.visible = true;
 
-    // Render preview only when the preview window is actually visible
+    // Render preview only when the preview window is actually visible. This uses
+    // the secondary renderer/context purely for the on-screen preview canvas.
     if (previewVisible) {
       secondaryRenderer.setRenderTarget(null);
-      if (accumulationEnabled) {
-        secondaryRenderer.autoClearColor = false;
-        secondaryRenderer.render(fadeScene, fadeCamera);
-        secondaryRenderer.render(scene, secondaryCamera);
-      } else {
-        secondaryRenderer.autoClearColor = true;
-        secondaryRenderer.clear();
-        secondaryRenderer.render(scene, secondaryCamera);
-      }
+      secondaryRenderer.clear();
+      secondaryRenderer.render(scene, secondaryCamera);
     }
 
     scene.background = null;

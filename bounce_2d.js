@@ -72,7 +72,9 @@ function setupUIStyle() {
   /**
    * Creates a row of UI buttons within the main container.
    * @param {HTMLElement} container - The parent container (usually .interactive).
-   * @param {Array<[string, Function]>} buttonDefs - An array of [label, callback].
+   * @param {Array<[string, Function, Function?]>} buttonDefs - An array of
+   *   [label, callback, contextCallback?]. The optional third entry runs on
+   *   right-click (contextmenu).
    */
   export function addUI(container, buttonDefs) {
     if (!container) {
@@ -82,12 +84,18 @@ function setupUIStyle() {
     const rowDiv = document.createElement('div');
     rowDiv.classList.add('ui-row');
     container.appendChild(rowDiv);
-  
-    for (const [label, callback] of buttonDefs) {
+
+    for (const [label, callback, contextCallback] of buttonDefs) {
       const button = document.createElement('div');
       button.classList.add('ui-button');
       button.innerText = label;
       button.addEventListener('click', () => callback(button));
+      if (contextCallback) {
+        button.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          contextCallback(button);
+        });
+      }
       rowDiv.appendChild(button);
     }
   }
