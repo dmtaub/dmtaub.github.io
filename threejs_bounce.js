@@ -82,6 +82,11 @@ const materials = [
   new THREE.MeshStandardMaterial({ color: 'hsl(200, 100%, 50%)', metalness: 0.9, roughness: 0.2 }),
   new THREE.MeshStandardMaterial({ color: 'hsl(100, 100%, 50%)', metalness: 0.5, roughness: 0.8 }),
   new THREE.MeshPhongMaterial({ color: 'hsl(300, 100%, 50%)', shininess: 30 }),
+  new THREE.MeshStandardMaterial({ color: 'hsl(40, 100%, 45%)', metalness: 0.1, roughness: 0.95 }), // spikey/rough
+  new THREE.MeshStandardMaterial({ color: 'hsl(250, 80%, 70%)', metalness: 0.0, roughness: 0.3 }), // soft velvet
+  new THREE.MeshStandardMaterial({ color: 'hsl(0, 100%, 50%)', metalness: 1.0, roughness: 0.05 }), // shiny red chrome
+  new THREE.MeshStandardMaterial({ color: 'hsl(180, 100%, 40%)', metalness: 0.7, roughness: 0.15, emissive: 'hsl(180, 100%, 50%)', emissiveIntensity: 0.3 }), // glowing cyan
+  new THREE.MeshStandardMaterial({ color: 'hsl(270, 80%, 30%)', metalness: 0.3, roughness: 0.6 }), // deep purple matte
   reflectionMaterial
 ];
 
@@ -249,6 +254,7 @@ function createSecondaryCameraContainer(target) {
 function createSecondaryRenderer() {
   secondaryCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
 
+
   secondaryCameraRenderTarget = new THREE.WebGLRenderTarget(512, 512);
   secondaryCameraRenderTarget.texture.minFilter = THREE.LinearFilter;
   secondaryCameraRenderTarget.texture.magFilter = THREE.LinearFilter;
@@ -331,8 +337,10 @@ function animate() {
     if (ballVelocity.lengthSq() > 0.000001) {
       const lookPos = ball.position.clone().add(ballVelocity.clone().normalize().multiplyScalar(5));
       secondaryCamera.lookAt(lookPos);
+      secondaryCamera.rotateZ( Math.PI / 2);
     } else {
       secondaryCamera.lookAt(new THREE.Vector3(0, 0, 0));
+      secondaryCamera.rotateZ(- Math.PI / 2);
     }
 
     // Use ripple texture as a scene background so it shows regardless of camera angle
