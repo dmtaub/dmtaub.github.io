@@ -973,9 +973,6 @@
 
         return html`
             <div class="transport-float">
-                <button class="transport-minimize" onClick=${() => setMini(m => !m)}>
-                    ${mini ? '▾' : '▴'}
-                </button>
                 ${mini
                     ? html`<div class="transport-mini">
                         <button class="btn primary"   onClick=${onPlay}>▶</button>
@@ -993,6 +990,9 @@
                         <span class="status-dot">${isPlaying ? 'Now playing' : 'Ready'}</span>
                     <//>`
                 }
+                <button class="transport-minimize" onClick=${() => setMini(m => !m)}>
+                    ${mini ? '▾' : '▴'}
+                </button>
             </div>`;
     }
 
