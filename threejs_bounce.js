@@ -60,7 +60,7 @@ let particleField;
 // Reflection / secondary camera
 let secondaryCamera;
 let secondaryCameraEnabled = false;
-let accumulationEnabled = true;
+let accumulationEnabled = false;
 let previewVisible = false;
 let secondaryContainer; // floating container
 let secondaryCanvas;
@@ -364,7 +364,11 @@ function animate() {
   renderer.clearColor();
   renderer.render(rippleScene, rippleCamera);
 
-  // 2) Render main scene with the ripple as background
+  // 2) Render the reflection pass into its render target FIRST, so the target
+  //    is initialized before the main scene samples it as the ball's envMap.
+  renderSecondaryView();
+
+  // 3) Render main scene with the ripple as background
   renderer.setRenderTarget(null);
   renderer.clearColor();
   backgroundMesh.scale.set(getFrustumWidth(), getFrustumHeight(), 1);
@@ -391,8 +395,13 @@ function animate() {
     const proximityFactor = Math.max(0, 1 - (dist - combinedRadius) / effectRadius);
     object.material.emissiveIntensity = 0.1 + proximityFactor * 0.9 + Math.sin(globalTime * 8) * proximityFactor * 0.3;
   }
+}
 
-  // Reflection camera if enabled
+/**
+ * Renders the secondary (reflection) camera's view into its render target,
+ * and into the preview canvas when the preview window is visible.
+ */
+function renderSecondaryView() {
   if (secondaryCameraEnabled && secondaryCamera) {
     secondaryCamera.position.copy(ball.position);
 
