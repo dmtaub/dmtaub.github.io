@@ -269,7 +269,20 @@
             display: flex; gap: 5px;
         }
         .transport-mini .btn {
-            padding: 5px 8px; font-size: 14px; min-width: 0;
+            padding: 0; font-size: 33px;
+            width: 34px; height: 34px;
+            justify-content: center;
+            padding-bottom: 4px;
+            padding-left: 2px;
+        }
+        .transport-mini .btn.primary {
+            font-size: 14px;
+            padding-top: 5px;
+        }
+        .transport-mini .btn.danger {
+            font-size: 22px;
+            padding-bottom: 4px;
+            padding-right: 2px;
         }
 
         .card h2 { color: #eef2ff; margin: 0 0 4px; font-size: 16px; }
@@ -956,11 +969,12 @@
     /* ── App ─────────────────────────────────────────────────────────────────── */
 
     function TransportFloat({ isPlaying, loopEnabled, onPlay, onStop, onLoop }) {
-        const [mini, setMini] = useState(false);
+        const [mini, setMini] = useState(true);
+
         return html`
             <div class="transport-float">
                 <button class="transport-minimize" onClick=${() => setMini(m => !m)}>
-                    ${mini ? '▾ expand' : '▴ collapse'}
+                    ${mini ? '▾' : '▴'}
                 </button>
                 ${mini
                     ? html`<div class="transport-mini">
