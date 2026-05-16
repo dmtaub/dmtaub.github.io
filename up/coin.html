@@ -62,7 +62,7 @@
         .back-link:hover { color: var(--text); }
     </style>
 </head>
-<body>
+<body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>
     <script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
     <canvas id="canvas"></canvas>
     <div id="ui">
