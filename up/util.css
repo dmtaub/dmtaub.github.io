@@ -19,30 +19,40 @@
     margin-bottom: 1.5rem;
 }
 
-.back-link {
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.9rem;
-}
-.back-link:hover { text-decoration: underline; }
-
-.theme-toggle {
-    background: none;
-    border: 1px solid var(--accent);
+/* Shared pill styling for the back link + theme toggle */
+.back-link, .theme-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: var(--title-btn-radius);
-    min-width: 40px;
-    height: 28px;
-    padding: 0 10px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    font-family: inherit;
     cursor: pointer;
-    color: var(--text);
-    font-size: 0.85rem;
-    transition: border-color 0.15s;
+    transition: color 0.2s, border-color 0.2s;
 }
-.theme-toggle:hover { border-color: var(--accent-soft); }
+.back-link  { color: var(--accent); text-decoration: none; }
+.theme-toggle { color: var(--text); }
+.back-link:hover, .theme-toggle:hover { border-color: var(--accent); }
+.back-link:hover { color: var(--text); }
 
 /* ── Page heading ── */
 h1.page-title { font-size: 1.7rem; margin: 0 0 0.2rem; color: var(--text); }
 .page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.25rem; }
+
+/* ── Status banner ── */
+.status-banner {
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.88rem;
+}
+.status-banner.err { background: #c0392b; }
 
 /* ── Spinner ── */
 .spinner {

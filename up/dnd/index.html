@@ -7,10 +7,6 @@
     <link type="text/css" rel="stylesheet" href="../../style.css">
     <link type="text/css" rel="stylesheet" href="../util.css">
     <style>
-        /* ── Loading banner ── */
-        #loadBanner { display:none; align-items:center; gap:0.6rem; background:var(--accent); color:#fff; padding:0.55rem 1rem; border-radius:6px; margin-bottom:1rem; font-size:0.88rem; }
-        #loadBanner.err { background:#c0392b; }
-
         /* ── Tabs ── */
         .tabs { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.5rem; border-bottom:1px solid var(--border); padding-bottom:0.75rem; }
         .tab-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.85rem; cursor:pointer; font-size:0.9rem; color:var(--text-muted); transition:all .15s; }
@@ -222,14 +218,7 @@
 </head>
 <body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>
 <div class="page-wrap">
-    <div class="topbar">
-        <a class="back-link" href="../">← Utils</a>
-        <button class="theme-toggle" id="themeToggle">☀</button>
-    </div>
-    <h1 class="page-title">5e Tools</h1>
-    <p class="page-subtitle">Personal DnD 5e assistant — stat blocks, roll tables, roster, quick reference.</p>
-
-    <div id="loadBanner"><span class="spinner"></span><span id="loadMsg">Loading…</span></div>
+    <page-topbar back="../" title="5e Tools" subtitle="Personal DnD 5e assistant — stat blocks, roll tables, roster, quick reference." status-banner></page-topbar>
 
     <div class="tabs">
         <button class="tab-btn active" data-tab="statblocks">Stat Blocks</button>

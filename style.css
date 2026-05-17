@@ -611,7 +611,7 @@ h2.spaced { letter-spacing: 0.05em; }
         padding: 0;
         justify-content: center;
     }
-    .toggle-text, .nav-gear-text { display: none; }
+    theme-toggle span, .nav-gear-text { display: none; }
 }
 
 /* Mobile thumbnails */

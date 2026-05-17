@@ -201,10 +201,10 @@ async function loadSRD(meta) {
   if (cached) {
     try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(meta.cache_key); }
   }
-  showBanner('Fetching SRD 5.1 (~1.8 MB, first visit only)…');
+  _topbar.showStatus('Fetching SRD 5.1 (~1.8 MB, first visit only)…');
   const resp = await fetch(meta.srd_url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  showBanner('Parsing monsters and equipment…');
+  _topbar.showStatus('Parsing monsters and equipment…');
   const html   = await resp.text();
   const doc    = new DOMParser().parseFromString(html, 'text/html');
   const parsed = { weapons: parseWeapons(doc, meta), monsters: parseMonsters(doc, meta) };
@@ -213,13 +213,7 @@ async function loadSRD(meta) {
 }
 
 // ─── BANNER ──────────────────────────────────────────────────────────────────
-function showBanner(msg, isErr) {
-  const el = document.getElementById('loadBanner');
-  if (!msg) { el.style.display = 'none'; return; }
-  el.style.display = 'flex';
-  el.classList.toggle('err', !!isErr);
-  document.getElementById('loadMsg').textContent = msg;
-}
+const _topbar = document.querySelector('page-topbar');
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
 const LAST_TAB_KEY = '5e-last-tab';
@@ -1408,7 +1402,7 @@ renderNpcRoster();
 
 (async function init() {
   try {
-    showBanner('Loading configuration…');
+    _topbar.showStatus('Loading configuration…');
     const metaResp = await fetch(META_URL);
     if (!metaResp.ok) throw new Error(`Could not load ${META_URL} (HTTP ${metaResp.status})`);
     const meta = await metaResp.json();
@@ -1429,10 +1423,10 @@ renderNpcRoster();
     buildStatGrid('');
     buildAllRollTables(allTables);
     buildWeaponsTable(srd.weapons);
-    showBanner(null);
+    _topbar.showStatus(null);
   } catch(e) {
     console.error('SRD load failed:', e);
-    showBanner('Could not load SRD data — check your connection and refresh. Encounter builder and narrative rolls still work.', true);
+    _topbar.showStatus('Could not load SRD data — check your connection and refresh. Encounter builder and narrative rolls still work.', true);
     buildStatGrid('');
     buildAllRollTables(BUILTIN_ROLL_TABLES);
     buildWeaponsTable([]);

@@ -43,11 +43,6 @@
         .btn-add-zip { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.3rem 0.8rem; cursor:pointer; font-size:0.85rem; white-space:nowrap; transition:opacity .15s; }
         .btn-add-zip:hover { opacity:.85; }
 
-        /* ── Status ── */
-        .status-banner { display:flex; align-items:center; gap:0.6rem; background:var(--accent); color:#fff; padding:0.5rem 1rem; border-radius:6px; margin-bottom:1rem; font-size:0.88rem; }
-        .status-banner.err { background:#c0392b; }
-        .status-banner.hidden { display:none; }
-
         /* ── Forecast header ── */
         .forecast-header { margin-bottom:1rem; }
         .forecast-location { font-size:1.25rem; font-weight:700; color:var(--text); margin-bottom:0.2rem; }
@@ -87,12 +82,7 @@
 </head>
 <body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>
 <div class="page-wrap">
-    <div class="topbar">
-        <a class="back-link" href="./">← Utils</a>
-        <button class="theme-toggle" id="themeToggle">☀</button>
-    </div>
-    <h1 class="page-title">Weather</h1>
-    <p class="page-subtitle">Hourly forecasts — data from the National Weather Service.</p>
+    <page-topbar title="Weather" subtitle="Hourly forecasts — data from the National Weather Service." status-banner></page-topbar>
 
     <div class="loc-tabs" id="locTabs">
         <button class="loc-tab-btn" data-tab="west">West</button>
@@ -105,10 +95,6 @@
 
     <div id="locBar"></div>
 
-    <div class="status-banner hidden" id="statusBanner">
-        <span class="spinner" id="statusSpinner"></span>
-        <span id="statusMsg"></span>
-    </div>
 
     <div id="forecastArea"></div>
 </div>
@@ -221,13 +207,7 @@ async function getGeo(key) {
 }
 
 // ─── Status banner ───────────────────────────────────────────────────────────
-function showStatus(msg, isErr) {
-  const el = document.getElementById('statusBanner');
-  el.className = 'status-banner' + (isErr ? ' err' : '');
-  document.getElementById('statusSpinner').style.display = isErr ? 'none' : '';
-  document.getElementById('statusMsg').textContent = msg;
-}
-function hideStatus() { document.getElementById('statusBanner').className = 'status-banner hidden'; }
+const _topbar = document.querySelector('page-topbar');
 
 // ─── Location tabs ────────────────────────────────────────────────────────────
 document.getElementById('locTabs').addEventListener('click', e => {
@@ -328,17 +308,17 @@ function renderLocBar() {
 async function addZip() {
   const input = document.getElementById('zipInput');
   const zip = input.value.replace(/\D/g, '').slice(0, 5);
-  if (zip.length !== 5) { showStatus('Enter a 5-digit US zip code.', true); return; }
+  if (zip.length !== 5) { _topbar.showStatus('Enter a 5-digit US zip code.', true); return; }
   if (savedZips.find(z => z.zip === zip)) {
     input.value = ''; activeKey = zip; renderLocBar(); loadForecast(zip); return;
   }
-  showStatus(`Looking up ${zip}…`);
+  _topbar.showStatus(`Looking up ${zip}…`);
   try {
     const geo = await fetchGeo(zip);
     savedZips.push(geo); saveZips();
     activeKey = zip; input.value = '';
     renderLocBar(); await loadForecast(zip);
-  } catch(e) { showStatus(e.message, true); }
+  } catch(e) { _topbar.showStatus(e.message, true); }
 }
 
 // ─── Geocoding ────────────────────────────────────────────────────────────────
@@ -363,9 +343,9 @@ const CACHE_TTL = 30 * 60 * 1000;
 async function loadForecast(key) {
   const hit = forecastCache.get(key);
   if (hit && Date.now() - hit.ts < CACHE_TTL) {
-    lastPeriods = hit.periods; renderForecast(key, hit.periods); hideStatus(); return;
+    lastPeriods = hit.periods; renderForecast(key, hit.periods); _topbar.hideStatus(); return;
   }
-  showStatus(`Fetching forecast…`);
+  _topbar.showStatus(`Fetching forecast…`);
   try {
     const z   = await getGeo(key);
     const pts = await fetch(`https://api.weather.gov/points/${z.lat},${z.lng}`, { headers: NWS_UA });
@@ -378,8 +358,8 @@ async function loadForecast(key) {
     lastPeriods = periods;
     localStorage.setItem(LAST_KEY, JSON.stringify(key));
     renderForecast(key, periods);
-    hideStatus();
-  } catch(e) { showStatus(e.message, true); }
+    _topbar.hideStatus();
+  } catch(e) { _topbar.showStatus(e.message, true); }
 }
 
 // ─── Forecast render ─────────────────────────────────────────────────────────

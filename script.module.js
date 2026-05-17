@@ -42,16 +42,12 @@ export function showSection(sectionId) {
     document.body.classList.toggle('projects-section', sectionId === 'projects');
     document.body.dataset.section = sectionId;
     if (sectionId === 'projects') {
-        _savedDark = document.body.classList.contains('dark');
-        document.body.classList.add('dark');
+        _savedDark = Theme.isDark();
+        Theme.set(true, false);  // force dark without saving preference
         document.body.classList.add('scrolled');
         requestAnimationFrame(() => { if (_updateProjects) _updateProjects(); });
     } else if (wasInProjects) {
-        document.body.classList.toggle('dark', _savedDark);
-        const btn = document.getElementById('themeToggle');
-        if (btn) btn.innerHTML = _savedDark
-            ? '<span class="toggle-icon">🌙</span><span class="toggle-text"> Dark</span>'
-            : '<span class="toggle-icon">☀</span><span class="toggle-text"> Light</span>';
+        Theme.set(_savedDark, false);  // restore without saving
         updateScrolled();
     } else {
         updateScrolled();
@@ -79,9 +75,9 @@ export function init(){
 // create bindings when first loaded
 document.addEventListener('DOMContentLoaded', () => {
     init();
-    initTheme();
     initFade();
     initScrollShrink();
+    document.addEventListener('themechange', syncResumeTheme);
     // get current hash
     const sectionId = location.hash.substring(1);
     // if showing the introduction section, start the animation
@@ -94,8 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function syncResumeTheme() {
     const iframe = document.querySelector('#popupOverlay iframe');
     if (!iframe) return;
-    const dark = document.body.classList.contains('dark');
-    iframe.contentWindow?.postMessage(dark ? 'dark' : 'light', '*');
+    iframe.contentWindow?.postMessage(Theme.isDark() ? 'dark' : 'light', '*');
 }
 
 // JavaScript to handle the popup
@@ -117,35 +112,6 @@ document.getElementById('popupOverlay').addEventListener('click', function (e) {
         this.style.display = 'none';
     }
 });
-
-// ── Theme toggle + auto-dark on Projects ────────────────────────────────────
-function initTheme() {
-    const btn = document.getElementById('themeToggle');
-
-    function setDark(dark, save = false) {
-        document.body.classList.toggle('dark', dark);
-        if (save) localStorage.setItem('theme', dark ? 'dark' : 'light');
-        if (btn) {
-            btn.innerHTML = dark
-                ? '<span class="toggle-icon">🌙</span><span class="toggle-text"> Dark</span>'
-                : '<span class="toggle-icon">☀</span><span class="toggle-text"> Light</span>';
-        }
-    }
-
-    const saved = localStorage.getItem('theme');
-    const prefersDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    // Sync button text with current dark state (may already be set by showSection or inline script)
-    setDark(document.body.classList.contains('dark') || prefersDark);
-
-    if (btn) {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            setDark(!document.body.classList.contains('dark'), true);
-            syncResumeTheme();
-        });
-    }
-
-}
 
 // ── Projects scroll-driven animation ────────────────────────────────────────
 function initProjectsScroll() {
