@@ -268,6 +268,7 @@ body.projects-section .container {
 }
 
 .interactive {
+    position: relative;
     width: 100%;
     min-height: 400px;
     background-color: #0d0c18;
@@ -594,6 +595,32 @@ h2.spaced { letter-spacing: 0.05em; }
     color: var(--text-muted);
 }
 .popup-close:hover { color: var(--text); }
+
+/* =====================
+   WebGL context-lost overlay
+   ===================== */
+#context-lost {
+    display: none;
+    position: fixed; inset: 0;
+    align-items: center; justify-content: center; flex-direction: column;
+    gap: 0.75rem;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: 1rem; line-height: 1.4; text-align: center;
+    padding: 2rem;
+}
+#context-lost.show { display: flex; }
+#context-lost .icon { font-size: 2.5rem; opacity: 0.5; }
+#context-lost button {
+    margin-top: 0.5rem;
+    background: none; border: 1px solid var(--accent);
+    border-radius: var(--pill-radius); padding: 0.5rem 2rem;
+    font-size: 0.95rem; color: var(--accent);
+    cursor: pointer; font-family: inherit;
+}
+#context-lost button:hover { border-color: var(--text); color: var(--text); }
+/* When embedded inside .interactive, constrain to that container */
+.interactive #context-lost { position: absolute; }
 
 /* =====================
    Responsive

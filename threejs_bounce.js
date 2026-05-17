@@ -2,6 +2,7 @@
 // Main Three.js setup for the bouncing ball, scene creation, reflection camera, and animation loop.
 
 import * as THREE from 'three';
+import { watchContextLoss, probeWebGL, showContextLostOverlay } from './util3d.js';
 import { setupCSS, addUI, createFloatingContainer } from './bounce_2d.js';
 import {
   createRippleScene,
@@ -17,6 +18,7 @@ import { createParticleField, updateParticleField } from './bounce_particles.js'
 */
 let started = false;
 let currentFrame = null;
+let ctx; // context-loss controller, set in init()
 
 let scene, camera, renderer;
 let container, containerWidth, containerHeight;
@@ -227,9 +229,28 @@ function init() {
   containerWidth = container.clientWidth;
   containerHeight = container.clientHeight;
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  if (!probeWebGL()) {
+    showContextLostOverlay();
+    return;
+  }
+
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'default' });
+  } catch (err) {
+    // Backstop for Safari dropping the context between probe and allocation.
+    showContextLostOverlay();
+    throw err;
+  }
   renderer.setSize(containerWidth, containerHeight);
   container.appendChild(renderer.domElement);
+
+  // Surface the overlay on restore too — this animation can't recreate Three.js
+  // resources, and the default onRestored (location.reload) would race the
+  // onFallback timer and never let the message appear.
+  ctx = watchContextLoss(renderer, {
+    onFallback: showContextLostOverlay,
+    onRestored: showContextLostOverlay,
+  });
 
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(20, containerWidth / containerHeight, 0.1, 100);
@@ -338,6 +359,10 @@ function createSecondaryRenderer() {
 
 function animate() {
   currentFrame = requestAnimationFrame(animate);
+
+  // Per-frame backstop: Safari sometimes drops the context silently.
+  if (ctx?.check()) { cancelAnimationFrame(currentFrame); currentFrame = null; return; }
+
   globalTime += 0.01;
 
   checkProximity();

@@ -10,7 +10,8 @@
     {
         "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/",
+            "util3d": "../util3d.js"
         }
     }
     </script>
@@ -52,6 +53,7 @@
         .back-link, .theme-toggle { position: fixed; top: 1rem; pointer-events: all; }
         .back-link    { left:  1rem; }
         .theme-toggle { right: 1rem; }
+
     </style>
 </head>
 <body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>
@@ -60,6 +62,11 @@
         <div id="result"></div>
         <button id="flip-btn" disabled>Loading…</button>
     </div>
+    <div id="context-lost">
+        <span class="icon">🎲</span>
+        <span>WebGL context lost</span>
+        <button onclick="location.reload()">Reload</button>
+    </div>
     <a class="back-link" href="./">← Utils</a>
     <theme-toggle></theme-toggle>
 
@@ -67,6 +74,7 @@
     <script type="module">
         import * as THREE from 'three';
         import { USDLoader } from 'three/addons/loaders/USDLoader.js';
+        import { watchContextLoss, pauseWhenHidden, probeWebGL, showContextLostOverlay } from 'util3d';
         import * as RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js';
 
         await RAPIER.init();
@@ -155,13 +163,49 @@
         // Renderer
         // ─────────────────────────────────────────────────────────────────────────
         // WebGLRenderer draws the Three.js scene to the <canvas> element each frame.
-        // PCFSoftShadowMap gives soft shadow edges; SRGBColorSpace ensures colours
+        // PCFShadowMap gives soft shadow edges; SRGBColorSpace ensures colours
         // match what the asset was authored in.
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); // cap at 2× for performance
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadow;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // `let` (not const) so the context-restore handler can swap in a fresh renderer.
+        function createRenderer() {
+            const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'default' });
+            r.setPixelRatio(Math.min(devicePixelRatio, 2)); // cap at 2× for performance
+            r.shadowMap.enabled = true;
+            r.shadowMap.type = THREE.PCFShadowMap;
+            r.outputColorSpace = THREE.SRGBColorSpace;
+            return r;
+        }
+
+        let renderer;
+        if (!probeWebGL()) {
+            showContextLostOverlay();
+            throw new Error('WebGL unavailable');
+        }
+        try {
+            renderer = createRenderer();
+        } catch (err) {
+            // Backstop: Safari can still drop the context between probe and allocation.
+            showContextLostOverlay();
+            throw err;
+        }
+
+        const ctx = watchContextLoss(renderer, {
+            onFallback: showContextLostOverlay,
+            onRestored: () => {
+                try {
+                    renderer.dispose();
+                    renderer = createRenderer();
+                    ctx.reattach(renderer); // wire listeners + .check() to new context
+                    onResize();
+                    applyTheme(Theme.isDark());
+                    _animating = true;
+                    requestAnimationFrame(animate);
+                } catch (err) {
+                    console.error('WebGL restore failed:', err);
+                    showContextLostOverlay();
+                }
+            },
+        });
 
         // ─────────────────────────────────────────────────────────────────────────
         // Scene & camera
@@ -538,8 +582,21 @@
         // Animation loop
         // ─────────────────────────────────────────────────────────────────────────
         const timer = new THREE.Timer();
+        let _animating = true;
 
-        (function animate(timestamp) {
+        // Pause rendering when the tab is hidden — reduces GPU pressure and makes
+        // Safari far less likely to reclaim the WebGL context.
+        pauseWhenHidden(
+            () => { _animating = false; },
+            () => { _animating = true; requestAnimationFrame(animate); },
+        );
+
+        function animate(timestamp) {
+            if (!_animating) return;
+
+            // Per-frame backstop: Safari sometimes drops the context silently.
+            if (ctx.check()) { _animating = false; return; }
+
             requestAnimationFrame(animate);
             timer.update(timestamp);
             const dt = Math.min(timer.getDelta(), 1 / 30); // cap at 30 fps equivalent
@@ -624,7 +681,8 @@
             camera.lookAt(camTarget);
 
             renderer.render(scene, camera);
-        })();
+        }
+        requestAnimationFrame(animate);
     </script>
 </body>
 </html>
