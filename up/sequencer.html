@@ -485,8 +485,8 @@
     /** @param {DurationName} d @returns {string} */
     function durationToTone(d) { return DURATION_TO_TONE[d] ?? '4n'; }
     /** @type {Record<string, number>} */
-    const GAP_TO_BEATS = { '-1/8n': -0.5, '-1/16n': -0.25, '0': 0, '1/16n': 0.25, '1/8n': 0.5, '1/4n': 1 };
-    const GAP_OPTIONS = ['-1/8n', '-1/16n', '0', '1/16n', '1/8n', '1/4n'];
+    const GAP_TO_FRACTION = { '-25%': -0.25, '-10%': -0.1, '-5%': -0.05, '0%': 0, '5%': 0.05, '10%': 0.1, '25%': 0.25 };
+    const GAP_OPTIONS = ['-25%', '-10%', '-5%', '0%', '5%', '10%', '25%'];
     /** @type {Record<string, number[]>} */
     const CHORD_QUALITIES = { major: [0, 4, 7], minor: [0, 3, 7], diminished: [0, 3, 6] };
 
@@ -747,11 +747,11 @@
     }
 
     /** @param {MelodyItem[]} melody @param {DurationName} [baseBeat] @param {string} [gap] @returns {number} */
-    function totalBeats(melody, baseBeat = '1/4n', gap = '0') {
+    function totalBeats(melody, baseBeat = '1/4n', gap = '0%') {
         const step = DURATION_TO_BEATS[baseBeat];
         if (step == null) {
-            const gapBeats = GAP_TO_BEATS[gap] ?? 0;
-            return melody.reduce((s, item) => s + (DURATION_TO_BEATS[item.duration] ?? 1) + gapBeats, 0);
+            const gapFrac = GAP_TO_FRACTION[gap] ?? 0;
+            return melody.reduce((s, item) => s + (DURATION_TO_BEATS[item.duration] ?? 1) * (1 + gapFrac), 0);
         }
         return melody.length * step;
     }
@@ -765,13 +765,13 @@
      * @param {string} [gap]
      * @returns {EventItem[]}
      */
-    function melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat = '1/4n', gap = '0') {
+    function melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat = '1/4n', gap = '0%') {
         const step = DURATION_TO_BEATS[baseBeat];
-        const gapBeats = GAP_TO_BEATS[gap] ?? 0;
+        const gapFrac = GAP_TO_FRACTION[gap] ?? 0;
         let cursor = 0;
         return melody.map(item => {
             const base = { time: cursor, duration: item.duration, degree: item.degree, inversion: item.inversion || 0, octaveShift: item.octaveShift || 0 };
-            cursor += step ?? ((DURATION_TO_BEATS[item.duration] ?? 1) + gapBeats);
+            cursor += step ?? ((DURATION_TO_BEATS[item.duration] ?? 1) * (1 + gapFrac));
             if (chordMode) {
                 const chord = buildChordFromDegree(keyRoot, scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
                 return { ...base, notes: chord.notes.map(midiToNoteName), chordLabel: chord.label };
@@ -1112,7 +1112,7 @@
         const [chordMode,         setChordMode]         = useState(false);
         const [globalChordVariant, setGlobalChordVariant] = useState(/** @type {ChordVariantName} */('triad'));
         const [baseBeat,          setBaseBeat]          = useState(/** @type {DurationName|'none'} */('none'));
-        const [gap,               setGap]               = useState('1/16n');
+        const [gap,               setGap]               = useState('-25%');
         const [seqTheme,          setSeqTheme]          = useState(
             /** @type {'slate'|'default'} */(localStorage.getItem('seqTheme') !== 'default' ? 'slate' : 'default'));
         const [melody,            setMelody]            = useState(() =>
