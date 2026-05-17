@@ -106,10 +106,10 @@
         #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
 
         /* ── Inner Tabs (within Rolls panel) ── */
-        .inner-tabs { display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:1.25rem; border-bottom:1px solid var(--border); padding-bottom:0.6rem; }
-        .inner-tab-btn { background:none; border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.65rem; cursor:pointer; font-size:0.82rem; color:var(--text-muted); transition:all .15s; }
-        .inner-tab-btn:hover { border-color:var(--accent-soft); color:var(--text); }
-        .inner-tab-btn.active { background:var(--surface); color:var(--text); border-color:var(--accent-soft); font-weight:600; }
+        .inner-tabs { display:flex; gap:0; flex-wrap:wrap; margin-bottom:1.25rem; border-bottom:1px solid var(--border); }
+        .inner-tab-btn { background:none; border:none; border-bottom:2px solid transparent; padding:0.35rem 0.8rem; cursor:pointer; font-size:0.85rem; color:var(--text-muted); margin-bottom:-1px; transition:color .15s, border-color .15s; }
+        .inner-tab-btn:hover { color:var(--text); }
+        .inner-tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
         .inner-tab-panel { display:none; }
         .inner-tab-panel.active { display:block; }
 

@@ -1006,45 +1006,45 @@ function rosterFormHTML(d) {
   d = d || {};
   return `<div class="roster-form">
     <div class="roster-form-grid">
-      <div class="field-group"><label>Name *</label><input class="enc-input" id="rfName" placeholder="Aragorn" value="${d.name||''}"></div>
-      <div class="field-group"><label>Class / Role</label><input class="enc-input" id="rfCls" placeholder="Ranger" value="${d.cls||''}"></div>
-      <div class="field-group"><label>Level / CR</label><input class="enc-input" id="rfLevel" type="number" min="0" placeholder="5" value="${d.level||''}"></div>
-      <div class="field-group"><label>Max HP</label><input class="enc-input" id="rfHp" type="number" min="1" placeholder="52" value="${d.maxHp||''}"></div>
-      <div class="field-group"><label>AC</label><input class="enc-input" id="rfAc" type="number" min="0" placeholder="16" value="${d.ac||''}"></div>
-      <div class="field-group"><label>Init Bonus</label><input class="enc-input" id="rfInit" type="number" placeholder="0" value="${d.initMod != null ? d.initMod : ''}"></div>
+      <div class="field-group"><label>Name *</label><input class="enc-input rf-name" placeholder="Aragorn" value="${d.name||''}"></div>
+      <div class="field-group"><label>Class / Role</label><input class="enc-input rf-cls" placeholder="Ranger" value="${d.cls||''}"></div>
+      <div class="field-group"><label>Level / CR</label><input class="enc-input rf-level" type="number" min="0" placeholder="5" value="${d.level||''}"></div>
+      <div class="field-group"><label>Max HP</label><input class="enc-input rf-hp" type="number" min="1" placeholder="52" value="${d.maxHp||''}"></div>
+      <div class="field-group"><label>AC</label><input class="enc-input rf-ac" type="number" min="0" placeholder="16" value="${d.ac||''}"></div>
+      <div class="field-group"><label>Init Bonus</label><input class="enc-input rf-init" type="number" placeholder="0" value="${d.initMod != null ? d.initMod : ''}"></div>
     </div>
     <div class="roster-form-actions">
-      <button class="btn sm" id="rfSave">Save</button>
-      <button class="btn secondary sm" id="rfCancel">Cancel</button>
+      <button class="btn sm rf-save">Save</button>
+      <button class="btn secondary sm rf-cancel">Cancel</button>
     </div>
   </div>`;
 }
 
-function readRosterForm(existing) {
-  const name = document.getElementById('rfName').value.trim();
+function readRosterForm(wrap, existing) {
+  const name = wrap.querySelector('.rf-name').value.trim();
   if (!name) return null;
   return {
-    id: existing ? existing.id : Date.now() + '_' + Math.random(),
+    id:      existing ? existing.id : Date.now() + '_' + Math.random(),
     name,
-    cls:     document.getElementById('rfCls').value.trim(),
-    level:   parseInt(document.getElementById('rfLevel').value) || null,
-    maxHp:   parseInt(document.getElementById('rfHp').value)    || null,
-    ac:      parseInt(document.getElementById('rfAc').value)    || null,
-    initMod: parseInt(document.getElementById('rfInit').value)  || 0,
+    cls:     wrap.querySelector('.rf-cls').value.trim(),
+    level:   parseInt(wrap.querySelector('.rf-level').value) || null,
+    maxHp:   parseInt(wrap.querySelector('.rf-hp').value)    || null,
+    ac:      parseInt(wrap.querySelector('.rf-ac').value)    || null,
+    initMod: parseInt(wrap.querySelector('.rf-init').value)  || 0,
   };
 }
 
 function openRosterForm(wrap, existing, onSave) {
   wrap.style.display = '';
   wrap.innerHTML = rosterFormHTML(existing);
-  document.getElementById('rfSave').addEventListener('click', () => {
-    const entry = readRosterForm(existing);
+  wrap.querySelector('.rf-save').addEventListener('click', () => {
+    const entry = readRosterForm(wrap, existing);
     if (!entry) return;
     onSave(entry);
     wrap.style.display = 'none';
     wrap.innerHTML = '';
   });
-  document.getElementById('rfCancel').addEventListener('click', () => {
+  wrap.querySelector('.rf-cancel').addEventListener('click', () => {
     wrap.style.display = 'none';
     wrap.innerHTML = '';
   });
