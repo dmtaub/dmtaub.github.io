@@ -99,6 +99,7 @@
     <div id="forecastArea"></div>
 </div>
 
+<script src="./util.js"></script>
 <script>
 
 // ─── Preset locations ────────────────────────────────────────────────────────
@@ -515,6 +516,5 @@ document.querySelectorAll('.loc-tab-btn').forEach(b => b.classList.toggle('activ
 renderLocBar();
 if (activeKey) loadForecast(activeKey); else renderEmpty();
 </script>
-<script src="./util.js"></script>
 </body>
 </html>
