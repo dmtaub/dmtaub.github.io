@@ -480,6 +480,10 @@
     const SEMITONE_TO_NAME = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
     /** @type {Record<string, number>} */
     const DURATION_TO_BEATS = { '1/8n': 0.5, '1/4n': 1, '1/2n': 2, '1n': 4 };
+    /** @type {Record<string, string>} */
+    const DURATION_TO_TONE = { '1/8n': '8n', '1/4n': '4n', '1/2n': '2n', '1n': '1n' };
+    /** @param {DurationName} d @returns {string} */
+    function durationToTone(d) { return DURATION_TO_TONE[d] ?? '4n'; }
     /** @type {Record<string, number[]>} */
     const CHORD_QUALITIES = { major: [0, 4, 7], minor: [0, 3, 7], diminished: [0, 3, 6] };
 
@@ -739,9 +743,11 @@
         });
     }
 
-    /** @param {MelodyItem[]} melody @returns {number} */
-    function totalBeats(melody) {
-        return melody.reduce((s, item) => s + (DURATION_TO_BEATS[item.duration] ?? 1), 0);
+    /** @param {MelodyItem[]} melody @param {DurationName} [baseBeat] @returns {number} */
+    function totalBeats(melody, baseBeat = '1/4n') {
+        const step = DURATION_TO_BEATS[baseBeat];
+        if (step == null) return melody.reduce((s, item) => s + (DURATION_TO_BEATS[item.duration] ?? 1), 0);
+        return melody.length * step;
     }
 
     /**
@@ -749,13 +755,15 @@
      * @param {boolean} chordMode
      * @param {string} keyRoot
      * @param {ScaleName} scale
+     * @param {DurationName} [baseBeat]
      * @returns {EventItem[]}
      */
-    function melodyToEvents(melody, chordMode, keyRoot, scale) {
+    function melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat = '1/4n') {
+        const step = DURATION_TO_BEATS[baseBeat];
         let cursor = 0;
         return melody.map(item => {
             const base = { time: cursor, duration: item.duration, degree: item.degree, inversion: item.inversion || 0, octaveShift: item.octaveShift || 0 };
-            cursor += DURATION_TO_BEATS[item.duration] ?? 1;
+            cursor += step ?? (DURATION_TO_BEATS[item.duration] ?? 1);
             if (chordMode) {
                 const chord = buildChordFromDegree(keyRoot, scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
                 return { ...base, notes: chord.notes.map(midiToNoteName), chordLabel: chord.label };
@@ -847,14 +855,15 @@
      * @param {string} keyRoot
      * @param {ScaleName} scale
      * @param {number} tempo
+     * @param {DurationName} [baseBeat]
      * @returns {Blob}
      */
-    function makeMidiFile(melody, chordMode, keyRoot, scale, tempo) {
+    function makeMidiFile(melody, chordMode, keyRoot, scale, tempo, baseBeat = '1/4n') {
         const tpq   = 480;
         const micro = Math.round(60000000 / tempo);
         /** @type {Array<{tick:number, bytes:number[]}>} */
         const events = [{ tick: 0, bytes: [0xff, 0x51, 0x03, (micro >> 16) & 0xff, (micro >> 8) & 0xff, micro & 0xff] }];
-        melodyToEvents(melody, chordMode, keyRoot, scale).forEach(ev => {
+        melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat).forEach(ev => {
             const start = Math.round(ev.time * tpq);
             const dur   = Math.round((DURATION_TO_BEATS[ev.duration] ?? 1) * tpq);
             ev.notes.map(noteNameToMidi).forEach(midi => {
@@ -890,7 +899,7 @@
          */
         async preview(notes, duration = '1/2n') {
             await Tone.start();
-            this.synth.triggerAttackRelease(notes, duration, Tone.now(), Array.isArray(notes) ? 0.7 : 0.9);
+            this.synth.triggerAttackRelease(notes, durationToTone(duration), Tone.now(), Array.isArray(notes) ? 0.7 : 0.9);
         }
 
         /**
@@ -902,19 +911,19 @@
          * @param {boolean} [loop]
          * @returns {Promise<number>}
          */
-        async play(melody, chordMode, keyRoot, scale, bpm, loop = false, onIndex = null) {
+        async play(melody, chordMode, keyRoot, scale, bpm, loop = false, onIndex = null, baseBeat = '1/4n') {
             await Tone.start();
             this.stop();
-            const events = melodyToEvents(melody, chordMode, keyRoot, scale);
+            const events = melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat);
             Tone.Transport.bpm.value = bpm;
             this.part = new Tone.Part((time, /** @type {any} */ value) => {
-                this.synth.triggerAttackRelease(value.notes, value.duration, time, chordMode ? 0.65 : 0.85);
+                this.synth.triggerAttackRelease(value.notes, durationToTone(value.duration), time, chordMode ? 0.65 : 0.85);
                 if (onIndex) Tone.getDraw().schedule(() => onIndex(value.index), time);
             }, events.map((ev, i) => ({ ...ev, index: i }))).start(0);
             this.part.loop    = loop;
-            this.part.loopEnd = totalBeats(melody);
+            this.part.loopEnd = totalBeats(melody, baseBeat);
             Tone.Transport.start();
-            return totalBeats(melody);
+            return totalBeats(melody, baseBeat);
         }
 
         stop() {
@@ -1094,6 +1103,7 @@
         const [playingIndex,      setPlayingIndex]      = useState(-1);
         const [chordMode,         setChordMode]         = useState(false);
         const [globalChordVariant, setGlobalChordVariant] = useState(/** @type {ChordVariantName} */('triad'));
+        const [baseBeat,          setBaseBeat]          = useState(/** @type {DurationName|'none'} */('none'));
         const [seqTheme,          setSeqTheme]          = useState(
             /** @type {'slate'|'default'} */(localStorage.getItem('seqTheme') !== 'default' ? 'slate' : 'default'));
         const [melody,            setMelody]            = useState(() =>
@@ -1137,7 +1147,7 @@
         const play = async () => {
             if (!playerRef.current) return;
             stopPlayback();
-            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled, setPlayingIndex);
+            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled, setPlayingIndex, baseBeat);
             setIsPlaying(true);
             if (!loopEnabled) {
                 const ms = (60 / tempo) * beats * 1000 + 250;
@@ -1193,7 +1203,7 @@
         };
 
         const exportMidi = () => {
-            const blob = makeMidiFile(melody, chordMode, keyRoot, scale, tempo);
+            const blob = makeMidiFile(melody, chordMode, keyRoot, scale, tempo, baseBeat);
             const url  = URL.createObjectURL(blob);
             const a    = document.createElement('a');
             a.href = url; a.download = `sequencer-${keyRoot}-${scale}-${chordMode ? 'chords' : 'melody'}.mid`;
@@ -1233,6 +1243,13 @@
                                 <label>Phrase Length</label>
                                 <select class="seq-select" value=${length} onChange=${e => setLength(parseInt(e.target.value, 10))}>
                                     ${LENGTHS.map(n => html`<option key=${n} value=${n}>${n} notes</option>`)}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Base Beat</label>
+                                <select class="seq-select" value=${baseBeat} onChange=${e => setBaseBeat(e.target.value)}>
+                                    <option value="none">None</option>
+                                    ${DURATION_OPTIONS.map(d => html`<option key=${d} value=${d}>${d}</option>`)}
                                 </select>
                             </div>
                             ${chordMode && html`<div class="field">
