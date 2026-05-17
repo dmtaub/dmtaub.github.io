@@ -484,6 +484,9 @@
     const DURATION_TO_TONE = { '1/8n': '8n', '1/4n': '4n', '1/2n': '2n', '1n': '1n' };
     /** @param {DurationName} d @returns {string} */
     function durationToTone(d) { return DURATION_TO_TONE[d] ?? '4n'; }
+    /** @type {Record<string, number>} */
+    const GAP_TO_BEATS = { '-1/8n': -0.5, '-1/16n': -0.25, '0': 0, '1/16n': 0.25, '1/8n': 0.5, '1/4n': 1 };
+    const GAP_OPTIONS = ['-1/8n', '-1/16n', '0', '1/16n', '1/8n', '1/4n'];
     /** @type {Record<string, number[]>} */
     const CHORD_QUALITIES = { major: [0, 4, 7], minor: [0, 3, 7], diminished: [0, 3, 6] };
 
@@ -743,10 +746,13 @@
         });
     }
 
-    /** @param {MelodyItem[]} melody @param {DurationName} [baseBeat] @returns {number} */
-    function totalBeats(melody, baseBeat = '1/4n') {
+    /** @param {MelodyItem[]} melody @param {DurationName} [baseBeat] @param {string} [gap] @returns {number} */
+    function totalBeats(melody, baseBeat = '1/4n', gap = '0') {
         const step = DURATION_TO_BEATS[baseBeat];
-        if (step == null) return melody.reduce((s, item) => s + (DURATION_TO_BEATS[item.duration] ?? 1), 0);
+        if (step == null) {
+            const gapBeats = GAP_TO_BEATS[gap] ?? 0;
+            return melody.reduce((s, item) => s + (DURATION_TO_BEATS[item.duration] ?? 1) + gapBeats, 0);
+        }
         return melody.length * step;
     }
 
@@ -756,14 +762,16 @@
      * @param {string} keyRoot
      * @param {ScaleName} scale
      * @param {DurationName} [baseBeat]
+     * @param {string} [gap]
      * @returns {EventItem[]}
      */
-    function melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat = '1/4n') {
+    function melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat = '1/4n', gap = '0') {
         const step = DURATION_TO_BEATS[baseBeat];
+        const gapBeats = GAP_TO_BEATS[gap] ?? 0;
         let cursor = 0;
         return melody.map(item => {
             const base = { time: cursor, duration: item.duration, degree: item.degree, inversion: item.inversion || 0, octaveShift: item.octaveShift || 0 };
-            cursor += step ?? (DURATION_TO_BEATS[item.duration] ?? 1);
+            cursor += step ?? ((DURATION_TO_BEATS[item.duration] ?? 1) + gapBeats);
             if (chordMode) {
                 const chord = buildChordFromDegree(keyRoot, scale, item.degree, item.inversion || 0, item.octaveShift || 0, item.chordVariant);
                 return { ...base, notes: chord.notes.map(midiToNoteName), chordLabel: chord.label };
@@ -858,12 +866,12 @@
      * @param {DurationName} [baseBeat]
      * @returns {Blob}
      */
-    function makeMidiFile(melody, chordMode, keyRoot, scale, tempo, baseBeat = '1/4n') {
+    function makeMidiFile(melody, chordMode, keyRoot, scale, tempo, baseBeat = '1/4n', gap = '0') {
         const tpq   = 480;
         const micro = Math.round(60000000 / tempo);
         /** @type {Array<{tick:number, bytes:number[]}>} */
         const events = [{ tick: 0, bytes: [0xff, 0x51, 0x03, (micro >> 16) & 0xff, (micro >> 8) & 0xff, micro & 0xff] }];
-        melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat).forEach(ev => {
+        melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat, gap).forEach(ev => {
             const start = Math.round(ev.time * tpq);
             const dur   = Math.round((DURATION_TO_BEATS[ev.duration] ?? 1) * tpq);
             ev.notes.map(noteNameToMidi).forEach(midi => {
@@ -911,19 +919,19 @@
          * @param {boolean} [loop]
          * @returns {Promise<number>}
          */
-        async play(melody, chordMode, keyRoot, scale, bpm, loop = false, onIndex = null, baseBeat = '1/4n') {
+        async play(melody, chordMode, keyRoot, scale, bpm, loop = false, onIndex = null, baseBeat = '1/4n', gap = '0') {
             await Tone.start();
             this.stop();
-            const events = melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat);
+            const events = melodyToEvents(melody, chordMode, keyRoot, scale, baseBeat, gap);
             Tone.Transport.bpm.value = bpm;
             this.part = new Tone.Part((time, /** @type {any} */ value) => {
                 this.synth.triggerAttackRelease(value.notes, durationToTone(value.duration), time, chordMode ? 0.65 : 0.85);
                 if (onIndex) Tone.getDraw().schedule(() => onIndex(value.index), time);
             }, events.map((ev, i) => ({ ...ev, index: i }))).start(0);
             this.part.loop    = loop;
-            this.part.loopEnd = totalBeats(melody, baseBeat);
+            this.part.loopEnd = totalBeats(melody, baseBeat, gap);
             Tone.Transport.start();
-            return totalBeats(melody, baseBeat);
+            return totalBeats(melody, baseBeat, gap);
         }
 
         stop() {
@@ -1104,6 +1112,7 @@
         const [chordMode,         setChordMode]         = useState(false);
         const [globalChordVariant, setGlobalChordVariant] = useState(/** @type {ChordVariantName} */('triad'));
         const [baseBeat,          setBaseBeat]          = useState(/** @type {DurationName|'none'} */('none'));
+        const [gap,               setGap]               = useState('1/16n');
         const [seqTheme,          setSeqTheme]          = useState(
             /** @type {'slate'|'default'} */(localStorage.getItem('seqTheme') !== 'default' ? 'slate' : 'default'));
         const [melody,            setMelody]            = useState(() =>
@@ -1147,7 +1156,7 @@
         const play = async () => {
             if (!playerRef.current) return;
             stopPlayback();
-            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled, setPlayingIndex, baseBeat);
+            const beats = await playerRef.current.play(melody, chordMode, keyRoot, scale, tempo, loopEnabled, setPlayingIndex, baseBeat, gap);
             setIsPlaying(true);
             if (!loopEnabled) {
                 const ms = (60 / tempo) * beats * 1000 + 250;
@@ -1203,7 +1212,7 @@
         };
 
         const exportMidi = () => {
-            const blob = makeMidiFile(melody, chordMode, keyRoot, scale, tempo, baseBeat);
+            const blob = makeMidiFile(melody, chordMode, keyRoot, scale, tempo, baseBeat, gap);
             const url  = URL.createObjectURL(blob);
             const a    = document.createElement('a');
             a.href = url; a.download = `sequencer-${keyRoot}-${scale}-${chordMode ? 'chords' : 'melody'}.mid`;
@@ -1263,6 +1272,13 @@
                                 <select class="seq-select" value=${seqTheme} onChange=${e => setSeqTheme(e.target.value)}>
                                     <option value="slate">Slate</option>
                                     <option value="default">Default</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Gap</label>
+                                <select class="seq-select" value=${gap} disabled=${baseBeat !== 'none'}
+                                        onChange=${e => setGap(e.target.value)}>
+                                    ${GAP_OPTIONS.map(g => html`<option key=${g} value=${g}>${g}</option>`)}
                                 </select>
                             </div>
                         </div>
