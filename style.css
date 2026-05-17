@@ -76,6 +76,13 @@ body.ever-scrolled header .last-robot {
 body.ever-scrolled header .main-robot {
     margin: 10px auto 10px 8px;
 }
+body.projects-section header .header-robot {
+    opacity: 0;
+    width: 0;
+    max-width: 0;
+    margin: 0;
+    pointer-events: none;
+}
 
 /* Title block */
 .header-title {
@@ -110,7 +117,8 @@ body.ever-scrolled header .main-robot {
     transition: opacity 1s ease 0.6s, max-height 1.1s ease 0.4s, margin 1.1s ease 0.4s, letter-spacing 2s ease-out;
 }
 body.scrolled .header-subtitle,
-body.ever-scrolled .header-subtitle {
+body.ever-scrolled .header-subtitle,
+body.projects-section .header-subtitle {
     opacity: 0;
     max-height: 0;
     margin: 0;
@@ -141,11 +149,15 @@ body.ever-scrolled .header-subtitle {
 body.scrolled .header-title .subtle,
 body.scrolled .header-title .showy {
     opacity: 0.5;
-    pointer-events: none;
     transition: opacity 0.3s ease, font-size 0.3s ease;
 }
 body.ever-scrolled .header-title .subtle { font-size: 8px; }
 body.ever-scrolled .header-title .showy  { font-size: 11pt; left: 10px; }
+body.projects-section .header-title .subtle,
+body.projects-section .header-title .showy {
+    opacity: 0;
+    pointer-events: none;
+}
 
 /* Shared pill — nav-gear (left) and theme-toggle (right) */
 .nav-pill {
