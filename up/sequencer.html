@@ -1003,7 +1003,7 @@
         const midis    = chordMode ? chord.notes : [noteNameToMidi(item.note) + (item.octaveShift || 0) * 12];
         const numeral  = getRomanNumeral(scale, item.degree);
         const name     = chordMode ? chord.label : midiToNoteName(midis[0]);
-        const progOpts = getProgressionOptions(melody, index, keyRoot, scale, item.chordVariant);
+        const progOpts = getProgressionOptions(melody, index, keyRoot, scale, item.chordVariant).reverse();
         const invCount = buildChordFromDegree(keyRoot, scale, item.degree, 0, item.octaveShift || 0, item.chordVariant).notes.length;
         const range    = Math.max(1, stats.max - stats.min);
         const pct      = ((midis[0] - stats.min) / range) * 80 + 20;
