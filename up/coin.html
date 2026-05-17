@@ -9,8 +9,8 @@
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+            "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
         }
     }
     </script>
@@ -147,7 +147,6 @@
         // ─────────────────────────────────────────────────────────────────────────
         // DOM references
         // ─────────────────────────────────────────────────────────────────────────
-        const dark    = document.body.classList.contains('dark');
         const canvas  = document.getElementById('canvas');
         const flipBtn = document.getElementById('flip-btn');
         const resultEl = document.getElementById('result');
@@ -169,7 +168,7 @@
         // ─────────────────────────────────────────────────────────────────────────
         // The scene is the container for all 3D objects, lights, and the background.
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(dark ? '#100f1a' : '#F4F0F4');
+        scene.background = new THREE.Color();
 
         // The camera starts at camPos and looks toward camLookAt.
         // During a flip the look-at point tracks the coin; camTarget holds the
@@ -189,11 +188,12 @@
         // Lighting
         // ─────────────────────────────────────────────────────────────────────────
         // Ambient light fills all surfaces equally — prevents pure black shadows.
-        scene.add(new THREE.AmbientLight(0xffffff, dark ? 0.5 : 0.7));
+        const ambient = new THREE.AmbientLight(0xffffff);
+        scene.add(ambient);
 
         // The "sun" directional light casts shadows. Its shadow camera is an
         // orthographic frustum; left/right/top/bottom define its coverage area.
-        const sun = new THREE.DirectionalLight(0xffffff, dark ? 1.5 : 1.2);
+        const sun = new THREE.DirectionalLight(0xffffff);
         sun.position.set(4, 20, 5);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);  // higher = sharper shadows
@@ -204,7 +204,7 @@
         scene.add(sun);
 
         // A dim fill light from the opposite side softens harsh shadows.
-        const fill = new THREE.DirectionalLight(dark ? 0x9b8bbb : 0xfff0e8, 0.4);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.4);
         fill.position.set(-4, 2, -3);
         scene.add(fill);
 
@@ -216,11 +216,24 @@
         // top surface is exactly at y = 0.
         const floor = new THREE.Mesh(
             new THREE.CircleGeometry(10, 72),
-            new THREE.MeshStandardMaterial({ color: dark ? 0x1c1b2a : 0xe8e4f0, roughness: 0.9 })
+            new THREE.MeshStandardMaterial({ roughness: 0.9 })
         );
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Theme — apply scene colours and intensities, called on load and on change
+        // ─────────────────────────────────────────────────────────────────────────
+        function applyTheme(dark) {
+            scene.background.set(dark ? '#100f1a' : '#F4F0F4');
+            ambient.intensity      = dark ? 0.5  : 0.7;
+            sun.intensity          = dark ? 1.5  : 1.2;
+            fill.color.set(dark ? 0x9b8bbb : 0xfff0e8);
+            floor.material.color.set(dark ? 0x1c1b2a : 0xe8e4f0);
+        }
+        applyTheme(Theme.isDark());
+        document.addEventListener('themechange', e => applyTheme(e.detail.dark));
 
         const world = new RAPIER.World({ x: 0, y: C.gravity, z: 0 });
         // Shifted down by 0.5 so the top face of the 1-unit-tall box is at y = 0.
