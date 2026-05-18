@@ -1312,10 +1312,11 @@ function renderBattleSetup() {
       playerPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No players in roster.</div>';
     } else {
       playerPicks.innerHTML = playerRoster.map(p =>
-        `<label class="battle-pick-row">
+        `<div class="battle-pick-row">
           <input type="checkbox" data-roster-type="player" data-id="${p.id}" checked>
-          ${p.name}${p.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + p.cls + ')</span>' : ''}
-        </label>`
+          <span style="flex:1">${p.name}${p.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + p.cls + ')</span>' : ''}</span>
+          <input class="b-setup-init" type="number" placeholder="Init" title="Leave blank to roll d20+mod" data-id="${p.id}" data-roster-type="player" style="width:54px">
+        </div>`
       ).join('');
     }
   }
@@ -1327,10 +1328,11 @@ function renderBattleSetup() {
       npcPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No NPCs in roster.</div>';
     } else {
       npcPicks.innerHTML = npcRoster.map(n =>
-        `<label class="battle-pick-row">
+        `<div class="battle-pick-row">
           <input type="checkbox" data-roster-type="npc" data-id="${n.id}">
-          ${n.name}${n.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + n.cls + ')</span>' : ''}
-        </label>`
+          <span style="flex:1">${n.name}${n.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + n.cls + ')</span>' : ''}</span>
+          <input class="b-setup-init" type="number" placeholder="Init" title="Leave blank to roll d20+mod" data-id="${n.id}" data-roster-type="npc" style="width:54px">
+        </div>`
       ).join('');
     }
   }
@@ -1441,18 +1443,14 @@ function beginBattle() {
   document.querySelectorAll('#battlePlayerPicks input[type=checkbox]:checked').forEach(cb => {
     const p = playerRoster.find(r => r.id === cb.dataset.id);
     if (!p) return;
-    const init = rollD20() + (p.initMod || 0);
+    const initInput = document.querySelector(`#battlePlayerPicks .b-setup-init[data-id="${p.id}"]`);
+    const typed = initInput ? parseInt(initInput.value) : NaN;
+    const init = !isNaN(typed) ? typed : rollD20() + (p.initMod || 0);
     combatants.push({
       id: Date.now() + '_p_' + p.id,
-      name: p.name,
-      type: 'pc',
-      hp: p.maxHp || 10,
-      maxHp: p.maxHp || 10,
-      ac: p.ac || 10,
-      initiative: init,
-      tempHp: 0,
-      conditions: [],
-      gone: false,
+      name: p.name, type: 'pc',
+      hp: p.maxHp || 10, maxHp: p.maxHp || 10, ac: p.ac || 10,
+      initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
     });
   });
 
@@ -1460,18 +1458,14 @@ function beginBattle() {
   document.querySelectorAll('#battleNpcPicks input[type=checkbox]:checked').forEach(cb => {
     const n = npcRoster.find(r => r.id === cb.dataset.id);
     if (!n) return;
-    const init = rollD20() + (n.initMod || 0);
+    const initInput = document.querySelector(`#battleNpcPicks .b-setup-init[data-id="${n.id}"]`);
+    const typed = initInput ? parseInt(initInput.value) : NaN;
+    const init = !isNaN(typed) ? typed : rollD20() + (n.initMod || 0);
     combatants.push({
       id: Date.now() + '_n_' + n.id,
-      name: n.name,
-      type: 'npc',
-      hp: n.maxHp || 10,
-      maxHp: n.maxHp || 10,
-      ac: n.ac || 10,
-      initiative: init,
-      tempHp: 0,
-      conditions: [],
-      gone: false,
+      name: n.name, type: 'npc',
+      hp: n.maxHp || 10, maxHp: n.maxHp || 10, ac: n.ac || 10,
+      initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
     });
   });
 
@@ -1574,6 +1568,10 @@ function renderBattleActive() {
             <input class="b-adj-input" type="number" min="0" placeholder="0" id="bthp-${i}">
             <button class="btn sm secondary" data-setthp="${i}">Set</button>
           </div>
+        </div>
+        <div class="b-detail-group" style="flex:1">
+          <label>Notes</label>
+          <input class="b-notes-input" type="text" placeholder="…" data-i="${i}" value="${(c.notes||'').replace(/"/g,'&quot;')}">
         </div>
         <div class="b-detail-group">
           <details class="b-cond-dropdown">
@@ -1721,6 +1719,14 @@ function renderBattleActive() {
       curBattle().combatants[i].tempHp = amt;
       saveBattles();
       renderBattleActive();
+    });
+  });
+
+  // Notes — in-place save on blur
+  listEl.querySelectorAll('.b-notes-input').forEach(inp => {
+    inp.addEventListener('blur', () => {
+      curBattle().combatants[+inp.dataset.i].notes = inp.value;
+      saveBattles();
     });
   });
 
