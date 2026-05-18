@@ -359,15 +359,15 @@
     <page-topbar back="../" title="5e Tools" subtitle="Personal DnD 5e assistant — stat blocks, roll tables, roster, quick reference." status-banner></page-topbar>
 
     <div class="tabs">
-        <button class="tab-btn active" data-tab="statblocks">Stat Blocks</button>
+        <button class="tab-btn active" data-tab="roster">Characters</button>
+        <button class="tab-btn" data-tab="statblocks">Enemies</button>
+        <button class="tab-btn" data-tab="encounter">Turn Order</button>
         <button class="tab-btn" data-tab="rolls">Rolls</button>
-        <button class="tab-btn" data-tab="roster">Roster</button>
         <button class="tab-btn" data-tab="reference">Reference</button>
-        <button class="tab-btn" data-tab="encounter">Battle</button>
     </div>
 
     <!-- ══ STAT BLOCKS ══════════════════════════════════════════════════════ -->
-    <div id="tab-statblocks" class="tab-panel active">
+    <div id="tab-statblocks" class="tab-panel">
         <div class="stat-controls-bar">
             <div class="search-row">
                 <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
@@ -430,7 +430,7 @@
     </div>
 
     <!-- ══ ROSTER ═══════════════════════════════════════════════════════════ -->
-    <div id="tab-roster" class="tab-panel">
+    <div id="tab-roster" class="tab-panel active">
         <div class="roster-section">
             <p class="roster-section-heading">Players</p>
             <div class="roster-controls">
