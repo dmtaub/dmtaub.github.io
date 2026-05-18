@@ -1394,7 +1394,7 @@ function renderBattleSetup() {
       if (!lst) return;
       lst.names.forEach(name => {
         const creature = ALL_CREATURES.find(c => c.name === name);
-        if (creature && !battleEnemyQueue.find(q => q.name === creature.name)) {
+        if (creature) {
           battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
         }
       });
@@ -1422,7 +1422,7 @@ function renderBattleSetup() {
       resultsEl.querySelectorAll('.battle-enemy-result-row').forEach(row => {
         row.addEventListener('click', () => {
           const creature = ALL_CREATURES.find(c => c.name === row.dataset.name);
-          if (creature && !battleEnemyQueue.find(q => q.name === creature.name)) {
+          if (creature) {
             battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
             renderBattleEnemyQueue();
           }
