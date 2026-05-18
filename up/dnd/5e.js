@@ -1862,7 +1862,7 @@ function renderBattleActive() {
         row.addEventListener('click', () => {
           _midAddCreature = (ALL_CREATURES || []).find(m => m.name === row.dataset.name);
           if (!_midAddCreature) return;
-          midName.textContent = _midAddCreature.name;
+          midName.value = _midAddCreature.name;
           document.getElementById('battleMidHp').value = _midAddCreature.hp ? parseInt(_midAddCreature.hp) || '' : '';
           document.getElementById('battleMidCount').value = 1;
           midSelRow.style.display = '';
@@ -1880,7 +1880,7 @@ function renderBattleActive() {
       const customHp = parseInt(document.getElementById('battleMidHp').value) || null;
       const baseHp  = customHp || parseInt(_midAddCreature.hp) || 10;
       const dexMod  = parseDexMod(_midAddCreature.dex);
-      const baseName = _midAddCreature.name;
+      const baseName = (document.getElementById('battleMidName').value.trim()) || _midAddCreature.name;
       const b = curBattle();
       for (let n = 0; n < count; n++) {
         const label = count > 1 ? `${baseName} ${n + 1}` : baseName;
