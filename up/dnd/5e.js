@@ -1456,12 +1456,16 @@ function renderBattleEnemyQueue() {
   if (!battleEnemyQueue.length) { el.innerHTML = ''; return; }
   el.innerHTML = battleEnemyQueue.map((entry, i) => {
     const hpPlaceholder = entry.creature ? (parseInt(entry.creature.hp) || '') : '';
+    const acPlaceholder = entry.creature ? (parseInt(entry.creature.ac) || '') : '';
     return `<div class="battle-queue-row" data-qi="${i}">
       <span class="bqr-name">${entry.name}</span>
       <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">×
         <input class="enc-input bqr-count" type="number" min="1" max="20" value="${entry.count}" data-qi="${i}" style="width:52px">
       </label>
-      <input class="enc-input bqr-hp" type="number" min="1" placeholder="${hpPlaceholder}" value="${entry.customHp}" data-qi="${i}" style="width:70px" title="HP override">
+      <label style="font-size:0.78rem;color:var(--text-muted)">HP</label>
+      <input class="enc-input bqr-hp" type="number" min="1" placeholder="${hpPlaceholder}" value="${entry.customHp||''}" data-qi="${i}" style="width:60px" title="HP override">
+      <label style="font-size:0.78rem;color:var(--text-muted)">AC</label>
+      <input class="enc-input bqr-ac" type="number" min="1" placeholder="${acPlaceholder}" value="${entry.customAc||''}" data-qi="${i}" style="width:54px" title="AC override">
       <button class="btn danger sm bqr-remove" data-qi="${i}">✕</button>
     </div>`;
   }).join('');
@@ -1473,6 +1477,9 @@ function renderBattleEnemyQueue() {
   }));
   el.querySelectorAll('.bqr-hp').forEach(inp => inp.addEventListener('change', () => {
     battleEnemyQueue[+inp.dataset.qi].customHp = inp.value.trim();
+  }));
+  el.querySelectorAll('.bqr-ac').forEach(inp => inp.addEventListener('change', () => {
+    battleEnemyQueue[+inp.dataset.qi].customAc = inp.value.trim();
   }));
   el.querySelectorAll('.bqr-remove').forEach(btn => btn.addEventListener('click', () => {
     battleEnemyQueue.splice(+btn.dataset.qi, 1);
@@ -1517,6 +1524,7 @@ function beginBattle() {
   // Collect enemy queue entries
   battleEnemyQueue.forEach(entry => {
     const baseHp = entry.customHp ? parseInt(entry.customHp) : (parseInt(entry.creature?.hp) || 10);
+    const baseAc = entry.customAc ? parseInt(entry.customAc) : (parseInt(entry.creature?.ac) || 10);
     const dexMod = parseDexMod(entry.creature?.dex);
     const baseName = entry.name;
     for (let n = 0; n < entry.count; n++) {
@@ -1527,7 +1535,7 @@ function beginBattle() {
         name: label, creatureName: baseName,
         type: 'enemy',
         hp: baseHp, maxHp: baseHp,
-        ac: parseInt(entry.creature?.ac) || 10,
+        ac: baseAc,
         initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
       });
     }
@@ -1864,6 +1872,7 @@ function renderBattleActive() {
           if (!_midAddCreature) return;
           midName.value = _midAddCreature.name;
           document.getElementById('battleMidHp').value = _midAddCreature.hp ? parseInt(_midAddCreature.hp) || '' : '';
+          document.getElementById('battleMidAc').value = _midAddCreature.ac ? parseInt(_midAddCreature.ac) || '' : '';
           document.getElementById('battleMidCount').value = 1;
           midSelRow.style.display = '';
           midResults.classList.remove('open');
@@ -1879,6 +1888,8 @@ function renderBattleActive() {
       const count   = Math.max(1, parseInt(document.getElementById('battleMidCount').value) || 1);
       const customHp = parseInt(document.getElementById('battleMidHp').value) || null;
       const baseHp  = customHp || parseInt(_midAddCreature.hp) || 10;
+      const customAc = parseInt(document.getElementById('battleMidAc').value) || null;
+      const baseAc  = customAc || parseInt(_midAddCreature.ac) || 10;
       const dexMod  = parseDexMod(_midAddCreature.dex);
       const baseName = (document.getElementById('battleMidName').value.trim()) || _midAddCreature.name;
       const b = curBattle();
@@ -1889,7 +1900,7 @@ function renderBattleActive() {
           name: label, creatureName: baseName,
           type: 'enemy',
           hp: baseHp, maxHp: baseHp,
-          ac: parseInt(_midAddCreature.ac) || 10,
+          ac: baseAc,
           initiative: rollD20() + dexMod,
           tempHp: 0, conditions: [], notes: '', gone: false,
         });
