@@ -879,8 +879,16 @@ let npcRoster    = (() => { try { return JSON.parse(localStorage.getItem('5e-npc
 function savePlayerRoster() { localStorage.setItem('5e-players', JSON.stringify(playerRoster)); }
 function saveNpcRoster()    { localStorage.setItem('5e-npcs',    JSON.stringify(npcRoster)); }
 
+const ABILITY_KEYS   = ['str','dex','con','int','wis','cha'];
+const ABILITY_LABELS = ['STR','DEX','CON','INT','WIS','CHA'];
+
+function abilityMod(score) { return Math.floor(((score || 10) - 10) / 2); }
+function modStr(score)     { const m = abilityMod(score); return (m >= 0 ? '+' : '') + m; }
+function profBonus(level)  { return Math.floor(((level || 1) - 1) / 4) + 2; }
+
 function rosterFormHTML(d) {
   d = d || {};
+  const saves = d.saves || {};
   return `<div class="roster-form">
     <div class="roster-form-grid">
       <div class="field-group"><label>Name *</label><input class="enc-input rf-name" placeholder="Aragorn" value="${d.name||''}"></div>
@@ -888,7 +896,28 @@ function rosterFormHTML(d) {
       <div class="field-group"><label>Level / CR</label><input class="enc-input rf-level" type="number" min="0" placeholder="5" value="${d.level||''}"></div>
       <div class="field-group"><label>Max HP</label><input class="enc-input rf-hp" type="number" min="1" placeholder="52" value="${d.maxHp||''}"></div>
       <div class="field-group"><label>AC</label><input class="enc-input rf-ac" type="number" min="0" placeholder="16" value="${d.ac||''}"></div>
-      <div class="field-group"><label>Init Bonus</label><input class="enc-input rf-init" type="number" placeholder="0" value="${d.initMod != null ? d.initMod : ''}"></div>
+      <div class="field-group"><label>Speed (ft)</label><input class="enc-input rf-speed" type="number" min="0" placeholder="30" value="${d.speed||''}"></div>
+    </div>
+    <div class="rf-ability-row">
+      ${ABILITY_KEYS.map((a, i) => `<div class="rf-ability-cell">
+        <label>${ABILITY_LABELS[i]}</label>
+        <input class="enc-input rf-ability rf-${a}" type="number" min="1" max="30" placeholder="10" value="${d[a]||''}">
+        <span class="rf-ability-mod" data-ability="${a}">${d[a] != null ? modStr(d[a]) : ''}</span>
+      </div>`).join('')}
+    </div>
+    <div class="rf-saves-row">
+      <span class="rf-saves-label">Save prof:</span>
+      ${ABILITY_KEYS.map((a, i) => `<label class="rf-save-check">
+        <input type="checkbox" class="rf-save rf-save-${a}" ${saves[a] ? 'checked' : ''}>
+        ${ABILITY_LABELS[i]}
+      </label>`).join('')}
+    </div>
+    <div class="roster-form-grid">
+      <div class="field-group"><label>Passive Perception</label><input class="enc-input rf-passive" type="number" placeholder="auto" value="${d.passivePerception||''}"></div>
+    </div>
+    <div class="rf-text-row">
+      <div class="field-group"><label>Inventory</label><textarea class="enc-input rf-inventory" rows="3" placeholder="Longsword, Shield, Backpack…">${d.inventory||''}</textarea></div>
+      <div class="field-group"><label>Notes / Traits</label><textarea class="enc-input rf-notes" rows="3" placeholder="Darkvision 60 ft, Fey Ancestry…">${d.notes||''}</textarea></div>
     </div>
     <div class="roster-form-actions">
       <button class="btn sm rf-save">Save</button>
@@ -900,20 +929,42 @@ function rosterFormHTML(d) {
 function readRosterForm(wrap, existing) {
   const name = wrap.querySelector('.rf-name').value.trim();
   if (!name) return null;
+  const dex  = parseInt(wrap.querySelector('.rf-dex').value)  || null;
+  const saves = {};
+  ABILITY_KEYS.forEach(a => { saves[a] = wrap.querySelector(`.rf-save-${a}`)?.checked || false; });
+  const abilities = {};
+  ABILITY_KEYS.forEach(a => { abilities[a] = parseInt(wrap.querySelector(`.rf-${a}`).value) || null; });
   return {
-    id:      existing ? existing.id : Date.now() + '_' + Math.random(),
+    id:               existing ? existing.id : Date.now() + '_' + Math.random(),
     name,
-    cls:     wrap.querySelector('.rf-cls').value.trim(),
-    level:   parseInt(wrap.querySelector('.rf-level').value) || null,
-    maxHp:   parseInt(wrap.querySelector('.rf-hp').value)    || null,
-    ac:      parseInt(wrap.querySelector('.rf-ac').value)    || null,
-    initMod: parseInt(wrap.querySelector('.rf-init').value)  || 0,
+    cls:              wrap.querySelector('.rf-cls').value.trim(),
+    level:            parseInt(wrap.querySelector('.rf-level').value)  || null,
+    maxHp:            parseInt(wrap.querySelector('.rf-hp').value)     || null,
+    ac:               parseInt(wrap.querySelector('.rf-ac').value)     || null,
+    speed:            parseInt(wrap.querySelector('.rf-speed').value)  || null,
+    passivePerception:parseInt(wrap.querySelector('.rf-passive').value)|| null,
+    inventory:        wrap.querySelector('.rf-inventory').value.trim(),
+    notes:            wrap.querySelector('.rf-notes').value.trim(),
+    saves,
+    ...abilities,
+    initMod: dex != null ? abilityMod(dex) : 0,
   };
 }
 
 function openRosterForm(wrap, existing, onSave) {
   wrap.style.display = '';
   wrap.innerHTML = rosterFormHTML(existing);
+  // Live-update ability modifiers as scores are typed
+  function updateMods() {
+    ABILITY_KEYS.forEach(a => {
+      const input = wrap.querySelector(`.rf-${a}`);
+      const modEl = wrap.querySelector(`.rf-ability-mod[data-ability="${a}"]`);
+      if (!input || !modEl) return;
+      const score = parseInt(input.value);
+      modEl.textContent = isNaN(score) ? '' : modStr(score);
+    });
+  }
+  ABILITY_KEYS.forEach(a => wrap.querySelector(`.rf-${a}`)?.addEventListener('input', updateMods));
   wrap.querySelector('.rf-save').addEventListener('click', () => {
     const entry = readRosterForm(wrap, existing);
     if (!entry) return;
@@ -933,8 +984,9 @@ function renderRosterCards(roster, gridId, formWrapId, onDelete, onEdit) {
     grid.innerHTML = '<p class="stat-empty">None yet.</p>';
     return;
   }
-  grid.innerHTML = roster.map((p, i) => `
-    <div class="roster-card">
+  grid.innerHTML = roster.map((p, i) => {
+    const hasAbilities = ABILITY_KEYS.some(a => p[a] != null);
+    return `<div class="roster-card">
       <div class="roster-card-actions">
         <button data-edit="${i}" title="Edit">✎</button>
         <button class="del" data-del="${i}" title="Delete">✕</button>
@@ -944,9 +996,20 @@ function renderRosterCards(roster, gridId, formWrapId, onDelete, onEdit) {
       <div class="roster-card-stats">
         ${p.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${p.maxHp}</span>` : ''}
         ${p.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${p.ac}</span>`    : ''}
-        <span class="stat-pill"><strong>Init</strong> ${p.initMod >= 0 ? '+' : ''}${p.initMod}</span>
+        ${p.speed != null ? `<span class="stat-pill"><strong>Spd</strong> ${p.speed}</span>` : ''}
+        <span class="stat-pill"><strong>Init</strong> ${(p.initMod||0) >= 0 ? '+' : ''}${p.initMod||0}</span>
       </div>
-    </div>`).join('');
+      ${hasAbilities ? `<div class="roster-card-abilities">${ABILITY_KEYS.map((a, i2) => {
+        const score = p[a];
+        const mod   = score != null ? abilityMod(score) : null;
+        return `<div class="rca-cell">
+          <span class="rca-label">${ABILITY_LABELS[i2]}</span>
+          <span class="rca-score">${score != null ? score : '—'}</span>
+          ${mod != null ? `<span class="rca-mod">${mod >= 0 ? '+' : ''}${mod}</span>` : ''}
+        </div>`;
+      }).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
   grid.querySelectorAll('[data-del]').forEach(btn =>
     btn.addEventListener('click', () => onDelete(+btn.dataset.del)));
   grid.querySelectorAll('[data-edit]').forEach(btn =>
@@ -1322,30 +1385,40 @@ function renderBattleCombatantStatBlock(c) {
     if (!creature) return `<div style="color:var(--text-muted);font-size:0.82rem">No stat block found for "${c.creatureName || c.name}".</div>`;
     return `<div class="b-detail-statblock-inner">${renderFull(creature)}</div>`;
   }
-  if (c.type === 'pc') {
-    const p = playerRoster.find(r => r.id === c.rosterId) || playerRoster.find(r => r.name === c.name);
-    if (!p) return `<div style="color:var(--text-muted);font-size:0.82rem">Player not found in roster.</div>`;
+  if (c.type === 'pc' || c.type === 'npc') {
+    const roster = c.type === 'pc' ? playerRoster : npcRoster;
+    const label  = c.type === 'pc' ? 'Player Character' : 'NPC';
+    const p = roster.find(r => r.id === c.rosterId) || roster.find(r => r.name === c.name);
+    if (!p) return `<div style="color:var(--text-muted);font-size:0.82rem">${label} not found in roster.</div>`;
+    const hasAbilities = ABILITY_KEYS.some(a => p[a] != null);
+    const level  = p.level || 1;
+    const prof   = profBonus(level);
+    const saves  = p.saves || {};
+    const profSaves = ABILITY_KEYS.filter(a => saves[a] && p[a] != null);
     return `<div class="b-detail-statblock-inner">
       <div class="stat-block-name">${p.name}</div>
-      <div class="stat-block-meta">${[p.cls, p.level ? 'Level ' + p.level : ''].filter(Boolean).join(' · ') || 'Player Character'}</div>
+      <div class="stat-block-meta">${[p.cls, p.level ? 'Level ' + p.level : ''].filter(Boolean).join(' · ') || label}</div>
       <div class="stat-row">
         ${p.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${p.maxHp}</span>` : ''}
         ${p.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${p.ac}</span>` : ''}
+        ${p.speed != null ? `<span class="stat-pill"><strong>Speed</strong> ${p.speed} ft</span>` : ''}
         <span class="stat-pill"><strong>Init</strong> ${(p.initMod||0) >= 0 ? '+' : ''}${p.initMod||0}</span>
+        ${p.level ? `<span class="stat-pill"><strong>Prof</strong> +${prof}</span>` : ''}
+        ${p.passivePerception != null ? `<span class="stat-pill"><strong>Pass. Perc</strong> ${p.passivePerception}</span>` : ''}
       </div>
-    </div>`;
-  }
-  if (c.type === 'npc') {
-    const n = npcRoster.find(r => r.id === c.rosterId) || npcRoster.find(r => r.name === c.name);
-    if (!n) return `<div style="color:var(--text-muted);font-size:0.82rem">NPC not found in roster.</div>`;
-    return `<div class="b-detail-statblock-inner">
-      <div class="stat-block-name">${n.name}</div>
-      <div class="stat-block-meta">${[n.cls, n.level ? 'Level ' + n.level : ''].filter(Boolean).join(' · ') || 'NPC'}</div>
-      <div class="stat-row">
-        ${n.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${n.maxHp}</span>` : ''}
-        ${n.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${n.ac}</span>` : ''}
-        <span class="stat-pill"><strong>Init</strong> ${(n.initMod||0) >= 0 ? '+' : ''}${n.initMod||0}</span>
-      </div>
+      ${hasAbilities ? `<table class="b-ability-table">
+        <thead><tr>${ABILITY_LABELS.map(l => `<th>${l}</th>`).join('')}</tr></thead>
+        <tbody>
+          <tr>${ABILITY_KEYS.map(a => `<td>${p[a] != null ? p[a] : '—'}</td>`).join('')}</tr>
+          <tr>${ABILITY_KEYS.map(a => `<td>${p[a] != null ? modStr(p[a]) : '—'}</td>`).join('')}</tr>
+        </tbody>
+      </table>` : ''}
+      ${profSaves.length ? `<div class="b-detail-line"><strong>Saving Throws</strong> ${profSaves.map(a => {
+        const total = abilityMod(p[a]) + prof;
+        return `${a.toUpperCase()} ${total >= 0 ? '+' : ''}${total}`;
+      }).join(', ')}</div>` : ''}
+      ${p.inventory ? `<div class="b-detail-section"><strong>Inventory</strong><div class="b-detail-text">${p.inventory}</div></div>` : ''}
+      ${p.notes ? `<div class="b-detail-section"><strong>Traits / Notes</strong><div class="b-detail-text">${p.notes}</div></div>` : ''}
     </div>`;
   }
   return '';

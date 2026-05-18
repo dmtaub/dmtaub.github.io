@@ -212,7 +212,37 @@
         .roster-form-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:0.5rem 0.75rem; margin-bottom:0.75rem; }
         .roster-form .field-group { display:flex; flex-direction:column; gap:0.2rem; }
         .roster-form .field-group label { font-size:0.78rem; color:var(--text-muted); }
-        .roster-form-actions { display:flex; gap:0.5rem; }
+        .roster-form-actions { display:flex; gap:0.5rem; margin-top:0.75rem; }
+        /* ability score row in roster form */
+        .rf-ability-row { display:grid; grid-template-columns:repeat(6,1fr); gap:0.4rem 0.5rem; margin-bottom:0.6rem; }
+        .rf-ability-cell { display:flex; flex-direction:column; align-items:center; gap:0.1rem; }
+        .rf-ability-cell label { font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; }
+        .rf-ability-cell .enc-input { width:100%; text-align:center; padding:0.2rem 0.3rem; }
+        .rf-ability-mod { font-size:0.72rem; color:var(--accent); font-weight:600; min-height:1em; }
+        /* saves row */
+        .rf-saves-row { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem; font-size:0.8rem; }
+        .rf-saves-label { font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; }
+        .rf-save-check { display:flex; align-items:center; gap:0.2rem; cursor:pointer; color:var(--text); }
+        .rf-save-check input { accent-color:var(--accent); }
+        /* text areas row */
+        .rf-text-row { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem 0.75rem; margin-bottom:0.5rem; }
+        .rf-text-row .field-group textarea { background:var(--bg); border:1px solid var(--border); border-radius:5px; padding:0.3rem 0.45rem; font-size:0.83rem; color:var(--text); resize:vertical; width:100%; box-sizing:border-box; font-family:inherit; }
+        @media (max-width:520px) { .rf-ability-row { grid-template-columns:repeat(3,1fr); } .rf-text-row { grid-template-columns:1fr; } }
+        /* ability mini-table on roster card */
+        .roster-card-abilities { display:grid; grid-template-columns:repeat(6,1fr); gap:0.2rem; margin-top:0.5rem; border-top:1px solid var(--border); padding-top:0.4rem; }
+        .rca-cell { display:flex; flex-direction:column; align-items:center; gap:0; }
+        .rca-label { font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; }
+        .rca-score { font-size:0.82rem; font-weight:600; color:var(--text); }
+        .rca-mod { font-size:0.68rem; color:var(--accent); }
+        /* ability table in battle detail */
+        .b-ability-table { width:100%; border-collapse:collapse; margin:0.4rem 0; font-size:0.8rem; text-align:center; }
+        .b-ability-table th { font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); padding:0.1rem 0.2rem; border-bottom:1px solid var(--border); }
+        .b-ability-table td { padding:0.15rem 0.2rem; color:var(--text); }
+        .b-ability-table tr:last-child td { font-weight:600; color:var(--accent); }
+        .b-detail-line { font-size:0.8rem; margin:0.3rem 0; color:var(--text); }
+        .b-detail-section { margin-top:0.5rem; }
+        .b-detail-section strong { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); display:block; margin-bottom:0.2rem; }
+        .b-detail-text { font-size:0.82rem; color:var(--text); white-space:pre-wrap; line-height:1.5; }
 
         @media (max-width:520px) {
             .stat-grid { grid-template-columns:1fr; }
