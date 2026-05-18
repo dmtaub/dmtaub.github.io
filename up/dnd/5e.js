@@ -848,9 +848,10 @@ function buildWeaponsTable(weapons) {
   wrap.innerHTML = html;
 }
 
-// ─── ENCOUNTER BUILDER ───────────────────────────────────────────────────────
+// ─── CONDITIONS (shared) ─────────────────────────────────────────────────────
 const CONDITIONS = ['Blinded','Charmed','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Poisoned','Prone','Restrained','Stunned','Unconscious'];
 
+// ─── ENCOUNTER BUILDER (legacy state — kept for data migration only) ──────────
 let encounterState = (() => {
   try { return JSON.parse(localStorage.getItem('5e-encounters') || 'null'); } catch(e) {}
   return null;
@@ -859,141 +860,6 @@ let encounterState = (() => {
 function saveEnc() { localStorage.setItem('5e-encounters', JSON.stringify(encounterState)); }
 function curEnc()  { return encounterState.slots[encounterState.current]; }
 
-function renderSlots() {
-  const el = document.getElementById('encSlots');
-  el.innerHTML = encounterState.slots.map((s,i) =>
-    `<span class="enc-slot ${i===encounterState.current?'active':''}" data-i="${i}">${s.name}</span>`
-  ).join('');
-  el.querySelectorAll('.enc-slot').forEach(sp => sp.addEventListener('click', () => {
-    encounterState.current = parseInt(sp.dataset.i);
-    encounterState.round = 1; encounterState.turn = 0;
-    saveEnc(); renderAll();
-  }));
-}
-
-function hpClass(cur, max) {
-  if (!max) return '';
-  const p = cur / max;
-  return p <= 0.25 ? 'low' : p <= 0.5 ? 'mid' : '';
-}
-
-function renderCombatants() {
-  const enc = curEnc();
-  const list = document.getElementById('combatantList');
-  if (!enc.combatants.length) {
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.88rem;padding:0.4rem 0">No combatants. Add one above.</div>';
-    return;
-  }
-  list.innerHTML = enc.combatants.map((c,i) => {
-    const pct = c.maxHp > 0 ? Math.max(0, Math.min(100, c.hp / c.maxHp * 100)) : 100;
-    const conds = c.conditions || [];
-    return `<div class="combatant-row ${encounterState.turn===i?'active-turn':''} ${c.hp<=0?'defeated':''}">
-      <div class="comb-init">${c.initiative??'—'}</div>
-      <div class="comb-name">${c.name} <span style="font-size:0.7rem;color:var(--text-muted)">(${c.type})</span></div>
-      <div class="comb-ac">AC ${c.ac}</div>
-      <div class="comb-hp-wrap">
-        <div class="hp-bar-wrap"><div class="hp-bar ${hpClass(c.hp,c.maxHp)}" style="width:${pct}%"></div></div>
-        <span class="comb-hp">
-          <input class="comb-hp-input" data-i="${i}" type="number" value="${c.hp}" min="0" max="${c.maxHp}"> / ${c.maxHp}
-        </span>
-      </div>
-      <div class="comb-conditions">${CONDITIONS.map(cd =>
-        `<span class="condition-tag ${conds.includes(cd)?'on':''}" data-i="${i}" data-cond="${cd}" title="${cd}">${cd.substring(0,3)}</span>`
-      ).join('')}</div>
-      <button class="btn danger sm" data-rm="${i}">✕</button>
-    </div>`;
-  }).join('');
-
-  list.querySelectorAll('.comb-hp-input').forEach(inp => inp.addEventListener('change', () => {
-    curEnc().combatants[+inp.dataset.i].hp = Math.max(0, +inp.value || 0);
-    saveEnc(); renderCombatants();
-  }));
-  list.querySelectorAll('.condition-tag').forEach(tag => tag.addEventListener('click', () => {
-    const c = curEnc().combatants[+tag.dataset.i];
-    c.conditions = c.conditions || [];
-    const idx = c.conditions.indexOf(tag.dataset.cond);
-    if (idx >= 0) c.conditions.splice(idx,1); else c.conditions.push(tag.dataset.cond);
-    saveEnc(); renderCombatants();
-  }));
-  list.querySelectorAll('[data-rm]').forEach(btn => btn.addEventListener('click', () => {
-    curEnc().combatants.splice(+btn.dataset.rm, 1);
-    if (encounterState.turn >= curEnc().combatants.length) encounterState.turn = 0;
-    saveEnc(); renderAll();
-  }));
-}
-
-function renderRoundTracker() {
-  document.getElementById('roundNum').textContent = encounterState.round;
-  const t = curEnc().combatants[encounterState.turn];
-  document.getElementById('turnNum').textContent = t ? t.name : '—';
-}
-
-function renderAll() { renderSlots(); renderCombatants(); renderRoundTracker(); }
-
-document.getElementById('btnNewEnc').addEventListener('click', () => {
-  const name = prompt('Encounter name:', 'Encounter '+(encounterState.slots.length+1));
-  if (!name) return;
-  encounterState.slots.push({ name, combatants:[] });
-  encounterState.current = encounterState.slots.length - 1;
-  encounterState.round = 1; encounterState.turn = 0;
-  saveEnc(); renderAll();
-});
-document.getElementById('btnRenameEnc').addEventListener('click', () => {
-  const name = prompt('New name:', curEnc().name);
-  if (name) { curEnc().name = name; saveEnc(); renderSlots(); }
-});
-document.getElementById('btnDeleteEnc').addEventListener('click', () => {
-  if (encounterState.slots.length <= 1) { alert('Cannot delete the last encounter.'); return; }
-  if (!confirm('Delete "'+curEnc().name+'"?')) return;
-  encounterState.slots.splice(encounterState.current, 1);
-  encounterState.current = Math.max(0, encounterState.current - 1);
-  encounterState.round = 1; encounterState.turn = 0;
-  saveEnc(); renderAll();
-});
-document.getElementById('btnAddCombatant').addEventListener('click', () => {
-  const name = document.getElementById('addName').value.trim();
-  if (!name) return;
-  const maxHp = parseInt(document.getElementById('addHp').value) || 10;
-  const ac    = parseInt(document.getElementById('addAc').value)  || 10;
-  const initV = document.getElementById('addInit').value.trim();
-  curEnc().combatants.push({ name, hp:maxHp, maxHp, ac, initiative: initV!=='' ? +initV : null, type: document.getElementById('addType').value, conditions:[] });
-  saveEnc(); renderCombatants();
-  document.getElementById('addName').value = '';
-  ['addHp','addAc','addInit'].forEach(id => document.getElementById(id).value = '');
-});
-document.getElementById('addName').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('btnAddCombatant').click(); });
-document.getElementById('btnNextTurn').addEventListener('click', () => {
-  const cs = curEnc().combatants;
-  if (!cs.length) return;
-  encounterState.turn = (encounterState.turn + 1) % cs.length;
-  if (encounterState.turn === 0) encounterState.round++;
-  saveEnc(); renderAll();
-});
-document.getElementById('btnRollInit').addEventListener('click', () => {
-  curEnc().combatants.forEach(c => { c.initiative = Math.floor(Math.random()*20)+1; });
-  saveEnc(); renderCombatants();
-});
-document.getElementById('btnSortInit').addEventListener('click', () => {
-  curEnc().combatants.sort((a,b) => (b.initiative??-99)-(a.initiative??-99));
-  encounterState.turn = 0;
-  saveEnc(); renderCombatants();
-});
-document.getElementById('btnResetRound').addEventListener('click', () => {
-  encounterState.round = 1; encounterState.turn = 0;
-  saveEnc(); renderRoundTracker();
-});
-document.getElementById('btnExport').addEventListener('click', () => {
-  document.getElementById('jsonIO').value = JSON.stringify(curEnc(), null, 2);
-});
-document.getElementById('btnImport').addEventListener('click', () => {
-  try {
-    const d = JSON.parse(document.getElementById('jsonIO').value);
-    if (!Array.isArray(d.combatants)) throw new Error('Missing combatants array');
-    encounterState.slots[encounterState.current] = d;
-    encounterState.turn = 0;
-    saveEnc(); renderAll();
-  } catch(e) { alert('Invalid JSON: '+e.message); }
-});
 
 // ─── ROSTERS ─────────────────────────────────────────────────────────────────
 let playerRoster = (() => { try { return JSON.parse(localStorage.getItem('5e-players') || '[]'); } catch(e) { return []; } })();
@@ -1392,13 +1258,544 @@ function buildPlayerRolls() {
   }
 }
 
+// ─── BATTLE TRACKER ──────────────────────────────────────────────────────────
+let battles = (() => { try { return JSON.parse(localStorage.getItem('5e-battles') || '[]'); } catch(e) { return []; } })();
+if (!battles.length) battles = [{ id: Date.now() + '_0', name: 'Battle 1', phase: 'setup', round: 1, turnIdx: 0, combatants: [] }];
+let currentBattleIdx = 0;
+function curBattle() { return battles[currentBattleIdx]; }
+function saveBattles() { localStorage.setItem('5e-battles', JSON.stringify(battles)); }
+
+// In-memory enemy queue for the setup phase (reset when switching battles)
+let battleEnemyQueue = [];
+let _battleDragIdx = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function parseDexMod(dexStr) {
+  if (!dexStr) return 0;
+  const m = dexStr.match(/\(([+\-]\d+)\)/);
+  if (m) return parseInt(m[1], 10);
+  // fallback: raw score
+  const score = parseInt(dexStr, 10);
+  return isNaN(score) ? 0 : Math.floor((score - 10) / 2);
+}
+
+function battleHpClass(cur, max) {
+  if (!max) return '';
+  const p = cur / max;
+  return p <= 0.25 ? 'low' : p <= 0.5 ? 'mid' : '';
+}
+
+function rollD20() { return Math.floor(Math.random() * 20) + 1; }
+
+// ── Slot rendering ────────────────────────────────────────────────────────────
+function renderBattleSlots() {
+  const el = document.getElementById('battleSlots');
+  if (!el) return;
+  el.innerHTML = battles.map((b, i) =>
+    `<span class="enc-slot ${i === currentBattleIdx ? 'active' : ''}" data-bi="${i}">${b.name}</span>`
+  ).join('');
+  el.querySelectorAll('.enc-slot').forEach(sp => sp.addEventListener('click', () => {
+    currentBattleIdx = parseInt(sp.dataset.bi);
+    battleEnemyQueue = [];
+    saveBattles();
+    renderBattle();
+  }));
+}
+
+// ── Setup phase ───────────────────────────────────────────────────────────────
+function renderBattleSetup() {
+  // Player checkboxes
+  const playerPicks = document.getElementById('battlePlayerPicks');
+  if (playerPicks) {
+    if (!playerRoster.length) {
+      playerPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No players in roster.</div>';
+    } else {
+      playerPicks.innerHTML = playerRoster.map(p =>
+        `<label class="battle-pick-row">
+          <input type="checkbox" data-roster-type="player" data-id="${p.id}" checked>
+          ${p.name}${p.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + p.cls + ')</span>' : ''}
+        </label>`
+      ).join('');
+    }
+  }
+
+  // NPC checkboxes
+  const npcPicks = document.getElementById('battleNpcPicks');
+  if (npcPicks) {
+    if (!npcRoster.length) {
+      npcPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No NPCs in roster.</div>';
+    } else {
+      npcPicks.innerHTML = npcRoster.map(n =>
+        `<label class="battle-pick-row">
+          <input type="checkbox" data-roster-type="npc" data-id="${n.id}">
+          ${n.name}${n.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + n.cls + ')</span>' : ''}
+        </label>`
+      ).join('');
+    }
+  }
+
+  // Populate monster list select
+  const listSelect = document.getElementById('battleListSelect');
+  if (listSelect) {
+    listSelect.innerHTML = '<option value="">— Load monster list —</option>' +
+      monsterLists.map(l => `<option value="${l.id}">${l.name} (${l.names.length})</option>`).join('');
+    listSelect.addEventListener('change', () => {
+      const lid = listSelect.value;
+      if (!lid) return;
+      const lst = monsterLists.find(l => l.id === lid);
+      if (!lst) return;
+      lst.names.forEach(name => {
+        const creature = ALL_CREATURES.find(c => c.name === name);
+        if (creature && !battleEnemyQueue.find(q => q.name === creature.name)) {
+          battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
+        }
+      });
+      listSelect.value = '';
+      renderBattleEnemyQueue();
+    });
+  }
+
+  // Enemy search
+  const searchEl = document.getElementById('battleEnemySearch');
+  const resultsEl = document.getElementById('battleEnemyResults');
+  if (searchEl && resultsEl) {
+    searchEl.addEventListener('input', () => {
+      const q = searchEl.value.trim().toLowerCase();
+      if (!q || !ALL_CREATURES.length) { resultsEl.classList.remove('open'); resultsEl.innerHTML = ''; return; }
+      const matches = ALL_CREATURES.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
+      if (!matches.length) { resultsEl.classList.remove('open'); return; }
+      resultsEl.innerHTML = matches.map(c =>
+        `<div class="battle-enemy-result-row" data-name="${c.name}">
+          <span>${c.name}</span>
+          <span class="ber-cr">CR ${c.cr || '?'}</span>
+        </div>`
+      ).join('');
+      resultsEl.classList.add('open');
+      resultsEl.querySelectorAll('.battle-enemy-result-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const creature = ALL_CREATURES.find(c => c.name === row.dataset.name);
+          if (creature && !battleEnemyQueue.find(q => q.name === creature.name)) {
+            battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
+            renderBattleEnemyQueue();
+          }
+          searchEl.value = '';
+          resultsEl.classList.remove('open');
+          resultsEl.innerHTML = '';
+        });
+      });
+    });
+
+    // Close results on outside click
+    document.addEventListener('click', e => {
+      if (!searchEl.contains(e.target) && !resultsEl.contains(e.target)) {
+        resultsEl.classList.remove('open');
+      }
+    }, { passive: true });
+  }
+
+  renderBattleEnemyQueue();
+
+  // Begin Battle button
+  const btnBegin = document.getElementById('btnBeginBattle');
+  if (btnBegin) {
+    btnBegin.onclick = beginBattle;
+  }
+}
+
+function renderBattleEnemyQueue() {
+  const el = document.getElementById('battleEnemyQueue');
+  if (!el) return;
+  if (!battleEnemyQueue.length) { el.innerHTML = ''; return; }
+  el.innerHTML = battleEnemyQueue.map((entry, i) => {
+    const hpPlaceholder = entry.creature ? (parseInt(entry.creature.hp) || '') : '';
+    return `<div class="battle-queue-row" data-qi="${i}">
+      <span class="bqr-name">${entry.name}</span>
+      <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">×
+        <input class="enc-input bqr-count" type="number" min="1" max="20" value="${entry.count}" data-qi="${i}" style="width:52px">
+      </label>
+      <input class="enc-input bqr-hp" type="number" min="1" placeholder="${hpPlaceholder}" value="${entry.customHp}" data-qi="${i}" style="width:70px" title="HP override">
+      <button class="btn danger sm bqr-remove" data-qi="${i}">✕</button>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.bqr-count').forEach(inp => inp.addEventListener('change', () => {
+    const i = +inp.dataset.qi;
+    battleEnemyQueue[i].count = Math.max(1, Math.min(20, parseInt(inp.value) || 1));
+    inp.value = battleEnemyQueue[i].count;
+  }));
+  el.querySelectorAll('.bqr-hp').forEach(inp => inp.addEventListener('change', () => {
+    battleEnemyQueue[+inp.dataset.qi].customHp = inp.value.trim();
+  }));
+  el.querySelectorAll('.bqr-remove').forEach(btn => btn.addEventListener('click', () => {
+    battleEnemyQueue.splice(+btn.dataset.qi, 1);
+    renderBattleEnemyQueue();
+  }));
+}
+
+// ── Begin Battle ──────────────────────────────────────────────────────────────
+function beginBattle() {
+  const combatants = [];
+
+  // Collect checked players
+  document.querySelectorAll('#battlePlayerPicks input[type=checkbox]:checked').forEach(cb => {
+    const p = playerRoster.find(r => r.id === cb.dataset.id);
+    if (!p) return;
+    const init = rollD20() + (p.initMod || 0);
+    combatants.push({
+      id: Date.now() + '_p_' + p.id,
+      name: p.name,
+      type: 'pc',
+      hp: p.maxHp || 10,
+      maxHp: p.maxHp || 10,
+      ac: p.ac || 10,
+      initiative: init,
+      tempHp: 0,
+      conditions: [],
+      gone: false,
+    });
+  });
+
+  // Collect checked NPCs
+  document.querySelectorAll('#battleNpcPicks input[type=checkbox]:checked').forEach(cb => {
+    const n = npcRoster.find(r => r.id === cb.dataset.id);
+    if (!n) return;
+    const init = rollD20() + (n.initMod || 0);
+    combatants.push({
+      id: Date.now() + '_n_' + n.id,
+      name: n.name,
+      type: 'npc',
+      hp: n.maxHp || 10,
+      maxHp: n.maxHp || 10,
+      ac: n.ac || 10,
+      initiative: init,
+      tempHp: 0,
+      conditions: [],
+      gone: false,
+    });
+  });
+
+  // Collect enemy queue entries
+  battleEnemyQueue.forEach(entry => {
+    const baseHp = entry.customHp ? parseInt(entry.customHp) : (parseInt(entry.creature?.hp) || 10);
+    const dexMod = parseDexMod(entry.creature?.dex);
+    const baseName = entry.name;
+    for (let n = 0; n < entry.count; n++) {
+      const label = entry.count > 1 ? `${baseName} ${n + 1}` : baseName;
+      const init = rollD20() + dexMod;
+      combatants.push({
+        id: Date.now() + '_e_' + n + '_' + Math.random().toString(36).slice(2),
+        name: label,
+        type: 'enemy',
+        hp: baseHp,
+        maxHp: baseHp,
+        ac: parseInt(entry.creature?.ac) || 10,
+        initiative: init,
+        tempHp: 0,
+        conditions: [],
+        gone: false,
+      });
+    }
+  });
+
+  if (!combatants.length) { alert('Add at least one combatant before beginning.'); return; }
+
+  // Sort by initiative descending
+  combatants.sort((a, b) => b.initiative - a.initiative);
+
+  const b = curBattle();
+  b.combatants = combatants;
+  b.phase = 'active';
+  b.round = 1;
+  b.turnIdx = 0;
+  saveBattles();
+  battleEnemyQueue = [];
+  renderBattle();
+}
+
+// ── Active phase ──────────────────────────────────────────────────────────────
+function renderBattleActive() {
+  const b = curBattle();
+  document.getElementById('battleRoundNum').textContent = b.round;
+  const cur = b.combatants[b.turnIdx];
+  document.getElementById('battleCurrentName').textContent = cur ? cur.name : '—';
+
+  const listEl = document.getElementById('battleList');
+  if (!listEl) return;
+
+  if (!b.combatants.length) { listEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.88rem;padding:0.4rem 0">No combatants.</div>'; return; }
+
+  // Determine display order: active first (by turnIdx position), then array order
+  // Visual states: active-turn, gone, defeated
+  listEl.innerHTML = b.combatants.map((c, i) => {
+    const isActive  = i === b.turnIdx;
+    const isDefeated = c.hp <= 0;
+    const isGone    = c.gone && !isDefeated;
+    const rowCls    = `battle-row${isActive ? ' active-turn' : ''}${isGone ? ' gone' : ''}${isDefeated ? ' defeated' : ''}`;
+    const dotCls    = c.type === 'pc' ? 'pc' : c.type === 'npc' ? 'npc' : 'enemy';
+    const pct       = c.maxHp > 0 ? Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100)) : 100;
+    const condAbbrv = (c.conditions || []).slice(0, 3).map(cd => cd.substring(0, 3)).join(' ');
+
+    const condTags = CONDITIONS.map(cd =>
+      `<span class="b-cond-tag ${(c.conditions||[]).includes(cd) ? 'on' : ''}" data-i="${i}" data-cond="${cd}">${cd}</span>`
+    ).join('');
+
+    return `<div class="${rowCls}" data-bi="${i}" draggable="true">
+      <div class="battle-row-main" data-i="${i}">
+        <span class="b-drag" data-nodrag>⠿</span>
+        <span class="b-init" contenteditable="true" data-i="${i}" title="Initiative">${c.initiative}</span>
+        <span class="b-type-dot ${dotCls}"></span>
+        <span class="b-name">${c.name}</span>
+        <div style="display:flex;align-items:center;gap:0.35rem">
+          <div class="b-hp-bar-wrap"><div class="b-hp-bar ${battleHpClass(c.hp, c.maxHp)}" style="width:${pct}%"></div></div>
+          <span class="b-hp-text">${c.hp}/${c.maxHp}</span>
+          ${c.tempHp > 0 ? `<span class="b-thp">+${c.tempHp} THP</span>` : ''}
+        </div>
+        <span class="b-ac">AC ${c.ac}</span>
+        ${condAbbrv ? `<span class="b-conds">${condAbbrv}</span>` : ''}
+        <button class="b-remove" data-rm="${i}" title="Remove">✕</button>
+      </div>
+      <div class="battle-row-detail" id="bdetail-${i}">
+        <div class="b-detail-group">
+          <div class="b-adj-row">
+            <label>Damage/Heal</label>
+            <input class="b-adj-input" type="number" min="0" placeholder="0" id="badj-${i}">
+            <button class="btn sm" data-dmg="${i}">Dmg</button>
+            <button class="btn sm secondary" data-heal="${i}">Heal</button>
+          </div>
+          <div class="b-adj-row">
+            <label>Temp HP</label>
+            <input class="b-adj-input" type="number" min="0" placeholder="0" id="bthp-${i}">
+            <button class="btn sm secondary" data-setthp="${i}">Set</button>
+          </div>
+        </div>
+        <div class="b-cond-tags">${condTags}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Wire drag-and-drop
+  listEl.querySelectorAll('.battle-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      _battleDragIdx = parseInt(row.dataset.bi);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      const toIdx = parseInt(row.dataset.bi);
+      if (_battleDragIdx === null || _battleDragIdx === toIdx) return;
+      const b = curBattle();
+      const [moved] = b.combatants.splice(_battleDragIdx, 1);
+      b.combatants.splice(toIdx, 0, moved);
+      // Adjust turnIdx
+      if (b.turnIdx === _battleDragIdx) {
+        b.turnIdx = toIdx;
+      } else {
+        // Adjust pointer if needed
+        if (_battleDragIdx < b.turnIdx && toIdx >= b.turnIdx) b.turnIdx--;
+        else if (_battleDragIdx > b.turnIdx && toIdx <= b.turnIdx) b.turnIdx++;
+      }
+      _battleDragIdx = null;
+      saveBattles();
+      renderBattleActive();
+    });
+    row.addEventListener('dragend', () => { _battleDragIdx = null; });
+  });
+
+  // Wire row clicks to expand detail panel
+  listEl.querySelectorAll('.battle-row-main').forEach(main => {
+    main.addEventListener('click', e => {
+      if (e.target.closest('[contenteditable]') || e.target.closest('.b-remove') || e.target.closest('[data-nodrag]')) return;
+      const i = main.dataset.i;
+      const detail = document.getElementById('bdetail-' + i);
+      if (detail) detail.classList.toggle('open');
+    });
+  });
+
+  // Initiative edits
+  listEl.querySelectorAll('.b-init').forEach(span => {
+    span.addEventListener('blur', () => {
+      const i = +span.dataset.i;
+      const val = parseInt(span.textContent.trim(), 10);
+      if (!isNaN(val)) {
+        curBattle().combatants[i].initiative = val;
+        saveBattles();
+      }
+    });
+    span.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } });
+  });
+
+  // Damage / Heal
+  listEl.querySelectorAll('[data-dmg]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.dmg;
+      const amt = Math.max(0, parseInt(document.getElementById('badj-' + i)?.value) || 0);
+      if (!amt) return;
+      const c = curBattle().combatants[i];
+      let rem = amt;
+      if (c.tempHp > 0) {
+        const absorbed = Math.min(c.tempHp, rem);
+        c.tempHp -= absorbed;
+        rem -= absorbed;
+      }
+      c.hp = Math.max(0, c.hp - rem);
+      saveBattles();
+      renderBattleActive();
+    });
+  });
+  listEl.querySelectorAll('[data-heal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.heal;
+      const amt = Math.max(0, parseInt(document.getElementById('badj-' + i)?.value) || 0);
+      if (!amt) return;
+      const c = curBattle().combatants[i];
+      c.hp = Math.min(c.maxHp, c.hp + amt);
+      saveBattles();
+      renderBattleActive();
+    });
+  });
+
+  // Temp HP
+  listEl.querySelectorAll('[data-setthp]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.setthp;
+      const amt = Math.max(0, parseInt(document.getElementById('bthp-' + i)?.value) || 0);
+      curBattle().combatants[i].tempHp = amt;
+      saveBattles();
+      renderBattleActive();
+    });
+  });
+
+  // Condition toggles
+  listEl.querySelectorAll('.b-cond-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      const i = +tag.dataset.i;
+      const cond = tag.dataset.cond;
+      const c = curBattle().combatants[i];
+      c.conditions = c.conditions || [];
+      const idx = c.conditions.indexOf(cond);
+      if (idx >= 0) c.conditions.splice(idx, 1); else c.conditions.push(cond);
+      saveBattles();
+      renderBattleActive();
+    });
+  });
+
+  // Remove combatant
+  listEl.querySelectorAll('[data-rm]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.rm;
+      const b = curBattle();
+      b.combatants.splice(i, 1);
+      if (b.turnIdx >= b.combatants.length) b.turnIdx = 0;
+      saveBattles();
+      renderBattleActive();
+    });
+  });
+
+  // Next Turn button
+  const btnNext = document.getElementById('btnBattleNext');
+  if (btnNext) btnNext.onclick = battleNextTurn;
+
+  // End Battle button
+  const btnEnd = document.getElementById('btnEndBattle');
+  if (btnEnd) btnEnd.onclick = () => {
+    if (!confirm('End this battle and return to setup?')) return;
+    const b = curBattle();
+    b.phase = 'setup';
+    b.combatants = [];
+    b.round = 1;
+    b.turnIdx = 0;
+    battleEnemyQueue = [];
+    saveBattles();
+    renderBattle();
+  };
+}
+
+function battleNextTurn() {
+  const b = curBattle();
+  const cs = b.combatants;
+  if (!cs.length) return;
+
+  // Mark current as gone
+  if (cs[b.turnIdx]) cs[b.turnIdx].gone = true;
+
+  // Find next non-gone, non-defeated combatant starting after current
+  const n = cs.length;
+  let found = -1;
+  for (let offset = 1; offset < n; offset++) {
+    const idx = (b.turnIdx + offset) % n;
+    const c = cs[idx];
+    if (!c.gone && c.hp > 0) { found = idx; break; }
+  }
+
+  if (found === -1) {
+    // New round
+    b.round++;
+    cs.forEach(c => { c.gone = false; });
+    // Find first non-defeated
+    const firstAlive = cs.findIndex(c => c.hp > 0);
+    b.turnIdx = firstAlive >= 0 ? firstAlive : 0;
+  } else {
+    b.turnIdx = found;
+  }
+
+  saveBattles();
+  renderBattleActive();
+}
+
+// ── Battle slot management ────────────────────────────────────────────────────
+document.getElementById('btnNewBattle').addEventListener('click', () => {
+  const name = prompt('Battle name:', 'Battle ' + (battles.length + 1));
+  if (!name) return;
+  battles.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), name, phase: 'setup', round: 1, turnIdx: 0, combatants: [] });
+  currentBattleIdx = battles.length - 1;
+  battleEnemyQueue = [];
+  saveBattles();
+  renderBattle();
+});
+
+document.getElementById('btnRenameBattle').addEventListener('click', () => {
+  const name = prompt('New name:', curBattle().name);
+  if (name) { curBattle().name = name; saveBattles(); renderBattleSlots(); }
+});
+
+document.getElementById('btnDeleteBattle').addEventListener('click', () => {
+  if (battles.length <= 1) { alert('Cannot delete the last battle.'); return; }
+  if (!confirm('Delete "' + curBattle().name + '"?')) return;
+  battles.splice(currentBattleIdx, 1);
+  currentBattleIdx = Math.max(0, currentBattleIdx - 1);
+  battleEnemyQueue = [];
+  saveBattles();
+  renderBattle();
+});
+
+// ── Top-level render ──────────────────────────────────────────────────────────
+function showBattlePhase() {
+  const phase = curBattle().phase;
+  const setup  = document.getElementById('battleSetup');
+  const active = document.getElementById('battleActive');
+  if (setup)  setup.style.display  = phase === 'setup'  ? '' : 'none';
+  if (active) active.style.display = phase === 'active' ? '' : 'none';
+}
+
+function renderBattle() {
+  renderBattleSlots();
+  showBattlePhase();
+  const b = curBattle();
+  if (b.phase === 'setup') {
+    renderBattleSetup();
+  } else {
+    renderBattleActive();
+  }
+}
+
 // ─── INITIALISE ──────────────────────────────────────────────────────────────
 buildNarrative();
 buildPlayerRolls();
-renderAll();
 renderSavedLists();
 renderPlayerRoster();
 renderNpcRoster();
+renderBattle();
 
 (async function init() {
   try {
