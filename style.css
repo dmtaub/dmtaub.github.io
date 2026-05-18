@@ -476,7 +476,7 @@ h2.spaced { letter-spacing: 0.05em; }
 .project-image[data-card="matterport"] {
     background:
         linear-gradient(rgb(0 0 0 / var(--card-img-dim)), rgb(0 0 0 / var(--card-img-dim))),
-        url('files/plugin.jpg') center/var(--card-img-size) no-repeat,
+        url('files/building.png') center/var(--card-img-size) no-repeat,
         radial-gradient(ellipse at 40% 40%, rgba(60,80,220,0.5) 0%, transparent 50%),
         radial-gradient(ellipse at 70% 70%, rgba(120,40,200,0.3) 0%, transparent 45%),
         linear-gradient(135deg, #020210 0%, #08081e 100%);
