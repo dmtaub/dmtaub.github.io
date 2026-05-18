@@ -1458,7 +1458,7 @@ function renderBattleEnemyQueue() {
     const hpPlaceholder = entry.creature ? (parseInt(entry.creature.hp) || '') : '';
     const acPlaceholder = entry.creature ? (parseInt(entry.creature.ac) || '') : '';
     return `<div class="battle-queue-row" data-qi="${i}">
-      <span class="bqr-name">${entry.name}</span>
+      <input class="enc-input bqr-name" type="text" value="${(entry.customName||entry.name).replace(/"/g,'&quot;')}" data-qi="${i}" title="Name">
       <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">×
         <input class="enc-input bqr-count" type="number" min="1" max="20" value="${entry.count}" data-qi="${i}" style="width:52px">
       </label>
@@ -1470,6 +1470,9 @@ function renderBattleEnemyQueue() {
     </div>`;
   }).join('');
 
+  el.querySelectorAll('.bqr-name').forEach(inp => inp.addEventListener('change', () => {
+    battleEnemyQueue[+inp.dataset.qi].customName = inp.value.trim() || battleEnemyQueue[+inp.dataset.qi].name;
+  }));
   el.querySelectorAll('.bqr-count').forEach(inp => inp.addEventListener('change', () => {
     const i = +inp.dataset.qi;
     battleEnemyQueue[i].count = Math.max(1, Math.min(20, parseInt(inp.value) || 1));
@@ -1526,7 +1529,7 @@ function beginBattle() {
     const baseHp = entry.customHp ? parseInt(entry.customHp) : (parseInt(entry.creature?.hp) || 10);
     const baseAc = entry.customAc ? parseInt(entry.customAc) : (parseInt(entry.creature?.ac) || 10);
     const dexMod = parseDexMod(entry.creature?.dex);
-    const baseName = entry.name;
+    const baseName = entry.customName || entry.name;
     for (let n = 0; n < entry.count; n++) {
       const label = entry.count > 1 ? `${baseName} ${n + 1}` : baseName;
       const init = rollD20() + dexMod;
