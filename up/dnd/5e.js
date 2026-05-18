@@ -1311,13 +1311,17 @@ function renderBattleSetup() {
     if (!playerRoster.length) {
       playerPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No players in roster.</div>';
     } else {
-      playerPicks.innerHTML = playerRoster.map(p =>
-        `<div class="battle-pick-row">
+      playerPicks.innerHTML = playerRoster.map(p => {
+        const mod = p.initMod || 0;
+        const modStr = (mod >= 0 ? '+' : '') + mod;
+        return `<div class="battle-pick-row">
           <input type="checkbox" data-roster-type="player" data-id="${p.id}" checked>
-          <span style="flex:1">${p.name}${p.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + p.cls + ')</span>' : ''}</span>
-          <input class="b-setup-init" type="number" placeholder="Init" title="Leave blank to roll d20+mod" data-id="${p.id}" data-roster-type="player" style="width:54px">
-        </div>`
-      ).join('');
+          <span class="bpr-name">${p.name}${p.cls ? ' <span class="bpr-sub">(' + p.cls + ')</span>' : ''}</span>
+          <span class="bpr-mod" title="Initiative modifier">${modStr}</span>
+          <span class="bpr-plus">+</span>
+          <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${p.id}" data-roster-type="player">
+        </div>`;
+      }).join('');
     }
   }
 
@@ -1327,13 +1331,17 @@ function renderBattleSetup() {
     if (!npcRoster.length) {
       npcPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No NPCs in roster.</div>';
     } else {
-      npcPicks.innerHTML = npcRoster.map(n =>
-        `<div class="battle-pick-row">
+      npcPicks.innerHTML = npcRoster.map(n => {
+        const mod = n.initMod || 0;
+        const modStr = (mod >= 0 ? '+' : '') + mod;
+        return `<div class="battle-pick-row">
           <input type="checkbox" data-roster-type="npc" data-id="${n.id}">
-          <span style="flex:1">${n.name}${n.cls ? ' <span style="font-size:0.78rem;color:var(--text-muted)">(' + n.cls + ')</span>' : ''}</span>
-          <input class="b-setup-init" type="number" placeholder="Init" title="Leave blank to roll d20+mod" data-id="${n.id}" data-roster-type="npc" style="width:54px">
-        </div>`
-      ).join('');
+          <span class="bpr-name">${n.name}${n.cls ? ' <span class="bpr-sub">(' + n.cls + ')</span>' : ''}</span>
+          <span class="bpr-mod" title="Initiative modifier">${modStr}</span>
+          <span class="bpr-plus">+</span>
+          <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${n.id}" data-roster-type="npc">
+        </div>`;
+      }).join('');
     }
   }
 
@@ -1445,7 +1453,7 @@ function beginBattle() {
     if (!p) return;
     const initInput = document.querySelector(`#battlePlayerPicks .b-setup-init[data-id="${p.id}"]`);
     const typed = initInput ? parseInt(initInput.value) : NaN;
-    const init = !isNaN(typed) ? typed : rollD20() + (p.initMod || 0);
+    const init = !isNaN(typed) ? typed + (p.initMod || 0) : rollD20() + (p.initMod || 0);
     combatants.push({
       id: Date.now() + '_p_' + p.id,
       name: p.name, type: 'pc',
@@ -1460,7 +1468,7 @@ function beginBattle() {
     if (!n) return;
     const initInput = document.querySelector(`#battleNpcPicks .b-setup-init[data-id="${n.id}"]`);
     const typed = initInput ? parseInt(initInput.value) : NaN;
-    const init = !isNaN(typed) ? typed : rollD20() + (n.initMod || 0);
+    const init = !isNaN(typed) ? typed + (n.initMod || 0) : rollD20() + (n.initMod || 0);
     combatants.push({
       id: Date.now() + '_n_' + n.id,
       name: n.name, type: 'npc',
@@ -1550,7 +1558,7 @@ function renderBattleActive() {
           ${c.tempHp > 0 ? `<span class="b-thp">+${c.tempHp}</span>` : ''}
         </div>
         <span class="b-ac" contenteditable="true" data-i="${i}" title="Edit AC">AC ${c.ac ?? '—'}</span>
-        ${condAbbrv ? `<span class="b-conds" title="${conds.join(', ')}">${condAbbrv}</span>` : ''}
+        <span class="b-conds" title="${conds.join(', ')}">${condAbbrv}</span>
         <button class="b-adj-btn dmg" data-adjopen="${i}" data-adjmode="dmg">Dmg</button>
         <button class="b-adj-btn heal" data-adjopen="${i}" data-adjmode="heal">Heal</button>
         <button class="b-remove" data-rm="${i}" title="Remove">✕</button>
