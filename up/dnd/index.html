@@ -240,6 +240,22 @@
         .battle-queue-row .bqr-hp { width:72px; }
         .battle-header { display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap; margin-bottom:0.65rem; padding:0.5rem 0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; }
         .btn-next-turn { padding:0.45rem 1.15rem; font-size:0.95rem; }
+        .battle-mid-add { padding:0.5rem 0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; margin-bottom:0.5rem; display:flex; flex-direction:column; gap:0.4rem; }
+        .battle-mid-add-row { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+        .b-hp-group { display:flex; align-items:center; gap:0.35rem; }
+        .b-detail-top { display:grid; grid-template-columns:130px 1fr auto; gap:0.6rem 1.2rem; align-items:start; margin-bottom:0.75rem; }
+        .b-detail-statblock { border-top:1px solid var(--border); padding-top:0.65rem; font-size:0.82rem; }
+        .b-detail-statblock .stat-block-name { font-size:0.95rem; font-weight:700; }
+        .b-detail-statblock .stat-block-meta { font-size:0.78rem; color:var(--text-muted); margin-bottom:0.4rem; }
+        .b-detail-statblock .ability-grid { font-size:0.78rem; }
+        .b-detail-statblock .stat-row { margin:0.3rem 0; }
+        .b-detail-statblock .sb-section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin:0.4rem 0 0.15rem; }
+        .b-detail-statblock .sb-entry { margin-bottom:0.25rem; line-height:1.45; }
+        .b-detail-statblock .sb-entry-name { font-weight:700; font-style:italic; }
+        .b-detail-statblock .sb-divider { border:none; border-top:1px solid var(--border); margin:0.4rem 0; }
+        .b-detail-statblock .sb-fields { font-size:0.78rem; line-height:1.6; }
+        .b-detail-statblock .flip-hint { display:none; }
+        .b-detail-statblock .stat-pill { font-size:0.78rem; }
         .battle-list { display:flex; flex-direction:column; gap:0.3rem; }
         .battle-row { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); transition:opacity .15s, border-color .15s; }
         .battle-row.active-turn { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
@@ -265,7 +281,7 @@
         .b-remove { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:0.88rem; padding:0.1rem 0.3rem; border-radius:3px; flex-shrink:0; }
         .b-remove:hover { color:#c0392b; }
         .battle-row-detail { display:none; background:var(--bg); border-top:1px solid var(--border); padding:0.65rem 0.9rem; }
-        .battle-row-detail.open { display:grid; grid-template-columns:130px 1fr auto; gap:0.6rem 1.2rem; align-items:start; }
+        .battle-row-detail.open { display:block; }
         .b-detail-group { display:flex; flex-direction:column; gap:0.3rem; }
         .b-detail-group > label { font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
         .b-notes-input { background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.25rem 0.45rem; font-size:0.85rem; color:var(--text); width:100%; box-sizing:border-box; }
@@ -451,7 +467,21 @@
                     <span style="font-size:0.9rem">Round <strong id="battleRoundNum">1</strong></span>
                     <span style="font-size:0.9rem">Current: <strong id="battleCurrentName" style="color:var(--accent)">—</strong></span>
                     <button class="btn btn-next-turn" id="btnBattleNext">Next →</button>
+                    <button class="btn secondary sm" id="btnMidAddEnemy">＋ Enemy</button>
                     <button class="btn secondary sm" id="btnEndBattle" style="margin-left:auto">End Battle</button>
+                </div>
+                <div class="battle-mid-add" id="battleMidAdd" style="display:none">
+                    <input class="enc-input" id="battleMidSearch" type="text" placeholder="Search monsters…" autocomplete="off">
+                    <div class="battle-enemy-results" id="battleMidResults"></div>
+                    <div class="battle-mid-add-row" id="battleMidSelected" style="display:none">
+                        <span id="battleMidName" style="flex:1;font-weight:600;font-size:0.88rem"></span>
+                        <label style="font-size:0.82rem;color:var(--text-muted)">Count</label>
+                        <input class="enc-input" id="battleMidCount" type="number" min="1" value="1" style="width:54px">
+                        <label style="font-size:0.82rem;color:var(--text-muted)">HP</label>
+                        <input class="enc-input" id="battleMidHp" type="number" min="1" placeholder="default" style="width:70px">
+                        <button class="btn sm" id="btnMidAddConfirm">Add</button>
+                        <button class="btn sm secondary" id="btnMidAddCancel">Cancel</button>
+                    </div>
                 </div>
                 <div class="battle-list" id="battleList"></div>
             </div>

@@ -1269,6 +1269,7 @@ function saveBattles() { localStorage.setItem('5e-battles', JSON.stringify(battl
 let battleEnemyQueue = [];
 let _openBattleDetails = new Set();
 let _battleDragIdx = null;
+let _midAddCreature = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function parseDexMod(dexStr) {
@@ -1301,6 +1302,42 @@ function renderBattleSlots() {
     saveBattles();
     renderBattle();
   }));
+}
+
+// ── Combatant stat block for detail panel ─────────────────────────────────────
+function renderBattleCombatantStatBlock(c) {
+  if (c.type === 'enemy') {
+    const creature = (ALL_CREATURES || []).find(m => m.name === c.creatureName);
+    if (!creature) return `<div style="color:var(--text-muted);font-size:0.82rem">No stat block found for "${c.creatureName || c.name}".</div>`;
+    return `<div class="b-detail-statblock-inner">${renderFull(creature)}</div>`;
+  }
+  if (c.type === 'pc') {
+    const p = playerRoster.find(r => r.id === c.rosterId) || playerRoster.find(r => r.name === c.name);
+    if (!p) return `<div style="color:var(--text-muted);font-size:0.82rem">Player not found in roster.</div>`;
+    return `<div class="b-detail-statblock-inner">
+      <div class="stat-block-name">${p.name}</div>
+      <div class="stat-block-meta">${[p.cls, p.level ? 'Level ' + p.level : ''].filter(Boolean).join(' · ') || 'Player Character'}</div>
+      <div class="stat-row">
+        ${p.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${p.maxHp}</span>` : ''}
+        ${p.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${p.ac}</span>` : ''}
+        <span class="stat-pill"><strong>Init</strong> ${(p.initMod||0) >= 0 ? '+' : ''}${p.initMod||0}</span>
+      </div>
+    </div>`;
+  }
+  if (c.type === 'npc') {
+    const n = npcRoster.find(r => r.id === c.rosterId) || npcRoster.find(r => r.name === c.name);
+    if (!n) return `<div style="color:var(--text-muted);font-size:0.82rem">NPC not found in roster.</div>`;
+    return `<div class="b-detail-statblock-inner">
+      <div class="stat-block-name">${n.name}</div>
+      <div class="stat-block-meta">${[n.cls, n.level ? 'Level ' + n.level : ''].filter(Boolean).join(' · ') || 'NPC'}</div>
+      <div class="stat-row">
+        ${n.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${n.maxHp}</span>` : ''}
+        ${n.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${n.ac}</span>` : ''}
+        <span class="stat-pill"><strong>Init</strong> ${(n.initMod||0) >= 0 ? '+' : ''}${n.initMod||0}</span>
+      </div>
+    </div>`;
+  }
+  return '';
 }
 
 // ── Setup phase ───────────────────────────────────────────────────────────────
@@ -1456,7 +1493,7 @@ function beginBattle() {
     const init = !isNaN(typed) ? typed + (p.initMod || 0) : rollD20() + (p.initMod || 0);
     combatants.push({
       id: Date.now() + '_p_' + p.id,
-      name: p.name, type: 'pc',
+      name: p.name, type: 'pc', rosterId: p.id,
       hp: p.maxHp || 10, maxHp: p.maxHp || 10, ac: p.ac || 10,
       initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
     });
@@ -1471,7 +1508,7 @@ function beginBattle() {
     const init = !isNaN(typed) ? typed + (n.initMod || 0) : rollD20() + (n.initMod || 0);
     combatants.push({
       id: Date.now() + '_n_' + n.id,
-      name: n.name, type: 'npc',
+      name: n.name, type: 'npc', rosterId: n.id,
       hp: n.maxHp || 10, maxHp: n.maxHp || 10, ac: n.ac || 10,
       initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
     });
@@ -1487,15 +1524,11 @@ function beginBattle() {
       const init = rollD20() + dexMod;
       combatants.push({
         id: Date.now() + '_e_' + n + '_' + Math.random().toString(36).slice(2),
-        name: label,
+        name: label, creatureName: baseName,
         type: 'enemy',
-        hp: baseHp,
-        maxHp: baseHp,
+        hp: baseHp, maxHp: baseHp,
         ac: parseInt(entry.creature?.ac) || 10,
-        initiative: init,
-        tempHp: 0,
-        conditions: [],
-        gone: false,
+        initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
       });
     }
   });
@@ -1552,7 +1585,7 @@ function renderBattleActive() {
         <span class="b-init" contenteditable="true" data-i="${i}" title="Edit initiative">${c.initiative}</span>
         <span class="b-type-dot ${dotCls}"></span>
         <span class="b-name">${c.name}</span>
-        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">
+        <div class="b-hp-group">
           <div class="b-hp-bar-wrap"><div class="b-hp-bar ${battleHpClass(c.hp, c.maxHp)}" style="width:${pct}%"></div></div>
           <span class="b-hp-text">${c.hp}/${c.maxHp}</span>
           ${c.tempHp > 0 ? `<span class="b-thp">+${c.tempHp}</span>` : ''}
@@ -1570,23 +1603,26 @@ function renderBattleActive() {
         <button class="btn sm secondary" data-adjcancel="${i}">Cancel</button>
       </div>
       <div class="battle-row-detail" id="bdetail-${i}">
-        <div class="b-detail-group">
-          <label>Temp HP</label>
-          <div class="b-adj-row">
-            <input class="b-adj-input" type="number" min="0" placeholder="0" id="bthp-${i}">
-            <button class="btn sm secondary" data-setthp="${i}">Set</button>
+        <div class="b-detail-top">
+          <div class="b-detail-group">
+            <label>Temp HP</label>
+            <div class="b-adj-row">
+              <input class="b-adj-input" type="number" min="0" placeholder="0" id="bthp-${i}">
+              <button class="btn sm secondary" data-setthp="${i}">Set</button>
+            </div>
+          </div>
+          <div class="b-detail-group">
+            <label>Notes</label>
+            <input class="b-notes-input" type="text" placeholder="…" data-i="${i}" value="${(c.notes||'').replace(/"/g,'&quot;')}">
+          </div>
+          <div class="b-detail-group">
+            <details class="b-cond-dropdown">
+              <summary>Conditions${condCount ? ` <strong style="color:var(--accent)">(${condCount})</strong>` : ''}</summary>
+              <div class="b-cond-dropdown-options" data-condi="${i}">${condOpts}</div>
+            </details>
           </div>
         </div>
-        <div class="b-detail-group" style="flex:1">
-          <label>Notes</label>
-          <input class="b-notes-input" type="text" placeholder="…" data-i="${i}" value="${(c.notes||'').replace(/"/g,'&quot;')}">
-        </div>
-        <div class="b-detail-group">
-          <details class="b-cond-dropdown">
-            <summary>Conditions${condCount ? ` <strong style="color:var(--accent)">(${condCount})</strong>` : ''}</summary>
-            <div class="b-cond-dropdown-options" data-condi="${i}">${condOpts}</div>
-          </details>
-        </div>
+        <div class="b-detail-statblock">${renderBattleCombatantStatBlock(c)}</div>
       </div>
     </div>`;
   }).join('');
@@ -1793,6 +1829,78 @@ function renderBattleActive() {
     saveBattles();
     renderBattle();
   };
+
+  // Mid-battle add-enemy panel
+  const btnMidAdd  = document.getElementById('btnMidAddEnemy');
+  const midPanel   = document.getElementById('battleMidAdd');
+  const midSearch  = document.getElementById('battleMidSearch');
+  const midResults = document.getElementById('battleMidResults');
+  const midSelRow  = document.getElementById('battleMidSelected');
+  const midName    = document.getElementById('battleMidName');
+
+  if (btnMidAdd && midPanel) {
+    btnMidAdd.onclick = () => {
+      const open = midPanel.style.display !== 'none';
+      midPanel.style.display = open ? 'none' : '';
+      if (!open) { midSearch.value = ''; midSearch.focus(); midResults.innerHTML = ''; midResults.classList.remove('open'); midSelRow.style.display = 'none'; _midAddCreature = null; }
+    };
+
+    midSearch.addEventListener('input', () => {
+      const q = midSearch.value.trim().toLowerCase();
+      midResults.innerHTML = '';
+      midSelRow.style.display = 'none'; _midAddCreature = null;
+      if (q.length < 2) { midResults.classList.remove('open'); return; }
+      const hits = (ALL_CREATURES || []).filter(m => m.name.toLowerCase().includes(q)).slice(0, 12);
+      if (!hits.length) { midResults.classList.remove('open'); return; }
+      midResults.innerHTML = hits.map(m =>
+        `<div class="battle-enemy-result-row" data-name="${m.name.replace(/"/g,'&quot;')}">
+          ${m.name}<span class="ber-cr">${m.cr ? 'CR ' + m.cr : ''}</span>
+        </div>`
+      ).join('');
+      midResults.classList.add('open');
+      midResults.querySelectorAll('.battle-enemy-result-row').forEach(row => {
+        row.addEventListener('click', () => {
+          _midAddCreature = (ALL_CREATURES || []).find(m => m.name === row.dataset.name);
+          if (!_midAddCreature) return;
+          midName.textContent = _midAddCreature.name;
+          document.getElementById('battleMidHp').value = _midAddCreature.hp ? parseInt(_midAddCreature.hp) || '' : '';
+          document.getElementById('battleMidCount').value = 1;
+          midSelRow.style.display = '';
+          midResults.classList.remove('open');
+          midSearch.value = '';
+        });
+      });
+    });
+
+    document.getElementById('btnMidAddCancel').onclick = () => { _midAddCreature = null; midSelRow.style.display = 'none'; };
+
+    document.getElementById('btnMidAddConfirm').onclick = () => {
+      if (!_midAddCreature) return;
+      const count   = Math.max(1, parseInt(document.getElementById('battleMidCount').value) || 1);
+      const customHp = parseInt(document.getElementById('battleMidHp').value) || null;
+      const baseHp  = customHp || parseInt(_midAddCreature.hp) || 10;
+      const dexMod  = parseDexMod(_midAddCreature.dex);
+      const baseName = _midAddCreature.name;
+      const b = curBattle();
+      for (let n = 0; n < count; n++) {
+        const label = count > 1 ? `${baseName} ${n + 1}` : baseName;
+        b.combatants.push({
+          id: Date.now() + '_mid_' + n + '_' + Math.random().toString(36).slice(2),
+          name: label, creatureName: baseName,
+          type: 'enemy',
+          hp: baseHp, maxHp: baseHp,
+          ac: parseInt(_midAddCreature.ac) || 10,
+          initiative: rollD20() + dexMod,
+          tempHp: 0, conditions: [], notes: '', gone: false,
+        });
+      }
+      b.combatants.sort((a, z) => z.initiative - a.initiative);
+      saveBattles();
+      _midAddCreature = null; midSelRow.style.display = 'none';
+      midPanel.style.display = 'none';
+      renderBattleActive();
+    };
+  }
 }
 
 function battleNextTurn() {
