@@ -3,7 +3,7 @@
 
   "srd_url": "https://raw.githubusercontent.com/Tabyltop/CC-SRD/main/SRD5.1-CCBY4.0License-TT.html",
   "attribution": "SRD 5.1 © Wizards of the Coast LLC, licensed CC-BY-4.0. HTML conversion by Tabyltop (https://www.tabyltop.com).",
-  "cache_key": "5e-srd-parsed-v3",
+  "cache_key": "5e-srd-parsed-v5",
 
   "weapons": {
     "_comment": "The weapons section starts at the element with heading_id. The first <table> sibling contains the column headers and initial category label. The second <table> sibling contains all weapon rows; single-cell rows are category dividers.",

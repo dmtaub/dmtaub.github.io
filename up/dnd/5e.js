@@ -40,7 +40,11 @@ function tdTexts(row) {
 // ─── WEAPONS PARSER ──────────────────────────────────────────────────────────
 // Expects a parsed HTML Document from DOMParser.
 function parseWeapons(doc, meta) {
-  const heading = doc.getElementById(meta.weapons.heading_id);
+  // Use querySelectorAll + last() because the SRD has two elements with this id:
+  // an <h2> (section intro) and an <h4> (the actual table heading). getElementById
+  // returns the <h2>, whose siblings are <h3>s that break the parser. We want the <h4>.
+  const all = doc.querySelectorAll('#' + CSS.escape(meta.weapons.heading_id));
+  const heading = all[all.length - 1] || null;
   if (!heading) return [];
 
   // Collect the first two <table> siblings after the heading
