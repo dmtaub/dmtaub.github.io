@@ -266,10 +266,31 @@
         .b-adj-row { display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; font-size:0.87rem; margin-bottom:0.3rem; }
         .b-adj-row label { color:var(--text-muted); font-size:0.8rem; min-width:65px; }
         .b-adj-input { width:70px; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.25rem 0.45rem; font-size:0.85rem; color:var(--text); text-align:center; }
+        /* battle row: inline dmg/heal + AC + condition dropdown */
+        .b-adj-btn { background:none; border:1px solid var(--border); border-radius:4px; padding:0.12rem 0.45rem; font-size:0.75rem; cursor:pointer; color:var(--text-muted); flex-shrink:0; transition:all .12s; }
+        .b-adj-btn:hover { border-color:var(--accent-soft); color:var(--text); }
+        .b-adj-btn.dmg:hover { border-color:#f44336; color:#f44336; }
+        .b-adj-btn.heal:hover { border-color:#4caf50; color:#4caf50; }
+        .b-adj-panel { display:none; background:var(--bg); border-top:1px solid var(--border); padding:0.5rem 0.9rem; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+        .b-adj-panel.open { display:flex; }
+        .b-adj-panel label { font-size:0.78rem; color:var(--text-muted); font-weight:600; }
+        .b-adj-panel input { width:72px; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.28rem 0.45rem; font-size:0.9rem; color:var(--text); text-align:center; }
+        .b-adj-panel input:focus { outline:none; border-color:var(--accent-soft); }
+        .b-ac { font-size:0.78rem; color:var(--text-muted); flex-shrink:0; white-space:nowrap; outline:none; border-radius:3px; padding:0.05rem 0.2rem; cursor:text; }
+        .b-ac:focus { background:var(--bg); color:var(--text); }
+        /* condition dropdown (details/summary) */
+        .b-cond-dropdown { font-size:0.8rem; min-width:120px; }
+        .b-cond-dropdown summary { cursor:pointer; padding:0.18rem 0.55rem; background:var(--surface); border:1px solid var(--border); border-radius:5px; list-style:none; color:var(--text-muted); user-select:none; white-space:nowrap; }
+        .b-cond-dropdown summary::-webkit-details-marker { display:none; }
+        .b-cond-dropdown[open] summary { border-color:var(--accent-soft); border-radius:5px 5px 0 0; }
+        .b-cond-dropdown-options { position:relative; z-index:20; background:var(--surface); border:1px solid var(--accent-soft); border-top:none; border-radius:0 0 5px 5px; padding:0.35rem 0.4rem; display:grid; grid-template-columns:1fr 1fr; gap:0.1rem; min-width:200px; box-shadow:0 4px 12px var(--shadow); }
+        .b-cond-option { display:flex; align-items:center; gap:0.3rem; padding:0.18rem 0.3rem; border-radius:3px; font-size:0.79rem; cursor:pointer; color:var(--text-muted); }
+        .b-cond-option:hover { background:var(--bg); color:var(--text); }
+        .b-cond-option input { accent-color:var(--accent); cursor:pointer; width:0.85rem; height:0.85rem; flex-shrink:0; }
+        /* old chip tags kept for other uses */
         .b-cond-tags { display:flex; flex-wrap:wrap; gap:0.3rem; margin-top:0.35rem; }
         .b-cond-tag { font-size:0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.12rem 0.45rem; cursor:pointer; color:var(--text-muted); transition:all .12s; }
         .b-cond-tag.on { background:var(--accent); color:#fff; border-color:var(--accent); }
-        .b-cond-tag:hover:not(.on) { border-color:var(--accent-soft); color:var(--text); }
     </style>
 </head>
 <body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>
@@ -433,6 +454,13 @@
 
     <!-- ══ REFERENCE ════════════════════════════════════════════════════════ -->
     <div id="tab-reference" class="tab-panel">
+        <div class="inner-tabs">
+            <button class="inner-tab-btn active" data-inner-tab="ref-general">General</button>
+            <button class="inner-tab-btn" data-inner-tab="ref-conditions">Conditions</button>
+            <button class="inner-tab-btn" data-inner-tab="ref-weapons">Weapons</button>
+        </div>
+
+        <div id="inner-tab-ref-general" class="inner-tab-panel active">
         <div class="ref-grid">
 
             <div class="card">
@@ -517,9 +545,10 @@
             </div>
 
         </div>
+        </div><!-- /inner-tab-ref-general -->
 
-        <!-- Conditions — full width -->
-        <div class="card" style="margin-top:0">
+        <div id="inner-tab-ref-conditions" class="inner-tab-panel">
+        <div class="card">
             <h2>Conditions</h2>
             <table class="ref-table">
                 <thead><tr><th>Condition</th><th>Key Effect</th></tr></thead>
@@ -546,12 +575,14 @@
                 </tbody>
             </table>
         </div>
+        </div><!-- /inner-tab-ref-conditions -->
 
-        <!-- Weapons — populated from SRD -->
+        <div id="inner-tab-ref-weapons" class="inner-tab-panel">
         <div class="card">
             <h2>Weapons</h2>
             <div id="weaponsTableWrap"><p style="color:var(--text-muted);font-size:0.88rem">Loading from SRD…</p></div>
         </div>
+        </div><!-- /inner-tab-ref-weapons -->
     </div>
 </div>
 <script src="../util.js"></script>

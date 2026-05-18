@@ -1267,6 +1267,7 @@ function saveBattles() { localStorage.setItem('5e-battles', JSON.stringify(battl
 
 // In-memory enemy queue for the setup phase (reset when switching battles)
 let battleEnemyQueue = [];
+let _openBattleDetails = new Set();
 let _battleDragIdx = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1524,54 +1525,71 @@ function renderBattleActive() {
 
   if (!b.combatants.length) { listEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.88rem;padding:0.4rem 0">No combatants.</div>'; return; }
 
-  // Determine display order: active first (by turnIdx position), then array order
-  // Visual states: active-turn, gone, defeated
-  listEl.innerHTML = b.combatants.map((c, i) => {
-    const isActive  = i === b.turnIdx;
-    const isDefeated = c.hp <= 0;
-    const isGone    = c.gone && !isDefeated;
-    const rowCls    = `battle-row${isActive ? ' active-turn' : ''}${isGone ? ' gone' : ''}${isDefeated ? ' defeated' : ''}`;
-    const dotCls    = c.type === 'pc' ? 'pc' : c.type === 'npc' ? 'npc' : 'enemy';
-    const pct       = c.maxHp > 0 ? Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100)) : 100;
-    const condAbbrv = (c.conditions || []).slice(0, 3).map(cd => cd.substring(0, 3)).join(' ');
+  // Save which detail panels were open before re-render
+  listEl.querySelectorAll('.battle-row-detail.open').forEach(el => {
+    _openBattleDetails.add(parseInt(el.id.replace('bdetail-', '')));
+  });
 
-    const condTags = CONDITIONS.map(cd =>
-      `<span class="b-cond-tag ${(c.conditions||[]).includes(cd) ? 'on' : ''}" data-i="${i}" data-cond="${cd}">${cd}</span>`
+  listEl.innerHTML = b.combatants.map((c, i) => {
+    const isActive   = i === b.turnIdx;
+    const isDefeated = c.hp <= 0;
+    const isGone     = c.gone && !isDefeated;
+    const rowCls     = `battle-row${isActive ? ' active-turn' : ''}${isGone ? ' gone' : ''}${isDefeated ? ' defeated' : ''}`;
+    const dotCls     = c.type === 'pc' ? 'pc' : c.type === 'npc' ? 'npc' : 'enemy';
+    const pct        = c.maxHp > 0 ? Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100)) : 100;
+    const conds      = c.conditions || [];
+    const condAbbrv  = conds.slice(0, 3).map(cd => cd.substring(0, 3)).join(' ');
+    const condCount  = conds.length;
+    const condOpts   = CONDITIONS.map(cd =>
+      `<label class="b-cond-option"><input type="checkbox" value="${cd}" ${conds.includes(cd) ? 'checked' : ''}> ${cd}</label>`
     ).join('');
 
     return `<div class="${rowCls}" data-bi="${i}" draggable="true">
       <div class="battle-row-main" data-i="${i}">
         <span class="b-drag" data-nodrag>⠿</span>
-        <span class="b-init" contenteditable="true" data-i="${i}" title="Initiative">${c.initiative}</span>
+        <span class="b-init" contenteditable="true" data-i="${i}" title="Edit initiative">${c.initiative}</span>
         <span class="b-type-dot ${dotCls}"></span>
         <span class="b-name">${c.name}</span>
-        <div style="display:flex;align-items:center;gap:0.35rem">
+        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">
           <div class="b-hp-bar-wrap"><div class="b-hp-bar ${battleHpClass(c.hp, c.maxHp)}" style="width:${pct}%"></div></div>
           <span class="b-hp-text">${c.hp}/${c.maxHp}</span>
-          ${c.tempHp > 0 ? `<span class="b-thp">+${c.tempHp} THP</span>` : ''}
+          ${c.tempHp > 0 ? `<span class="b-thp">+${c.tempHp}</span>` : ''}
         </div>
-        <span class="b-ac">AC ${c.ac}</span>
-        ${condAbbrv ? `<span class="b-conds">${condAbbrv}</span>` : ''}
+        <span class="b-ac" contenteditable="true" data-i="${i}" title="Edit AC">AC ${c.ac ?? '—'}</span>
+        ${condAbbrv ? `<span class="b-conds" title="${conds.join(', ')}">${condAbbrv}</span>` : ''}
+        <button class="b-adj-btn dmg" data-adjopen="${i}" data-adjmode="dmg">Dmg</button>
+        <button class="b-adj-btn heal" data-adjopen="${i}" data-adjmode="heal">Heal</button>
         <button class="b-remove" data-rm="${i}" title="Remove">✕</button>
+      </div>
+      <div class="b-adj-panel" id="badj-panel-${i}">
+        <label id="badj-label-${i}">Damage:</label>
+        <input type="number" min="0" placeholder="amount" id="badj-${i}">
+        <button class="btn sm" data-adjapply="${i}">Apply</button>
+        <button class="btn sm secondary" data-adjcancel="${i}">Cancel</button>
       </div>
       <div class="battle-row-detail" id="bdetail-${i}">
         <div class="b-detail-group">
+          <label>Temp HP</label>
           <div class="b-adj-row">
-            <label>Damage/Heal</label>
-            <input class="b-adj-input" type="number" min="0" placeholder="0" id="badj-${i}">
-            <button class="btn sm" data-dmg="${i}">Dmg</button>
-            <button class="btn sm secondary" data-heal="${i}">Heal</button>
-          </div>
-          <div class="b-adj-row">
-            <label>Temp HP</label>
             <input class="b-adj-input" type="number" min="0" placeholder="0" id="bthp-${i}">
             <button class="btn sm secondary" data-setthp="${i}">Set</button>
           </div>
         </div>
-        <div class="b-cond-tags">${condTags}</div>
+        <div class="b-detail-group">
+          <details class="b-cond-dropdown">
+            <summary>Conditions${condCount ? ` <strong style="color:var(--accent)">(${condCount})</strong>` : ''}</summary>
+            <div class="b-cond-dropdown-options" data-condi="${i}">${condOpts}</div>
+          </details>
+        </div>
       </div>
     </div>`;
   }).join('');
+
+  // Restore open detail panels
+  _openBattleDetails.forEach(i => {
+    const d = document.getElementById('bdetail-' + i);
+    if (d) d.classList.add('open');
+  });
 
   // Wire drag-and-drop
   listEl.querySelectorAll('.battle-row').forEach(row => {
@@ -1605,10 +1623,15 @@ function renderBattleActive() {
   // Wire row clicks to expand detail panel
   listEl.querySelectorAll('.battle-row-main').forEach(main => {
     main.addEventListener('click', e => {
-      if (e.target.closest('[contenteditable]') || e.target.closest('.b-remove') || e.target.closest('[data-nodrag]')) return;
+      if (e.target.closest('[contenteditable]') || e.target.closest('.b-remove') ||
+          e.target.closest('[data-nodrag]') || e.target.closest('[data-adjopen]')) return;
       const i = main.dataset.i;
       const detail = document.getElementById('bdetail-' + i);
-      if (detail) detail.classList.toggle('open');
+      if (detail) {
+        detail.classList.toggle('open');
+        if (detail.classList.contains('open')) _openBattleDetails.add(+i);
+        else _openBattleDetails.delete(+i);
+      }
     });
   });
 
@@ -1617,41 +1640,76 @@ function renderBattleActive() {
     span.addEventListener('blur', () => {
       const i = +span.dataset.i;
       const val = parseInt(span.textContent.trim(), 10);
-      if (!isNaN(val)) {
-        curBattle().combatants[i].initiative = val;
-        saveBattles();
-      }
+      if (!isNaN(val)) { curBattle().combatants[i].initiative = val; saveBattles(); }
     });
     span.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } });
   });
 
-  // Damage / Heal
-  listEl.querySelectorAll('[data-dmg]').forEach(btn => {
+  // AC edits
+  listEl.querySelectorAll('.b-ac').forEach(span => {
+    span.addEventListener('focus', () => {
+      // Strip "AC " prefix for editing
+      span.textContent = span.textContent.replace(/^AC\s*/i, '');
+    });
+    span.addEventListener('blur', () => {
+      const i = +span.dataset.i;
+      const val = parseInt(span.textContent.trim(), 10);
+      if (!isNaN(val)) { curBattle().combatants[i].ac = val; saveBattles(); }
+      span.textContent = 'AC ' + (curBattle().combatants[i].ac ?? '—');
+    });
+    span.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } });
+  });
+
+  // Dmg / Heal toggle buttons
+  let _adjMode = {}; // per-row: 'dmg' | 'heal'
+  listEl.querySelectorAll('[data-adjopen]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const i = +btn.dataset.adjopen;
+      const mode = btn.dataset.adjmode;
+      const panel = document.getElementById('badj-panel-' + i);
+      if (!panel) return;
+      const alreadyOpen = panel.classList.contains('open') && _adjMode[i] === mode;
+      // Close all adj panels first
+      listEl.querySelectorAll('.b-adj-panel.open').forEach(p => p.classList.remove('open'));
+      if (!alreadyOpen) {
+        _adjMode[i] = mode;
+        document.getElementById('badj-label-' + i).textContent = mode === 'dmg' ? 'Damage:' : 'Heal:';
+        panel.classList.add('open');
+        document.getElementById('badj-' + i)?.focus();
+      }
+    });
+  });
+
+  // Apply dmg/heal
+  listEl.querySelectorAll('[data-adjapply]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const i = +btn.dataset.dmg;
-      const amt = Math.max(0, parseInt(document.getElementById('badj-' + i)?.value) || 0);
+      const i = +btn.dataset.adjapply;
+      const inp = document.getElementById('badj-' + i);
+      const amt = Math.max(0, parseInt(inp?.value) || 0);
       if (!amt) return;
       const c = curBattle().combatants[i];
-      let rem = amt;
-      if (c.tempHp > 0) {
-        const absorbed = Math.min(c.tempHp, rem);
-        c.tempHp -= absorbed;
-        rem -= absorbed;
+      if (_adjMode[i] === 'dmg') {
+        let rem = amt;
+        if (c.tempHp > 0) { const absorbed = Math.min(c.tempHp, rem); c.tempHp -= absorbed; rem -= absorbed; }
+        c.hp = Math.max(0, c.hp - rem);
+      } else {
+        c.hp = Math.min(c.maxHp, c.hp + amt);
       }
-      c.hp = Math.max(0, c.hp - rem);
       saveBattles();
       renderBattleActive();
     });
   });
-  listEl.querySelectorAll('[data-heal]').forEach(btn => {
+  listEl.querySelectorAll('[data-adjcancel]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const i = +btn.dataset.heal;
-      const amt = Math.max(0, parseInt(document.getElementById('badj-' + i)?.value) || 0);
-      if (!amt) return;
-      const c = curBattle().combatants[i];
-      c.hp = Math.min(c.maxHp, c.hp + amt);
-      saveBattles();
-      renderBattleActive();
+      const panel = document.getElementById('badj-panel-' + btn.dataset.adjcancel);
+      if (panel) panel.classList.remove('open');
+    });
+  });
+  // Enter in adj input triggers apply
+  listEl.querySelectorAll('.b-adj-panel input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); inp.closest('.b-adj-panel').querySelector('[data-adjapply]')?.click(); }
     });
   });
 
@@ -1666,17 +1724,29 @@ function renderBattleActive() {
     });
   });
 
-  // Condition toggles
-  listEl.querySelectorAll('.b-cond-tag').forEach(tag => {
-    tag.addEventListener('click', () => {
-      const i = +tag.dataset.i;
-      const cond = tag.dataset.cond;
+  // Condition checkboxes — in-place update (no full re-render, keeps dropdown open)
+  listEl.querySelectorAll('.b-cond-dropdown-options').forEach(opts => {
+    opts.addEventListener('change', e => {
+      if (e.target.type !== 'checkbox') return;
+      const i = +opts.dataset.condi;
       const c = curBattle().combatants[i];
-      c.conditions = c.conditions || [];
-      const idx = c.conditions.indexOf(cond);
-      if (idx >= 0) c.conditions.splice(idx, 1); else c.conditions.push(cond);
+      c.conditions = [...opts.querySelectorAll('input:checked')].map(cb => cb.value);
       saveBattles();
-      renderBattleActive();
+      // Update abbreviation and count in place without re-rendering
+      const row = listEl.querySelector(`[data-bi="${i}"]`);
+      if (row) {
+        const abbr = c.conditions.slice(0,3).map(cd => cd.substring(0,3)).join(' ');
+        let condsEl = row.querySelector('.b-conds');
+        if (abbr && !condsEl) {
+          // Insert before remove button
+          condsEl = document.createElement('span');
+          condsEl.className = 'b-conds';
+          row.querySelector('.b-remove').before(condsEl);
+        }
+        if (condsEl) { condsEl.textContent = abbr; condsEl.title = c.conditions.join(', '); condsEl.style.display = abbr ? '' : 'none'; }
+        const sum = row.querySelector('.b-cond-dropdown summary');
+        if (sum) sum.innerHTML = `Conditions${c.conditions.length ? ` <strong style="color:var(--accent)">(${c.conditions.length})</strong>` : ''}`;
+      }
     });
   });
 
