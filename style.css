@@ -637,6 +637,12 @@ h2.spaced { letter-spacing: 0.05em; }
     header .last-robot {
         display: none;
     }
+    /* Keep the single mobile robot centered when shrunk on scroll —
+       the desktop ever-scrolled rule pushes it to the left margin. */
+    body.ever-scrolled header .main-robot {
+        margin: 10px auto 0;
+        max-width: 0%;
+    }
     .header-title {
         padding: 0 0 10px;
     }
