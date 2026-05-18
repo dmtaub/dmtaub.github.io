@@ -1450,6 +1450,34 @@ function renderBattleSetup() {
   }
 }
 
+// Parse "Goblin - 3" → { base: "Goblin", n: 3 }; "Goblin" → { base: "Goblin", n: null }
+function parseQueueName(name) {
+  const m = name.match(/^(.*?)\s*-\s*(\d+)\s*$/);
+  return m ? { base: m[1].trimEnd(), n: parseInt(m[2]) } : { base: name, n: null };
+}
+
+function duplicateQueueEntry(i) {
+  const entry = battleEnemyQueue[i];
+  const currentName = entry.customName || entry.name;
+  const { base, n } = parseQueueName(currentName);
+
+  // If the original has no number yet, rename it to "- 1" and clone as "- 2"
+  if (n === null) {
+    entry.customName = `${base} - 1`;
+    const clone = { ...entry, customName: `${base} - 2` };
+    battleEnemyQueue.splice(i + 1, 0, clone);
+  } else {
+    // Find the highest trailing number among all entries sharing the same base
+    const highestN = battleEnemyQueue.reduce((max, e) => {
+      const { base: b, n: num } = parseQueueName(e.customName || e.name);
+      return b === base && num !== null ? Math.max(max, num) : max;
+    }, n);
+    const clone = { ...entry, customName: `${base} - ${highestN + 1}` };
+    battleEnemyQueue.splice(i + 1, 0, clone);
+  }
+  renderBattleEnemyQueue();
+}
+
 function renderBattleEnemyQueue() {
   const el = document.getElementById('battleEnemyQueue');
   if (!el) return;
@@ -1466,6 +1494,7 @@ function renderBattleEnemyQueue() {
       <input class="enc-input bqr-hp" type="number" min="1" placeholder="${hpPlaceholder}" value="${entry.customHp||''}" data-qi="${i}" style="width:60px" title="HP override">
       <label style="font-size:0.78rem;color:var(--text-muted)">AC</label>
       <input class="enc-input bqr-ac" type="number" min="1" placeholder="${acPlaceholder}" value="${entry.customAc||''}" data-qi="${i}" style="width:54px" title="AC override">
+      <button class="btn sm bqr-dupe" data-qi="${i}" title="Duplicate">＋</button>
       <button class="btn danger sm bqr-remove" data-qi="${i}">✕</button>
     </div>`;
   }).join('');
@@ -1483,6 +1512,9 @@ function renderBattleEnemyQueue() {
   }));
   el.querySelectorAll('.bqr-ac').forEach(inp => inp.addEventListener('change', () => {
     battleEnemyQueue[+inp.dataset.qi].customAc = inp.value.trim();
+  }));
+  el.querySelectorAll('.bqr-dupe').forEach(btn => btn.addEventListener('click', () => {
+    duplicateQueueEntry(+btn.dataset.qi);
   }));
   el.querySelectorAll('.bqr-remove').forEach(btn => btn.addEventListener('click', () => {
     battleEnemyQueue.splice(+btn.dataset.qi, 1);
@@ -1535,7 +1567,7 @@ function beginBattle() {
       const init = rollD20() + dexMod;
       combatants.push({
         id: Date.now() + '_e_' + n + '_' + Math.random().toString(36).slice(2),
-        name: label, creatureName: baseName,
+        name: label, creatureName: entry.name,
         type: 'enemy',
         hp: baseHp, maxHp: baseHp,
         ac: baseAc,
@@ -1900,7 +1932,7 @@ function renderBattleActive() {
         const label = count > 1 ? `${baseName} ${n + 1}` : baseName;
         b.combatants.push({
           id: Date.now() + '_mid_' + n + '_' + Math.random().toString(36).slice(2),
-          name: label, creatureName: baseName,
+          name: label, creatureName: _midAddCreature.name,
           type: 'enemy',
           hp: baseHp, maxHp: baseHp,
           ac: baseAc,
