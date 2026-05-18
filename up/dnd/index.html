@@ -161,7 +161,7 @@
         .enc-input:focus { outline:none; border-color:var(--accent-soft); }
         .btn { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.4rem 0.9rem; cursor:pointer; font-size:0.88rem; transition:opacity .15s; align-self:flex-end; }
         .btn:hover { opacity:.85; }
-        .btn.secondary { background:none; color:var(--accent); border:1px solid var(--accent); }
+        .btn.secondary { background:none; color:var(--accent); border:1px solid var(--accent);}
         .btn.secondary:hover { background:var(--bg); }
         .btn.danger { background:#c0392b; }
         .btn.sm { padding:0.25rem 0.55rem; font-size:0.8rem; }
@@ -179,10 +179,6 @@
         .comb-name { font-weight:600; font-size:0.9rem; flex:1; min-width:90px; }
         .comb-ac { font-size:0.8rem; color:var(--text-muted); white-space:nowrap; }
         .comb-hp-wrap { display:flex; align-items:center; gap:0.3rem; }
-        .hp-bar-wrap { width:70px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
-        .hp-bar { height:100%; background:#5cb85c; border-radius:3px; transition:width .2s; }
-        .hp-bar.mid { background:#f0ad4e; }
-        .hp-bar.low { background:#d9534f; }
         .comb-hp { font-size:0.85rem; white-space:nowrap; }
         .comb-hp-input { width:48px; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.18rem 0.3rem; font-size:0.82rem; color:var(--text); text-align:center; }
         .comb-conditions { font-size:0.72rem; flex:1; min-width:70px; }
@@ -247,8 +243,12 @@
         @media (max-width:520px) {
             .stat-grid { grid-template-columns:1fr; }
             .enc-input.wide { width:100%; }
-            .hp-bar-wrap { display:none; }
+            .b-hp-bar-wrap { display:none; }
             .ref-grid { grid-template-columns:1fr; }
+            /* Battle row: collapse to name + HP text + action buttons only */
+            .battle-row-main { grid-template-columns:1.4rem 0.75rem 1fr auto 3rem auto auto; }
+            .battle-row-main .b-hp-bar-wrap { display:none; }
+            .battle-setup-grid { grid-template-columns:1fr; }
         }
 
         /* ── Battle Tracker ── */
@@ -275,7 +275,10 @@
         .battle-queue-row .bqr-count { width:54px; }
         .battle-queue-row .bqr-hp { width:72px; }
         .battle-header { display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap; margin-bottom:0.65rem; padding:0.5rem 0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; }
+        .battle-header .secondary {min-height: 33px;}
         .btn-next-turn { padding:0.45rem 1.15rem; font-size:0.95rem; }
+        @keyframes roundFlash { 0%,100%{color:inherit} 30%{color:var(--accent);transform:scale(1.35)} }
+        .round-flash { animation:roundFlash 0.9s ease; }
         .battle-mid-add { padding:0.5rem 0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; margin-bottom:0.5rem; display:flex; flex-direction:column; gap:0.4rem; }
         .battle-mid-add-row { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
         .b-hp-group { display:flex; align-items:center; gap:0.35rem; }
@@ -458,10 +461,12 @@
             <!-- Battle slots row -->
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem">
                 <strong style="font-size:0.88rem">Battles:</strong>
-                <div class="battle-slots-row" id="battleSlots"></div>
-                <button class="btn secondary sm" id="btnNewBattle">+ New</button>
-                <button class="btn secondary sm" id="btnRenameBattle">Rename</button>
-                <button class="btn danger sm" id="btnDeleteBattle">Delete</button>
+                <div class="battle-slots-row" id="battleSlots" style="flex:1"></div>
+                <div style="margin-left:auto; margin-right: 15px;">
+                    <button class="btn secondary sm" id="btnNewBattle">+ New</button>
+                    <button class="btn secondary sm" id="btnRenameBattle">Rename</button>
+                    <button class="btn danger sm" id="btnDeleteBattle">Delete</button>
+                </div>
             </div>
 
             <!-- Setup phase -->
@@ -480,8 +485,8 @@
                 </div>
 
                 <!-- Enemies section -->
-                <div style="margin-top:0.75rem">
-                    <h4 style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.05em;margin:0 0 0.45rem">Enemies</h4>
+                <div class="battle-setup-col" style="margin-top:0.75rem">
+                    <h4>Enemies</h4>
                     <div class="battle-enemy-search-row">
                         <select class="enc-input" id="battleListSelect">
                             <option value="">— Load monster list —</option>
@@ -502,9 +507,9 @@
                 <div class="battle-header">
                     <span style="font-size:0.9rem">Round <strong id="battleRoundNum">1</strong></span>
                     <span style="font-size:0.9rem">Current: <strong id="battleCurrentName" style="color:var(--accent)">—</strong></span>
-                    <button class="btn btn-next-turn" id="btnBattleNext">Next →</button>
+                    <button class="btn btn-next-turn" id="btnBattleNext" style="margin-left:auto">Next →</button>
                     <button class="btn secondary sm" id="btnMidAddEnemy">＋ Enemy</button>
-                    <button class="btn secondary sm" id="btnEndBattle" style="margin-left:auto">End Battle</button>
+                    <button class="btn secondary sm" id="btnEndBattle">End Battle</button>
                 </div>
                 <div class="battle-mid-add" id="battleMidAdd" style="display:none">
                     <input class="enc-input" id="battleMidSearch" type="text" placeholder="Search monsters…" autocomplete="off">

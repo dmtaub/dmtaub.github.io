@@ -530,6 +530,8 @@ document.getElementById('btnShowAll').addEventListener('click', () => {
 });
 
 document.getElementById('btnClearSel').addEventListener('click', () => {
+  if (!selectedNames.size && !activeListId) return;
+  if (!confirm('Clear the current selection?')) return;
   selectedNames.clear();
   activeListId  = null;
   showAllPool   = false;
@@ -586,13 +588,14 @@ const BUILTIN_ROLL_TABLES = [
 let ALL_ROLL_TABLES = [];
 const rollFadeTimers = {};
 
-const ROLL_TABLE_CONTAINER = {
-  npcs:        'rollTablesNpcsContainer',
-  'enc-setup':  'rollTablesEncSetupContainer',
-  'enc-active': 'rollTablesEncActiveContainer',
-  'enc-after':  'rollTablesEncAfterContainer',
-  environment: 'rollTablesEnvironmentContainer',
-  inviting:    'rollTablesInvitingContainer',
+// Maps each roll-table tab key to its two container IDs (DM tables + player prompts).
+const ROLL_TAB_CONTAINERS = {
+  npcs:         { dm: 'rollTablesNpcsContainer',        player: 'playerRollsNpcsContainer'        },
+  'enc-setup':  { dm: 'rollTablesEncSetupContainer',    player: 'playerRollsEncSetupContainer'    },
+  'enc-active': { dm: 'rollTablesEncActiveContainer',   player: 'playerRollsEncActiveContainer'   },
+  'enc-after':  { dm: 'rollTablesEncAfterContainer',    player: 'playerRollsEncAfterContainer'    },
+  environment:  { dm: 'rollTablesEnvironmentContainer', player: 'playerRollsEnvironmentContainer' },
+  inviting:     { dm: 'rollTablesInvitingContainer',    player: 'playerRollsInvitingContainer'    },
 };
 
 function buildRollTablesInto(entries, containerId) {
@@ -630,7 +633,7 @@ function buildRollTablesInto(entries, containerId) {
       rollFadeTimers[idx] = setTimeout(() => {
         el.style.transition = 'opacity 10s linear';
         el.style.opacity = '0';
-      }, 800);
+      }, 4000);
     });
   });
 }
@@ -642,9 +645,10 @@ function buildAllRollTables(tables) {
     const tab = t.tab || 'encounters';
     if (!byTab[tab]) byTab[tab] = [];
     byTab[tab].push({ t, i });
+
   });
   for (const [tab, entries] of Object.entries(byTab)) {
-    const containerId = ROLL_TABLE_CONTAINER[tab];
+    const containerId = ROLL_TAB_CONTAINERS[tab]?.dm;
     if (containerId) buildRollTablesInto(entries, containerId);
   }
 }
@@ -862,14 +866,6 @@ function buildWeaponsTable(weapons) {
 // ─── CONDITIONS (shared) ─────────────────────────────────────────────────────
 const CONDITIONS = ['Blinded','Charmed','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Poisoned','Prone','Restrained','Stunned','Unconscious'];
 
-// ─── ENCOUNTER BUILDER (legacy state — kept for data migration only) ──────────
-let encounterState = (() => {
-  try { return JSON.parse(localStorage.getItem('5e-encounters') || 'null'); } catch(e) {}
-  return null;
-})() || { slots:[{ name:'Encounter 1', combatants:[] }], current:0, round:1, turn:0 };
-
-function saveEnc() { localStorage.setItem('5e-encounters', JSON.stringify(encounterState)); }
-function curEnc()  { return encounterState.slots[encounterState.current]; }
 
 
 // ─── ROSTERS ─────────────────────────────────────────────────────────────────
@@ -988,8 +984,8 @@ function renderRosterCards(roster, gridId, formWrapId, onDelete, onEdit) {
     const hasAbilities = ABILITY_KEYS.some(a => p[a] != null);
     return `<div class="roster-card">
       <div class="roster-card-actions">
-        <button data-edit="${i}" title="Edit">✎</button>
-        <button class="del" data-del="${i}" title="Delete">✕</button>
+        <button data-edit="${i}" title="Edit ${p.name}" aria-label="Edit ${p.name}">✎</button>
+        <button class="del" data-del="${i}" title="Delete ${p.name}" aria-label="Delete ${p.name}">✕</button>
       </div>
       <div class="roster-card-name">${p.name}</div>
       <div class="roster-card-sub">${[p.cls, p.level ? 'Level '+p.level : ''].filter(Boolean).join(' · ') || '&nbsp;'}</div>
@@ -1215,7 +1211,7 @@ const PLAYER_ROLL_PROMPTS = [
   },
 ];
 
-function buildPlayerRolls() {
+function buildPlayerRollPrompts() {
   let prTooltip = document.getElementById('prTooltip');
   if (!prTooltip) {
     prTooltip = document.createElement('div');
@@ -1313,19 +1309,11 @@ function buildPlayerRolls() {
       </div>
     </div>`;
 
-  const containerMap = {
-    npcs:         'playerRollsNpcsContainer',
-    'enc-setup':  'playerRollsEncSetupContainer',
-    'enc-active': 'playerRollsEncActiveContainer',
-    'enc-after':  'playerRollsEncAfterContainer',
-    environment:  'playerRollsEnvironmentContainer',
-    inviting:     'playerRollsInvitingContainer',
-  };
-  const byTab = { npcs: [], 'enc-setup': [], 'enc-active': [], 'enc-after': [], environment: [], inviting: [] };
+  const byTab = Object.fromEntries(Object.keys(ROLL_TAB_CONTAINERS).map(k => [k, []]));
   PLAYER_ROLL_PROMPTS.forEach((p, i) => { if (byTab[p.tab]) byTab[p.tab].push({ p, i }); });
 
   for (const [tab, entries] of Object.entries(byTab)) {
-    const container = document.getElementById(containerMap[tab]);
+    const container = document.getElementById(ROLL_TAB_CONTAINERS[tab]?.player);
     if (!container || !entries.length) continue;
     container.innerHTML = entries.map(({ p, i }) => rowHTML(p, i)).join('');
     wireContainer(container);
@@ -1399,12 +1387,12 @@ function renderBattleCombatantStatBlock(c) {
       <div class="stat-block-name">${p.name}</div>
       <div class="stat-block-meta">${[p.cls, p.level ? 'Level ' + p.level : ''].filter(Boolean).join(' · ') || label}</div>
       <div class="stat-row">
-        ${p.maxHp != null ? `<span class="stat-pill"><strong>HP</strong> ${p.maxHp}</span>` : ''}
-        ${p.ac    != null ? `<span class="stat-pill"><strong>AC</strong> ${p.ac}</span>` : ''}
-        ${p.speed != null ? `<span class="stat-pill"><strong>Speed</strong> ${p.speed} ft</span>` : ''}
-        <span class="stat-pill"><strong>Init</strong> ${(p.initMod||0) >= 0 ? '+' : ''}${p.initMod||0}</span>
-        ${p.level ? `<span class="stat-pill"><strong>Prof</strong> +${prof}</span>` : ''}
-        ${p.passivePerception != null ? `<span class="stat-pill"><strong>Pass. Perc</strong> ${p.passivePerception}</span>` : ''}
+        ${p.maxHp != null ? statPill('HP', p.maxHp) : ''}
+        ${p.ac    != null ? statPill('AC', p.ac) : ''}
+        ${p.speed != null ? statPill('Speed', p.speed + ' ft') : ''}
+        ${statPill('Init', modStr(p.initMod || 0))}
+        ${p.level ? statPill('Prof', '+' + prof) : ''}
+        ${p.passivePerception != null ? statPill('Pass. Perc', p.passivePerception) : ''}
       </div>
       ${hasAbilities ? `<table class="b-ability-table">
         <thead><tr>${ABILITY_LABELS.map(l => `<th>${l}</th>`).join('')}</tr></thead>
@@ -1425,46 +1413,26 @@ function renderBattleCombatantStatBlock(c) {
 }
 
 // ── Setup phase ───────────────────────────────────────────────────────────────
-function renderBattleSetup() {
-  // Player checkboxes
-  const playerPicks = document.getElementById('battlePlayerPicks');
-  if (playerPicks) {
-    if (!playerRoster.length) {
-      playerPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No players in roster.</div>';
-    } else {
-      playerPicks.innerHTML = playerRoster.map(p => {
-        const mod = p.initMod || 0;
-        const modStr = (mod >= 0 ? '+' : '') + mod;
-        return `<div class="battle-pick-row">
-          <input type="checkbox" data-roster-type="player" data-id="${p.id}" checked>
-          <span class="bpr-name">${p.name}${p.cls ? ' <span class="bpr-sub">(' + p.cls + ')</span>' : ''}</span>
-          <span class="bpr-mod" title="Initiative modifier">${modStr}</span>
-          <span class="bpr-plus">+</span>
-          <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${p.id}" data-roster-type="player">
-        </div>`;
-      }).join('');
-    }
+function renderPickList(containerId, roster, rosterType, defaultChecked) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const label = rosterType === 'player' ? 'players' : 'NPCs';
+  if (!roster.length) {
+    el.innerHTML = `<div style="font-size:0.85rem;color:var(--text-muted)">No ${label} in roster.</div>`;
+    return;
   }
+  el.innerHTML = roster.map(p => `<div class="battle-pick-row">
+    <input type="checkbox" data-roster-type="${rosterType}" data-id="${p.id}"${defaultChecked ? ' checked' : ''}>
+    <span class="bpr-name">${p.name}${p.cls ? ` <span class="bpr-sub">(${p.cls})</span>` : ''}</span>
+    <span class="bpr-mod" title="Initiative modifier">${modStr(p.initMod || 0)}</span>
+    <span class="bpr-plus">+</span>
+    <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${p.id}" data-roster-type="${rosterType}">
+  </div>`).join('');
+}
 
-  // NPC checkboxes
-  const npcPicks = document.getElementById('battleNpcPicks');
-  if (npcPicks) {
-    if (!npcRoster.length) {
-      npcPicks.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No NPCs in roster.</div>';
-    } else {
-      npcPicks.innerHTML = npcRoster.map(n => {
-        const mod = n.initMod || 0;
-        const modStr = (mod >= 0 ? '+' : '') + mod;
-        return `<div class="battle-pick-row">
-          <input type="checkbox" data-roster-type="npc" data-id="${n.id}">
-          <span class="bpr-name">${n.name}${n.cls ? ' <span class="bpr-sub">(' + n.cls + ')</span>' : ''}</span>
-          <span class="bpr-mod" title="Initiative modifier">${modStr}</span>
-          <span class="bpr-plus">+</span>
-          <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${n.id}" data-roster-type="npc">
-        </div>`;
-      }).join('');
-    }
-  }
+function renderBattleSetup() {
+  renderPickList('battlePlayerPicks', playerRoster, 'player', true);
+  renderPickList('battleNpcPicks',    npcRoster,    'npc',    false);
 
   // Populate monster list select
   const listSelect = document.getElementById('battleListSelect');
@@ -1496,12 +1464,7 @@ function renderBattleSetup() {
       if (!q || !ALL_CREATURES.length) { resultsEl.classList.remove('open'); resultsEl.innerHTML = ''; return; }
       const matches = ALL_CREATURES.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
       if (!matches.length) { resultsEl.classList.remove('open'); return; }
-      resultsEl.innerHTML = matches.map(c =>
-        `<div class="battle-enemy-result-row" data-name="${c.name}">
-          <span>${c.name}</span>
-          <span class="ber-cr">CR ${c.cr || '?'}</span>
-        </div>`
-      ).join('');
+      resultsEl.innerHTML = matches.map(renderEnemyResultRow).join('');
       resultsEl.classList.add('open');
       resultsEl.querySelectorAll('.battle-enemy-result-row').forEach(row => {
         row.addEventListener('click', () => {
@@ -1606,57 +1569,52 @@ function renderBattleEnemyQueue() {
   }));
 }
 
-// ── Begin Battle ──────────────────────────────────────────────────────────────
-function beginBattle() {
-  const combatants = [];
+// ── Shared UI helpers ─────────────────────────────────────────────────────────
+function statPill(label, value) {
+  return `<span class="stat-pill"><strong>${label}</strong> ${value}</span>`;
+}
 
-  // Collect checked players
-  document.querySelectorAll('#battlePlayerPicks input[type=checkbox]:checked').forEach(cb => {
-    const p = playerRoster.find(r => r.id === cb.dataset.id);
+function renderEnemyResultRow(c) {
+  return `<div class="battle-enemy-result-row" data-name="${c.name.replace(/"/g,'&quot;')}">
+    <span>${c.name}</span><span class="ber-cr">CR ${c.cr || '?'}</span>
+  </div>`;
+}
+
+// ── Combatant helpers ─────────────────────────────────────────────────────────
+function makeCombatant({ id, name, type, rosterId, creatureName, hp, maxHp, ac, initiative }) {
+  return { id, name, type, rosterId, creatureName, hp, maxHp, ac, initiative, tempHp: 0, conditions: [], notes: '', gone: false };
+}
+
+function collectRosterCombatants(sectionId, roster, type) {
+  const prefix = type === 'pc' ? 'p' : 'n';
+  const result = [];
+  document.querySelectorAll(`#${sectionId} input[type=checkbox]:checked`).forEach(cb => {
+    const p = roster.find(r => r.id === cb.dataset.id);
     if (!p) return;
-    const initInput = document.querySelector(`#battlePlayerPicks .b-setup-init[data-id="${p.id}"]`);
+    const initInput = document.querySelector(`#${sectionId} .b-setup-init[data-id="${p.id}"]`);
     const typed = initInput ? parseInt(initInput.value) : NaN;
     const init = !isNaN(typed) ? typed + (p.initMod || 0) : rollD20() + (p.initMod || 0);
-    combatants.push({
-      id: Date.now() + '_p_' + p.id,
-      name: p.name, type: 'pc', rosterId: p.id,
-      hp: p.maxHp || 10, maxHp: p.maxHp || 10, ac: p.ac || 10,
-      initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
-    });
+    result.push(makeCombatant({ id: Date.now() + `_${prefix}_` + p.id, name: p.name, type, rosterId: p.id, hp: p.maxHp || 10, maxHp: p.maxHp || 10, ac: p.ac || 10, initiative: init }));
   });
+  return result;
+}
 
-  // Collect checked NPCs
-  document.querySelectorAll('#battleNpcPicks input[type=checkbox]:checked').forEach(cb => {
-    const n = npcRoster.find(r => r.id === cb.dataset.id);
-    if (!n) return;
-    const initInput = document.querySelector(`#battleNpcPicks .b-setup-init[data-id="${n.id}"]`);
-    const typed = initInput ? parseInt(initInput.value) : NaN;
-    const init = !isNaN(typed) ? typed + (n.initMod || 0) : rollD20() + (n.initMod || 0);
-    combatants.push({
-      id: Date.now() + '_n_' + n.id,
-      name: n.name, type: 'npc', rosterId: n.id,
-      hp: n.maxHp || 10, maxHp: n.maxHp || 10, ac: n.ac || 10,
-      initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
-    });
-  });
+// ── Begin Battle ──────────────────────────────────────────────────────────────
+function beginBattle() {
+  const combatants = [
+    ...collectRosterCombatants('battlePlayerPicks', playerRoster, 'pc'),
+    ...collectRosterCombatants('battleNpcPicks',    npcRoster,    'npc'),
+  ];
 
   // Collect enemy queue entries
   battleEnemyQueue.forEach(entry => {
-    const baseHp = entry.customHp ? parseInt(entry.customHp) : (parseInt(entry.creature?.hp) || 10);
-    const baseAc = entry.customAc ? parseInt(entry.customAc) : (parseInt(entry.creature?.ac) || 10);
-    const dexMod = parseDexMod(entry.creature?.dex);
+    const baseHp  = entry.customHp ? parseInt(entry.customHp) : (parseInt(entry.creature?.hp) || 10);
+    const baseAc  = entry.customAc ? parseInt(entry.customAc) : (parseInt(entry.creature?.ac) || 10);
+    const dexMod  = parseDexMod(entry.creature?.dex);
     const baseName = entry.customName || entry.name;
     for (let n = 0; n < entry.count; n++) {
       const label = entry.count > 1 ? `${baseName} ${n + 1}` : baseName;
-      const init = rollD20() + dexMod;
-      combatants.push({
-        id: Date.now() + '_e_' + n + '_' + Math.random().toString(36).slice(2),
-        name: label, creatureName: entry.name,
-        type: 'enemy',
-        hp: baseHp, maxHp: baseHp,
-        ac: baseAc,
-        initiative: init, tempHp: 0, conditions: [], notes: '', gone: false,
-      });
+      combatants.push(makeCombatant({ id: Date.now() + '_e_' + n + '_' + Math.random().toString(36).slice(2), name: label, creatureName: entry.name, type: 'enemy', hp: baseHp, maxHp: baseHp, ac: baseAc, initiative: rollD20() + dexMod }));
     }
   });
 
@@ -1979,11 +1937,7 @@ function renderBattleActive() {
       if (q.length < 2) { midResults.classList.remove('open'); return; }
       const hits = (ALL_CREATURES || []).filter(m => m.name.toLowerCase().includes(q)).slice(0, 12);
       if (!hits.length) { midResults.classList.remove('open'); return; }
-      midResults.innerHTML = hits.map(m =>
-        `<div class="battle-enemy-result-row" data-name="${m.name.replace(/"/g,'&quot;')}">
-          ${m.name}<span class="ber-cr">${m.cr ? 'CR ' + m.cr : ''}</span>
-        </div>`
-      ).join('');
+      midResults.innerHTML = hits.map(renderEnemyResultRow).join('');
       midResults.classList.add('open');
       midResults.querySelectorAll('.battle-enemy-result-row').forEach(row => {
         row.addEventListener('click', () => {
@@ -2057,6 +2011,9 @@ function battleNextTurn() {
     // Find first non-defeated
     const firstAlive = cs.findIndex(c => c.hp > 0);
     b.turnIdx = firstAlive >= 0 ? firstAlive : 0;
+    // Flash the round counter to signal the new round (no banner needed — it's already in the UI)
+    const roundEl = document.getElementById('battleRoundNum');
+    if (roundEl) { roundEl.classList.add('round-flash'); setTimeout(() => roundEl.classList.remove('round-flash'), 1000); }
   } else {
     b.turnIdx = found;
   }
@@ -2113,7 +2070,7 @@ function renderBattle() {
 
 // ─── INITIALISE ──────────────────────────────────────────────────────────────
 buildNarrative();
-buildPlayerRolls();
+buildPlayerRollPrompts();
 renderSavedLists();
 renderPlayerRoster();
 renderNpcRoster();
