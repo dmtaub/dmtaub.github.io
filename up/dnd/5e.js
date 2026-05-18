@@ -920,7 +920,7 @@ function rosterFormHTML(d) {
       <div class="field-group"><label>Notes / Traits</label><textarea class="enc-input rf-notes" rows="3" placeholder="Darkvision 60 ft, Fey Ancestry…">${d.notes||''}</textarea></div>
     </div>
     <div class="roster-form-actions">
-      <button class="btn sm rf-save">Save</button>
+      <button class="btn sm rf-save-btn">Save</button>
       <button class="btn secondary sm rf-cancel">Cancel</button>
     </div>
   </div>`;
@@ -965,7 +965,7 @@ function openRosterForm(wrap, existing, onSave) {
     });
   }
   ABILITY_KEYS.forEach(a => wrap.querySelector(`.rf-${a}`)?.addEventListener('input', updateMods));
-  wrap.querySelector('.rf-save').addEventListener('click', () => {
+  wrap.querySelector('.rf-save-btn').addEventListener('click', () => {
     const entry = readRosterForm(wrap, existing);
     if (!entry) return;
     onSave(entry);
