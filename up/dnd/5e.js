@@ -234,23 +234,30 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 })();
 
 // ─── INNER TABS (Rolls panel) ────────────────────────────────────────────────
-const LAST_INNER_TAB_KEY = '5e-last-inner-tab';
-document.querySelectorAll('.inner-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.inner-tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.inner-tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('inner-tab-' + btn.dataset.innerTab).classList.add('active');
-    localStorage.setItem(LAST_INNER_TAB_KEY, btn.dataset.innerTab);
+document.querySelectorAll('.inner-tabs').forEach(group => {
+  const btns   = group.querySelectorAll('.inner-tab-btn');
+  const parent = group.closest('.tab-panel');
+  const storageKey = '5e-inner-tab-' + (parent ? parent.id : 'global');
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Deactivate only siblings in this group
+      btns.forEach(b => b.classList.remove('active'));
+      // Deactivate only panels that belong to this group's buttons
+      btns.forEach(b => document.getElementById('inner-tab-' + b.dataset.innerTab)?.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('inner-tab-' + btn.dataset.innerTab)?.classList.add('active');
+      localStorage.setItem(storageKey, btn.dataset.innerTab);
+    });
   });
+
+  // Restore last active tab for this group; fall back to first btn (already active in HTML)
+  const last = localStorage.getItem(storageKey);
+  if (last) {
+    const btn = group.querySelector(`.inner-tab-btn[data-inner-tab="${last}"]`);
+    if (btn) btn.click();
+  }
 });
-(function restoreInnerTab() {
-  const last = localStorage.getItem(LAST_INNER_TAB_KEY);
-  if (!last) return;
-  const key = last === 'npcs' || last === 'inviting' ? 'social' : last;
-  const btn = document.querySelector(`.inner-tab-btn[data-inner-tab="${key}"]`);
-  if (btn) btn.click();
-})();
 
 // ─── STAT BLOCKS ─────────────────────────────────────────────────────────────
 let ALL_CREATURES = [];

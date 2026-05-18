@@ -137,6 +137,12 @@
         .ref-section-row td { background:var(--bg); font-style:italic; color:var(--text-muted); font-size:0.82rem; }
 
         .ref-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:1.25rem; }
+        .ref-grid-3 { grid-template-columns:repeat(3,1fr); }
+        .ref-col-span-2 { grid-column:span 2; }
+        .ref-col-span-3 { grid-column:span 3; }
+        .ref-two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem 1.5rem; }
+        .ref-three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem 1.5rem; }
+        @media (max-width:640px) { .ref-grid-3 { grid-template-columns:1fr; } .ref-col-span-2,.ref-col-span-3 { grid-column:span 1; } .ref-two-col,.ref-three-col { grid-template-columns:1fr; } }
 
         /* alignment grid */
         .align-grid { display:grid; grid-template-columns:auto repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:6px; overflow:hidden; font-size:0.82rem; }
@@ -499,8 +505,66 @@
         </div>
 
         <div id="inner-tab-ref-general" class="inner-tab-panel active">
-        <div class="ref-grid">
+        <div class="ref-grid ref-grid-3">
 
+            <!-- Row 1: Combined card (3 cols) -->
+            <div class="card ref-col-span-3">
+                <h2>Rolls &amp; Rules</h2>
+                <h3 style="margin-top:0">Roll Formulas</h3>
+                <table class="ref-table">
+                    <thead><tr><th>Roll</th><th>Formula</th><th>Notes</th></tr></thead>
+                    <tbody>
+                        <tr><td>Weapon attack</td><td>d20 + Ability Mod + (Prof?)</td><td>Melee→Str, Ranged→Dex, Finesse/Thrown→Str <em>or</em> Dex</td></tr>
+                        <tr><td>Damage</td><td>Dice + Ability Mod</td><td>No proficiency bonus on damage</td></tr>
+                        <tr><td>Skill check</td><td>d20 + Ability Mod + (Prof?) </td><td>Expertise = ×2 Prof; Jack of All Trades = +½ Prof</td></tr>
+                        <tr><td>Saving throw</td><td>d20 + Ability Mod + (Prof?) </td><td>Each class has proficiency in two saves</td></tr>
+                        <tr>
+                            <td>Spell attack<br><span style="color:var(--text-muted);font-size:0.8em">Spell Save DC</span></td>
+                            <td>d20 + Spellcasting Mod + Prof<br><span style="color:var(--text-muted);font-size:0.8em">8 + Spellcasting Mod + Prof</span></td>
+                            <td><ul style="margin:0;padding-left:1.1em;font-size:0.88em">
+                                <li><strong>Int</strong> — Wizard, Artificer</li>
+                                <li><strong>Wis</strong> — Cleric, Druid, Ranger</li>
+                                <li><strong>Cha</strong> — Bard, Paladin, Sorcerer, Warlock</li>
+                            </ul></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h3>Situational</h3>
+                <table class="ref-table">
+                    <tbody>
+                        <tr><td>Initiative</td><td>Dexterity modifier</td></tr>
+                        <tr><td>Passive Perception</td><td>10 + Wis (Perception)</td></tr>
+                        <tr><td>Passive Investigation</td><td>10 + Int (Investigation)</td></tr>
+                        <tr><td>Unarmed Strike</td><td>Str to hit; 1 + Str mod damage</td></tr>
+                        <tr><td>Grapple / Shove</td><td>Athletics vs. Athletics <em>or</em> Acrobatics</td></tr>
+                        <tr><td>Two-Weapon Off-Hand</td><td>No ability modifier to damage (unless Fighting Style)</td></tr>
+                    </tbody>
+                </table>
+                <h3>Saves</h3>
+                <table class="ref-table">
+                    <tbody>
+                        <tr><td>Concentration</td><td>Con save, DC = max(10, ½ dmg taken)</td></tr>
+                        <tr><td>Death Save — success</td><td>3 successes → stabilize; nat 20 → regain 1 HP</td></tr>
+                        <tr><td>Death Save — failure</td><td>3 failures → dead; nat 1 → counts as 2 failures</td></tr>
+                        <tr><td>Exhaustion</td><td>Con save DC 10 after forced march (1 hr/mile)</td></tr>
+                    </tbody>
+                </table>
+                <h3>Actions in Combat</h3>
+                <table class="ref-table">
+                    <tbody>
+                        <tr><td>Disengage</td><td>Movement doesn't provoke opportunity attacks</td></tr>
+                        <tr><td>Dodge</td><td>Attacks against you have disadvantage; Dex saves have advantage</td></tr>
+                        <tr><td>Help</td><td>Ally gains advantage on next ability check or attack roll</td></tr>
+                        <tr><td>Ready</td><td>Hold action for a trigger; uses your reaction when triggered</td></tr>
+                        <tr><td>Hide</td><td>Stealth check; must be heavily obscured or behind cover</td></tr>
+                        <tr><td>Dash</td><td>Extra movement equal to your speed this turn</td></tr>
+                        <tr><td>Search</td><td>Perception or Investigation check to find something</td></tr>
+                        <tr><td>Use Object</td><td>Interact with a second object (first is free)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Row 2: Proficiency Bonus + Ability Score (1 col) + Alignment + DC (2 cols) -->
             <div class="card">
                 <h2>Proficiency Bonus</h2>
                 <table class="ref-table">
@@ -513,10 +577,7 @@
                         <tr><td>17–20</td><td>+6</td></tr>
                     </tbody>
                 </table>
-            </div>
-
-            <div class="card">
-                <h2>Ability Score → Modifier</h2>
+                <h3>Ability Score → Modifier</h3>
                 <table class="ref-table">
                     <thead><tr><th>Score</th><th>Modifier</th></tr></thead>
                     <tbody>
@@ -535,32 +596,8 @@
                 </table>
             </div>
 
-            <div class="card">
-                <h2>Spell Save DCs</h2>
-                <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.5rem">Formula: <strong style="color:var(--text)">8 + Prof Bonus + Spellcasting Modifier</strong></p>
-                <table class="ref-table">
-                    <thead><tr><th>Class(es)</th><th>Ability</th></tr></thead>
-                    <tbody>
-                        <tr><td>Wizard, Artificer</td><td>Intelligence</td></tr>
-                        <tr><td>Cleric, Druid, Ranger</td><td>Wisdom</td></tr>
-                        <tr><td>Bard, Paladin, Sorcerer, Warlock</td><td>Charisma</td></tr>
-                    </tbody>
-                </table>
-                <h3 style="margin-top:0.85rem">Common DC targets</h3>
-                <table class="ref-table">
-                    <thead><tr><th>Difficulty</th><th>DC</th></tr></thead>
-                    <tbody>
-                        <tr><td>Very Easy</td><td>5</td></tr>
-                        <tr><td>Easy</td><td>10</td></tr>
-                        <tr><td>Medium</td><td>15</td></tr>
-                        <tr><td>Hard</td><td>20</td></tr>
-                        <tr><td>Very Hard</td><td>25</td></tr>
-                        <tr><td>Nearly Impossible</td><td>30</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
+            <!-- Row 3: Alignment + DC (2 cols) + Actions in Combat (1 col) -->
+            <div class="card ref-col-span-2">
                 <h2>Alignment</h2>
                 <div class="align-grid">
                     <div class="align-header"></div>
@@ -580,7 +617,19 @@
                     <div class="align-cell"><span class="align-abbr">NE</span><span class="align-desc">Pure self-interest, no honor or loyalty</span></div>
                     <div class="align-cell"><span class="align-abbr">CE</span><span class="align-desc">Chaos, cruelty, destruction for its own sake</span></div>
                 </div>
+                <h3>DC Difficulty</h3>
+                <table class="ref-table">
+                    <tbody>
+                        <tr><td>Very Easy</td><td>5</td></tr>
+                        <tr><td>Easy</td><td>10</td></tr>
+                        <tr><td>Medium</td><td>15</td></tr>
+                        <tr><td>Hard</td><td>20</td></tr>
+                        <tr><td>Very Hard</td><td>25</td></tr>
+                        <tr><td>Nearly Impossible</td><td>30</td></tr>
+                    </tbody>
+                </table>
             </div>
+
 
         </div>
         </div><!-- /inner-tab-ref-general -->
