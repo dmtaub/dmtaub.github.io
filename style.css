@@ -35,6 +35,11 @@ h1, h2, h3 {
     transition: box-shadow 0.5s ease;
 }
 
+/* Offset anchor-scroll targets so the sticky topbar doesn't overlap them
+   (e.g. when re-clicking the same nav link). --topbar-h is maintained in JS. */
+:root { --topbar-h: 0px; }
+.section { scroll-margin-top: var(--topbar-h); }
+
 header {
     background-color: var(--header-bg);
     color: var(--header-text);

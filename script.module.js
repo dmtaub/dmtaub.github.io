@@ -26,6 +26,24 @@ function initScrollShrink() {
     window.addEventListener('scroll', updateScrolled, { passive: true });
 }
 
+// Keep --topbar-h in sync with the sticky header so anchor scrolls
+// (including same-hash re-clicks) clear it.
+function initTopbarHeightVar() {
+    const topbar = document.querySelector('.topbar-sticky');
+    if (!topbar) return;
+    const apply = () => {
+        document.documentElement.style.setProperty('--topbar-h', topbar.offsetHeight + 'px');
+    };
+    apply();
+    if (window.ResizeObserver) new ResizeObserver(apply).observe(topbar);
+    window.addEventListener('resize', apply);
+    // Header collapses on scroll via CSS transitions; re-measure after they settle.
+    window.addEventListener('scroll', () => {
+        clearTimeout(initTopbarHeightVar._t);
+        initTopbarHeightVar._t = setTimeout(apply, 550);
+    }, { passive: true });
+}
+
 let _savedDark = false;
 let _updateProjects = null;
 
@@ -77,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
     initFade();
     initScrollShrink();
+    initTopbarHeightVar();
     document.addEventListener('themechange', syncResumeTheme);
     // get current hash
     const sectionId = location.hash.substring(1);
