@@ -35,10 +35,23 @@ h1, h2, h3 {
     transition: box-shadow 0.5s ease;
 }
 
-/* Offset anchor-scroll targets so the sticky topbar doesn't overlap them
-   (e.g. when re-clicking the same nav link). --topbar-h is maintained in JS. */
+/* --topbar-h is maintained in JS (it changes as the header collapses on scroll) */
 :root { --topbar-h: 0px; }
 .section { scroll-margin-top: var(--topbar-h); }
+
+/* --dx per letter is measured in JS so the swap is exact in a proportional font.
+   Asymmetric timing: quick swap on hover, slow drift back on leave. */
+.typo-swap { display: inline-block; }
+.typo-swap .L {
+    display: inline-block;
+    transition: transform 1.5s ease-out;
+    will-change: transform;
+}
+.typo-host:hover .typo-swap .L,
+.typo-swap:focus-within .L {
+    transition: transform 0.65s cubic-bezier(0.65, 0, 0.35, 1);
+    transform: translateX(var(--dx, 0));
+}
 
 header {
     background-color: var(--header-bg);

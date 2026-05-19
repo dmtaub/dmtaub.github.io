@@ -26,8 +26,23 @@ function initScrollShrink() {
     window.addEventListener('scroll', updateScrolled, { passive: true });
 }
 
-// Keep --topbar-h in sync with the sticky header so anchor scrolls
-// (including same-hash re-clicks) clear it.
+function initTypoSwap() {
+    document.querySelectorAll('.typo-swap').forEach(wrap => {
+        const r = wrap.querySelector('.L-r');
+        const e = wrap.querySelector('.L-e');
+        if (!r || !e) return;
+        const measure = () => {
+            r.style.setProperty('--dx', '0px');
+            e.style.setProperty('--dx', '0px');
+            r.style.setProperty('--dx', e.getBoundingClientRect().width + 'px');
+            e.style.setProperty('--dx', -r.getBoundingClientRect().width + 'px');
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        if (document.fonts?.ready) document.fonts.ready.then(measure);
+    });
+}
+
 function initTopbarHeightVar() {
     const topbar = document.querySelector('.topbar-sticky');
     if (!topbar) return;
@@ -37,7 +52,7 @@ function initTopbarHeightVar() {
     apply();
     if (window.ResizeObserver) new ResizeObserver(apply).observe(topbar);
     window.addEventListener('resize', apply);
-    // Header collapses on scroll via CSS transitions; re-measure after they settle.
+    // Re-measure after the scroll-driven header collapse transition settles.
     window.addEventListener('scroll', () => {
         clearTimeout(initTopbarHeightVar._t);
         initTopbarHeightVar._t = setTimeout(apply, 550);
@@ -96,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFade();
     initScrollShrink();
     initTopbarHeightVar();
+    initTypoSwap();
     document.addEventListener('themechange', syncResumeTheme);
     // get current hash
     const sectionId = location.hash.substring(1);
