@@ -502,6 +502,16 @@ function updateHoverBar() {
 
   // Battle-targeted buttons (New / Add to…)
   if (typeof updateSelectionBattleButtons === 'function') updateSelectionBattleButtons();
+
+  // Keep the battles-picker dropdown's value in sync with edit state
+  const pickerEl = document.getElementById('battlesPicker');
+  if (pickerEl) pickerEl.value = (activeBattleEdit != null) ? String(activeBattleEdit) : '';
+}
+
+function _battleEnemyCount(b) {
+  const queue = (b.enemyQueueData || []).reduce((sum, e) => sum + (parseInt(e.count) || 1), 0);
+  const combatants = (b.combatants || []).filter(c => c.type === 'enemy').length;
+  return queue + combatants;
 }
 
 function renderBattlesPicker() {
@@ -510,13 +520,27 @@ function renderBattlesPicker() {
   // typeof check guards against init order — renderBattlesPicker runs before `battles` exists
   if (typeof battles === 'undefined') return;
   sel.innerHTML = '<option value="">— pick a battle —</option>' +
-    battles.map((b, i) =>
-      `<option value="${i}">${b.phase === 'setup' ? '🔜 ' : ''}${b.name}</option>`
-    ).join('');
-  sel.value = '';
+    battles.map((b, i) => {
+      const n = _battleEnemyCount(b);
+      const enemyTxt = n === 1 ? '1 enemy' : `${n} enemies`;
+      return `<option value="${i}">${b.phase === 'setup' ? '🔜 ' : ''}${b.name} (${enemyTxt})</option>`;
+    }).join('');
+  // Restore current selection so it sticks across re-renders.
+  sel.value = (activeBattleEdit != null) ? String(activeBattleEdit) : '';
   sel.onchange = () => {
-    const idx = parseInt(sel.value);
-    sel.value = '';
+    const raw = sel.value;
+    if (raw === '') {
+      // User explicitly cleared — exit edit mode if we were in it.
+      if (activeBattleEdit != null) {
+        activeBattleEdit = null;
+        battleEditOriginal = null;
+        selectedNames.clear();
+        buildStatGrid(document.getElementById('statSearch').value);
+        updateHoverBar();
+      }
+      return;
+    }
+    const idx = parseInt(raw);
     if (!Number.isInteger(idx) || !battles[idx]) return;
     startBattleEditFromPicker(idx);
   };
@@ -525,7 +549,13 @@ function renderBattlesPicker() {
 function startBattleEditFromPicker(idx) {
   const b = battles[idx];
   if (!b) return;
-  const names = (b.enemyQueueData || []).map(d => d.name);
+  // Setup-phase battles store enemies in enemyQueueData; active-phase battles
+  // store them as combatants. Pull from whichever is populated.
+  const queueNames = (b.enemyQueueData || []).map(d => d.name);
+  const combatantNames = (b.combatants || [])
+    .filter(c => c.type === 'enemy')
+    .map(c => c.creatureName || c.name);
+  const names = [...new Set([...queueNames, ...combatantNames])];
   selectedNames = new Set(names);
   battleEditOriginal = new Set(names);
   activeBattleEdit = idx;
