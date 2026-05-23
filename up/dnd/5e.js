@@ -2241,8 +2241,14 @@ function renderBattleSetup() {
           : [];
       }
       if (!templateMatches.length && !monsterMatches.length) {
-        resultsEl.classList.remove('open');
-        resultsEl.innerHTML = '';
+        // Empty search with no saved templates — show a hint instead of silently hiding.
+        if (!q && !monsterLists.length) {
+          resultsEl.innerHTML = `<div class="battle-enemy-empty">No lists defined — save a template from the Enemies tab.</div>`;
+          resultsEl.classList.add('open');
+        } else {
+          resultsEl.classList.remove('open');
+          resultsEl.innerHTML = '';
+        }
         return;
       }
       let html = '';
