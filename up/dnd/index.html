@@ -12,6 +12,7 @@
         .tab-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.85rem; cursor:pointer; font-size:0.9rem; color:var(--text-muted); transition:all .15s; }
         .tab-btn:hover { border-color:var(--accent-soft); color:var(--text); }
         .tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .battle-pending-icon { filter:brightness(100); margin-right:0.25rem; display:inline-block; }
         .tab-panel { display:none; }
         .tab-panel.active { display:block; }
 
@@ -127,14 +128,18 @@
         #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
         #selectionBar .btn-sel.dark { background:rgba(0,0,0,.35); border-color:rgba(0,0,0,.45); font-weight:600; }
         #selectionBar .btn-sel.dark:hover { background:rgba(0,0,0,.55); }
+        #selectionBar .btn-sel[disabled] { opacity:0.4; cursor:not-allowed; }
+        #selectionBar .btn-sel[disabled]:hover { background:rgba(255,255,255,.2); }
         .sel-dropdown-wrap { position:relative; }
         .sel-dropdown { display:none; position:absolute; bottom:100%; right:0; margin-bottom:0.5rem; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:30; overflow:hidden; }
         .sel-dropdown.open { display:block; }
         .sel-dropdown-item { padding:0.5rem 0.7rem; cursor:pointer; font-size:0.85rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:0.5rem; }
         .sel-dropdown-item:last-child { border-bottom:none; }
         .sel-dropdown-item:hover { background:var(--bg); }
+        .sel-dropdown-item.sel-dropdown-new { border-top:3px solid var(--accent-soft); background:var(--bg); }
+        .sel-dropdown-item.sel-dropdown-new:hover { background:var(--surface); }
         .sel-dropdown-item .meta { color:var(--text-muted); font-size:0.74rem; white-space:nowrap; }
-        .sel-dropdown-preview { display:none; position:absolute; bottom:100%; right:100%; margin-right:0.5rem; margin-bottom:0.5rem; background:var(--surface); color:var(--text); border:1px solid var(--accent-soft); border-radius:6px; padding:0.55rem 0.7rem; min-width:200px; max-width:280px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:31; font-size:0.8rem; line-height:1.5; pointer-events:none; }
+        .sel-dropdown-preview { display:none; position:fixed; background:var(--surface); color:var(--text); border:1px solid var(--accent-soft); border-radius:6px; padding:0.55rem 0.7rem; min-width:200px; max-width:280px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:31; font-size:0.8rem; line-height:1.5; pointer-events:none; }
         .sel-dropdown-preview.visible { display:block; }
         .sel-dropdown-preview .preview-title { font-weight:700; color:var(--accent); margin-bottom:0.3rem; }
         .sel-dropdown-preview .preview-meta { color:var(--text-muted); font-size:0.74rem; margin-bottom:0.35rem; }
@@ -196,11 +201,12 @@
         .enc-input.wide { width:190px; }
         .enc-input:focus { outline:none; border-color:var(--accent-soft); }
         .btn { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:0.4rem 0.9rem; cursor:pointer; font-size:0.88rem; transition:opacity .15s; align-self:flex-end; }
-        .btn:hover { opacity:.85; }
+        .btn:hover:not(:disabled) { opacity:.85; }
         .btn.secondary { background:none; color:var(--accent); border:1px solid var(--accent);}
-        .btn.secondary:hover { background:var(--bg); }
+        .btn.secondary:hover:not(:disabled) { background:var(--bg); }
         .btn.danger { background:#c0392b; }
         .btn.sm { padding:0.25rem 0.55rem; font-size:0.8rem; }
+        .btn:disabled { opacity:0.4; cursor:not-allowed; }
 
         .enc-slots { display:flex; gap:0.4rem; flex-wrap:wrap; margin:0; }
         .enc-slot { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:0.28rem 0.7rem; font-size:0.85rem; cursor:pointer; color:var(--text-muted); transition:all .15s; }
@@ -397,7 +403,7 @@
     <div class="tabs">
         <button class="tab-btn active" data-tab="roster">Characters</button>
         <button class="tab-btn" data-tab="statblocks">Enemies</button>
-        <button class="tab-btn" data-tab="encounter">Turn Order</button>
+        <button class="tab-btn" data-tab="encounter" id="tabBtnEncounter"><span class="battle-pending-icon" id="battlePendingIcon" style="display:none">🔜</span><span id="tabBtnEncounterText">Battles</span></button>
         <button class="tab-btn" data-tab="rolls">Rolls</button>
         <button class="tab-btn" data-tab="reference">Reference</button>
     </div>
@@ -436,19 +442,18 @@
         </div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
         <div id="selectionBar">
-            <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> <span id="selListSaved"></span> ·</span>
-            <span class="sel-count" id="selectionCount"></span>
             <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
-            <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
-            <button class="btn-sel dark" id="btnSelNewBattle">+ New battle</button>
-            <button class="btn-sel" id="btnSelAddCurrent" style="display:none">+ Add to current</button>
+            <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> ·</span>
+            <span id="selListSaved" style="display:none"></span>
+            <span class="sel-count" id="selectionCount"></span>
+            <button class="btn-sel ghost" id="btnClearSel">Clear</button>
             <div class="sel-dropdown-wrap" id="selBattleAddWrap" style="display:none">
-                <button class="btn-sel" id="btnSelAddTo">+ Add to… ▾</button>
+                <button class="btn-sel dark" id="btnSelAddTo">Add to battle ▾</button>
                 <div class="sel-dropdown" id="selBattleDropdown"></div>
                 <div class="sel-dropdown-preview" id="selBattlePreview"></div>
             </div>
+            <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
             <button class="btn-sel" id="btnSaveList">Save as…</button>
-            <button class="btn-sel ghost" id="btnClearSel">Clear</button>
         </div>
     </div>
 
@@ -553,7 +558,8 @@
                         <select class="enc-input" id="battleListSelect">
                             <option value="">— Load monster list —</option>
                         </select>
-                        <input class="enc-input" id="battleEnemySearch" type="text" placeholder="Search SRD monsters…" autocomplete="off">
+                        <input class="enc-input" id="battleEnemySearch" type="text" placeholder="Add a monster by name…" autocomplete="off">
+                        <button class="btn secondary sm" id="btnQueueToEnemies" title="Open these monsters in the Enemies tab with all selected">Show in 'Enemies'</button>
                     </div>
                     <div class="battle-enemy-results" id="battleEnemyResults"></div>
                     <div class="battle-queue" id="battleEnemyQueue"></div>
