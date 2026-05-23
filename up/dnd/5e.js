@@ -2016,6 +2016,35 @@ function renderBattleCombatantStatBlock(c) {
 }
 
 // ── Setup phase ───────────────────────────────────────────────────────────────
+// Roster picks (checkboxes + typed init) are persisted per-battle on the battle
+// object: `b.rosterChecked = { players:[id…], npcs:[id…] }` and
+// `b.rosterInit = { id: '15', … }`. Missing → fall back to defaults.
+function rosterPickKey(rosterType) { return rosterType === 'player' ? 'players' : 'npcs'; }
+
+function getCheckedSet(b, rosterType, roster, defaultChecked) {
+  const key = rosterPickKey(rosterType);
+  if (b && b.rosterChecked && b.rosterChecked[key]) return new Set(b.rosterChecked[key]);
+  return defaultChecked ? new Set(roster.map(p => p.id)) : new Set();
+}
+
+function persistBattleRosterPicks() {
+  const b = curBattle();
+  if (!b) return;
+  b.rosterChecked = { players: [], npcs: [] };
+  b.rosterInit = {};
+  [['player', 'battlePlayerPicks'], ['npc', 'battleNpcPicks']].forEach(([rt, sectionId]) => {
+    const key = rosterPickKey(rt);
+    document.querySelectorAll(`#${sectionId} input[type=checkbox]:checked`).forEach(cb => {
+      b.rosterChecked[key].push(cb.dataset.id);
+    });
+    document.querySelectorAll(`#${sectionId} .b-setup-init`).forEach(inp => {
+      const v = inp.value.trim();
+      if (v) b.rosterInit[inp.dataset.id] = v;
+    });
+  });
+  saveBattles();
+}
+
 function renderPickList(containerId, roster, rosterType, defaultChecked) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -2024,13 +2053,19 @@ function renderPickList(containerId, roster, rosterType, defaultChecked) {
     el.innerHTML = `<div style="font-size:0.85rem;color:var(--text-muted)">No ${label} in roster.</div>`;
     return;
   }
+  const b = curBattle();
+  const checked = getCheckedSet(b, rosterType, roster, defaultChecked);
+  const initOverrides = (b && b.rosterInit) || {};
   el.innerHTML = roster.map(p => `<div class="battle-pick-row">
-    <input type="checkbox" data-roster-type="${rosterType}" data-id="${p.id}"${defaultChecked ? ' checked' : ''}>
+    <input type="checkbox" data-roster-type="${rosterType}" data-id="${p.id}"${checked.has(p.id) ? ' checked' : ''}>
     <span class="bpr-name">${p.name}${p.cls ? ` <span class="bpr-sub">(${p.cls})</span>` : ''}</span>
     <span class="bpr-mod" title="Initiative modifier">${modStr(p.initMod || 0)}</span>
     <span class="bpr-plus">+</span>
-    <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${p.id}" data-roster-type="${rosterType}">
+    <input class="b-setup-init" type="number" placeholder="d20" title="Roll (blank = d20); modifier will be added" data-id="${p.id}" data-roster-type="${rosterType}" value="${initOverrides[p.id] || ''}">
   </div>`).join('');
+  // Persist changes to checkboxes and init overrides
+  el.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', persistBattleRosterPicks));
+  el.querySelectorAll('.b-setup-init').forEach(inp => inp.addEventListener('change', persistBattleRosterPicks));
 }
 
 function renderBattleSetup() {
