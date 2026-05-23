@@ -2203,7 +2203,13 @@ function renderBattleSetup() {
     const addMonsterToQueue = (name) => {
       const creature = ALL_CREATURES.find(c => c.name === name);
       if (!creature) return;
-      battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
+      // Auto-number if a queue row with the same display name already exists, mirroring
+      // the active-battle numbering rule: "Goblin" → "Goblin 2" → "Goblin 3" → …
+      const displayNames = battleEnemyQueue.map(e => e.customName || e.name);
+      const startNum = highestCombatantNumber(new Set(displayNames), creature.name);
+      const entry = { name: creature.name, count: 1, customHp: '', creature };
+      if (startNum > 0) entry.customName = `${creature.name} ${startNum + 1}`;
+      battleEnemyQueue.push(entry);
       saveBattleQueue();
       renderBattleEnemyQueue();
       clearAndClose();
