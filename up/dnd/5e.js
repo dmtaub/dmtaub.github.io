@@ -274,11 +274,11 @@ let cardMode = settings5e.cardMode || 'flip';
 function saveSettings() { localStorage.setItem('5e-settings', JSON.stringify(settings5e)); }
 
 function updateModeButtons() {
-  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === cardMode));
+  document.querySelectorAll('.card-mode-row .mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === cardMode));
 }
 updateModeButtons();
 
-document.querySelectorAll('.mode-btn').forEach(btn => {
+document.querySelectorAll('.card-mode-row .mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     cardMode = btn.dataset.mode;
     settings5e.cardMode = cardMode;
@@ -559,21 +559,42 @@ const QF_RANGES = {
   cr: { lt10:[null,10,'exclusive'], '10to20':[10,20,'inclusive'], gt20:[20,null,'inclusive'] },
   hp: { lt50:[null,50,'exclusive'], '50to150':[50,150,'inclusive'], gt150:[150,null,'inclusive'] },
 };
-const quickFilters = { cr:null, hp:null };
+const QF_CLASSES = {
+  humanoid: ['humanoid'],
+  animalia: ['beast', 'plant', 'ooze'],
+  mythic:   ['dragon', 'fiend', 'celestial', 'fey', 'undead', 'aberration', 'elemental', 'giant', 'monstrosity', 'construct'],
+};
+const quickFilters = { cr:new Set(), hp:new Set(), cls:new Set() };
+function creatureClass(c) {
+  const t = ((c.typeLine || c.type || '') + '').toLowerCase();
+  for (const [cls, words] of Object.entries(QF_CLASSES)) {
+    if (words.some(w => t.includes(w))) return cls;
+  }
+  return null;
+}
+function inRange(val, key, group) {
+  if (val == null) return false;
+  const [min, max, mode] = QF_RANGES[group][key];
+  if (min != null && val < min) return false;
+  if (max != null && (mode === 'exclusive' ? val >= max : val > max)) return false;
+  return true;
+}
 function matchesQuickFilter(c) {
-  for (const group of Object.keys(quickFilters)) {
-    const v = quickFilters[group];
-    if (!v) continue;
-    const [min, max, mode] = QF_RANGES[group][v];
-    const val = group === 'cr' ? parseCrNum(c.cr) : parseHpNum(c.hp);
-    if (val == null) return false;
-    if (min != null && val < min) return false;
-    if (max != null) {
-      if (mode === 'exclusive' ? val >= max : val > max) return false;
-    }
+  if (quickFilters.cls.size) {
+    const cls = creatureClass(c);
+    if (!cls || !quickFilters.cls.has(cls)) return false;
+  }
+  if (quickFilters.cr.size) {
+    const val = parseCrNum(c.cr);
+    if (![...quickFilters.cr].some(k => inRange(val, k, 'cr'))) return false;
+  }
+  if (quickFilters.hp.size) {
+    const val = parseHpNum(c.hp);
+    if (![...quickFilters.hp].some(k => inRange(val, k, 'hp'))) return false;
   }
   return true;
 }
+function anyQuickFilterActive() { return quickFilters.cr.size || quickFilters.hp.size || quickFilters.cls.size; }
 
 function buildStatGrid(filter) {
   const q   = (filter || '').toLowerCase();
@@ -589,11 +610,13 @@ function buildStatGrid(filter) {
         ('cr'+(c.cr||'')).includes(q)
       )
     : pool;
-  if (quickFilters.cr || quickFilters.hp) result = result.filter(matchesQuickFilter);
+  if (anyQuickFilterActive()) result = result.filter(matchesQuickFilter);
   CURRENT_FILTERED = result;
+  const countEl = document.getElementById('qfCount');
+  if (countEl) countEl.innerHTML = `<strong>${CURRENT_FILTERED.length}</strong> <span style="opacity:0.6">of</span> ${ALL_CREATURES.length}`;
   const grid = document.getElementById('statGrid');
   if (!CURRENT_FILTERED.length) {
-    const hasFilter = q || quickFilters.cr || quickFilters.hp;
+    const hasFilter = q || anyQuickFilterActive();
     grid.innerHTML = `<p class="stat-empty">${hasFilter ? 'No matches.' : 'No creatures loaded.'}</p>`;
     return;
   }
@@ -606,18 +629,34 @@ document.getElementById('statSearch').addEventListener('input', e => {
   updateHoverBar();
 });
 
-document.querySelectorAll('#statQuickFilters .qf-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const group = btn.dataset.qfGroup;
-    const value = btn.dataset.qfValue;
-    quickFilters[group] = quickFilters[group] === value ? null : value;
+function refreshQuickFilterChips() {
+  for (const group of ['cr', 'hp', 'cls']) {
+    const set = quickFilters[group];
+    const hasSelection = set.size > 0;
     document.querySelectorAll(`#statQuickFilters .qf-btn[data-qf-group="${group}"]`).forEach(b => {
-      b.classList.toggle('active', b.dataset.qfValue === quickFilters[group]);
+      b.classList.toggle('active', set.has(b.dataset.qfValue));
+      b.classList.toggle('group-active', hasSelection);
     });
-    if (activeListId && (quickFilters.cr || quickFilters.hp)) showAllPool = true;
+  }
+}
+
+document.querySelectorAll('#statQuickFilters .qf-btn[data-qf-group]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const set = quickFilters[btn.dataset.qfGroup];
+    const v = btn.dataset.qfValue;
+    if (set.has(v)) set.delete(v); else set.add(v);
+    refreshQuickFilterChips();
+    if (activeListId && anyQuickFilterActive()) showAllPool = true;
     buildStatGrid(document.getElementById('statSearch').value);
     updateHoverBar();
   });
+});
+
+document.getElementById('qfReset').addEventListener('click', () => {
+  quickFilters.cr.clear(); quickFilters.hp.clear(); quickFilters.cls.clear();
+  refreshQuickFilterChips();
+  buildStatGrid(document.getElementById('statSearch').value);
+  updateHoverBar();
 });
 
 // ─── ROLL TABLES ─────────────────────────────────────────────────────────────

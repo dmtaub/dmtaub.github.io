@@ -82,6 +82,18 @@
         .quick-filter-bar .qf-label { font-size:0.78rem; color:var(--text-muted); margin-left:0.25rem; }
         .quick-filter-bar .qf-label:first-child { margin-left:0; }
         .quick-filter-bar .qf-btn { padding:0.22rem 0.55rem; font-size:0.8rem; }
+        /* group has no selection → all chips dimly highlighted (means "all in this group") */
+        .quick-filter-bar .qf-btn[data-qf-group]:not(.active):not(.group-active) {
+            border-color:var(--accent-soft); color:var(--text); background:var(--bg);
+        }
+        /* a chip is selected */
+        .quick-filter-bar .qf-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; box-shadow:0 0 0 1px var(--accent); }
+        /* group has a selection but this chip isn't it → muted off-style */
+        .quick-filter-bar .qf-btn.group-active:not(.active) { background:none; border-color:var(--border); color:var(--text-muted); opacity:0.7; }
+        .quick-filter-bar .qf-count { margin-left:auto; font-size:0.8rem; color:var(--text-muted); font-variant-numeric:tabular-nums; padding:0.2rem 0.55rem; border:1px solid var(--border); border-radius:5px; background:var(--bg); }
+        .quick-filter-bar .qf-count strong { color:var(--accent); font-weight:600; }
+        .quick-filter-bar .qf-reset { background:var(--accent); color:#fff; border-color:var(--accent); padding:0.35rem 0.9rem; font-size:0.88rem; font-weight:600; }
+        .quick-filter-bar .qf-reset:hover { background:var(--bg); color:var(--accent); border-color:var(--accent); opacity:1; }
 
         .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
         .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); position:relative; transition:transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
@@ -392,6 +404,12 @@
             <button class="mode-btn qf-btn" data-qf-group="hp" data-qf-value="lt50">&lt; 50</button>
             <button class="mode-btn qf-btn" data-qf-group="hp" data-qf-value="50to150">50–150</button>
             <button class="mode-btn qf-btn" data-qf-group="hp" data-qf-value="gt150">150+</button>
+            <span class="qf-label">Class:</span>
+            <button class="mode-btn qf-btn" data-qf-group="cls" data-qf-value="humanoid">Humanoid</button>
+            <button class="mode-btn qf-btn" data-qf-group="cls" data-qf-value="animalia">Animalia</button>
+            <button class="mode-btn qf-btn" data-qf-group="cls" data-qf-value="mythic">Mythic</button>
+            <span class="qf-count" id="qfCount"></span>
+            <button class="mode-btn qf-btn qf-reset" id="qfReset">Reset</button>
         </div>
         <div id="savedListsSection"></div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
