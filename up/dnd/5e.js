@@ -953,6 +953,8 @@ function refreshQuickFilterChips() {
       b.classList.toggle('group-active', hasSelection);
     });
   }
+  const resetBtn = document.getElementById('qfReset');
+  if (resetBtn) resetBtn.disabled = !anyQuickFilterActive();
 }
 
 document.querySelectorAll('#statQuickFilters .qf-btn[data-qf-group]').forEach(btn => {
