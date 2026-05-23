@@ -2080,7 +2080,9 @@ function renderBattleEnemyQueue() {
   el.innerHTML = battleEnemyQueue.map((entry, i) => {
     const hpPlaceholder = entry.creature ? (parseInt(entry.creature.hp) || '') : '';
     const acPlaceholder = entry.creature ? (parseInt(entry.creature.ac) || '') : '';
+    const hasOverride = !!(entry.customHp || entry.customAc);
     return `<div class="battle-queue-row" data-qi="${i}">
+      <button class="btn sm bqr-info" data-qi="${i}" title="Stat block">ⓘ</button>
       <input class="enc-input bqr-name" type="text" value="${(entry.customName||entry.name).replace(/"/g,'&quot;')}" data-qi="${i}" title="Name">
       <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">×
         <input class="enc-input bqr-count" type="number" min="1" max="20" value="${entry.count}" data-qi="${i}" style="width:52px">
@@ -2089,7 +2091,7 @@ function renderBattleEnemyQueue() {
       <input class="enc-input bqr-hp" type="number" min="1" placeholder="${hpPlaceholder}" value="${entry.customHp||''}" data-qi="${i}" style="width:60px" title="HP override">
       <label style="font-size:0.78rem;color:var(--text-muted)">AC</label>
       <input class="enc-input bqr-ac" type="number" min="1" placeholder="${acPlaceholder}" value="${entry.customAc||''}" data-qi="${i}" style="width:54px" title="AC override">
-      <button class="btn sm bqr-info" data-qi="${i}" title="Stat block">ⓘ</button>
+      <button class="btn sm bqr-reset" data-qi="${i}" title="Reset HP/AC to defaults" ${hasOverride ? '' : 'disabled'}>↻</button>
       <button class="btn sm bqr-dupe" data-qi="${i}" title="Duplicate">＋</button>
       <button class="btn danger sm bqr-remove" data-qi="${i}">✕</button>
     </div>`;
@@ -2105,18 +2107,36 @@ function renderBattleEnemyQueue() {
     inp.value = battleEnemyQueue[i].count;
     saveBattleQueue();
   }));
+  const syncResetBtn = (i) => {
+    const entry = battleEnemyQueue[i];
+    const btn   = el.querySelector(`.bqr-reset[data-qi="${i}"]`);
+    if (entry && btn) btn.disabled = !(entry.customHp || entry.customAc);
+  };
   el.querySelectorAll('.bqr-hp').forEach(inp => inp.addEventListener('change', () => {
-    battleEnemyQueue[+inp.dataset.qi].customHp = inp.value.trim();
+    const i = +inp.dataset.qi;
+    battleEnemyQueue[i].customHp = inp.value.trim();
     saveBattleQueue();
+    syncResetBtn(i);
   }));
   el.querySelectorAll('.bqr-ac').forEach(inp => inp.addEventListener('change', () => {
-    battleEnemyQueue[+inp.dataset.qi].customAc = inp.value.trim();
+    const i = +inp.dataset.qi;
+    battleEnemyQueue[i].customAc = inp.value.trim();
     saveBattleQueue();
+    syncResetBtn(i);
   }));
   el.querySelectorAll('.bqr-info').forEach(btn => btn.addEventListener('click', () => {
     const entry = battleEnemyQueue[+btn.dataset.qi];
     const creature = entry?.creature || (entry && ALL_CREATURES.find(c => c.name === entry.name));
     if (creature) showCreatureInfo(creature);
+  }));
+  el.querySelectorAll('.bqr-reset').forEach(btn => btn.addEventListener('click', () => {
+    const i = +btn.dataset.qi;
+    const entry = battleEnemyQueue[i];
+    if (!entry) return;
+    entry.customHp = '';
+    entry.customAc = '';
+    saveBattleQueue();
+    renderBattleEnemyQueue();
   }));
   el.querySelectorAll('.bqr-dupe').forEach(btn => btn.addEventListener('click', () => {
     duplicateQueueEntry(+btn.dataset.qi);
