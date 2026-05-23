@@ -628,8 +628,18 @@ function buildStatGrid(filter) {
 
 document.getElementById('statSearch').addEventListener('input', e => {
   if (activeListId && e.target.value) showAllPool = true;
+  document.getElementById('statSearchClear').classList.toggle('visible', !!e.target.value);
   buildStatGrid(e.target.value);
   updateHoverBar();
+});
+
+document.getElementById('statSearchClear').addEventListener('click', () => {
+  const input = document.getElementById('statSearch');
+  input.value = '';
+  document.getElementById('statSearchClear').classList.remove('visible');
+  buildStatGrid('');
+  updateHoverBar();
+  input.focus();
 });
 
 function refreshQuickFilterChips() {

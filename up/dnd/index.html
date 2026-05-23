@@ -24,6 +24,11 @@
         .search-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.75rem; font-size:0.9rem; color:var(--text); }
         .search-input:focus { outline:none; border-color:var(--accent-soft); }
         .search-input::placeholder { color:var(--text-muted); }
+        .search-wrap { position:relative; flex:1; display:flex; }
+        .search-wrap .search-input { padding-right:2rem; width:100%; }
+        .search-clear { display:none; position:absolute; right:0.4rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); font-size:1.15rem; line-height:1; cursor:pointer; padding:0.15rem 0.4rem; border-radius:4px; }
+        .search-clear:hover { color:var(--text); background:var(--bg); }
+        .search-clear.visible { display:block; }
 
         /* ── Saved lists panel ── */
         #savedListsSection { margin-top:1.25rem; }
@@ -387,7 +392,10 @@
     <div id="tab-statblocks" class="tab-panel">
         <div class="stat-controls-bar">
             <div class="search-row">
-                <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
+                <div class="search-wrap">
+                    <input class="search-input" id="statSearch" type="text" placeholder="Search by name, type, or CR…">
+                    <button type="button" class="search-clear" id="statSearchClear" aria-label="Clear search">×</button>
+                </div>
             </div>
             <div class="card-mode-row">
                 <span class="card-mode-label">Cards:</span>
