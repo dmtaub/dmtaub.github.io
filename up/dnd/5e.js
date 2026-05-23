@@ -457,18 +457,22 @@ function updateHoverBar() {
 }
 
 function renderSavedLists() {
-  const sec = document.getElementById('savedListsSection');
-  if (!monsterLists.length) { sec.innerHTML = ''; return; }
-  const chips = monsterLists.map(lst => `
+  const chipsEl = document.getElementById('savedListsChips');
+  const heading = document.getElementById('savedListsHeading');
+  if (!monsterLists.length) {
+    chipsEl.innerHTML = '';
+    if (heading) heading.style.display = 'none';
+    return;
+  }
+  if (heading) heading.style.display = '';
+  chipsEl.innerHTML = monsterLists.map(lst => `
     <div class="list-chip" data-lid="${lst.id}">
-      <span class="list-chip-name">${lst.name}</span>
+      <button class="list-chip-name show-btn" data-lid="${lst.id}" title="Filter to this list">${lst.name}</button>
       <span class="list-chip-count">(${lst.names.length})</span>
-      <button class="list-chip-btn show-btn" data-lid="${lst.id}" title="Filter to this list">Show</button>
       <button class="list-chip-btn del" data-lid="${lst.id}" title="Delete list">✕</button>
     </div>`).join('');
-  sec.innerHTML = `<div class="saved-lists-header"><h3>Saved Lists</h3></div><div class="list-chips">${chips}</div>`;
-  sec.querySelectorAll('.show-btn').forEach(btn => btn.addEventListener('click', () => showList(btn.dataset.lid)));
-  sec.querySelectorAll('.list-chip-btn.del').forEach(btn => btn.addEventListener('click', () => deleteList(btn.dataset.lid)));
+  chipsEl.querySelectorAll('.show-btn').forEach(btn => btn.addEventListener('click', () => showList(btn.dataset.lid)));
+  chipsEl.querySelectorAll('.list-chip-btn.del').forEach(btn => btn.addEventListener('click', () => deleteList(btn.dataset.lid)));
 }
 
 function showList(id) {
@@ -478,6 +482,7 @@ function showList(id) {
   showAllPool   = false;
   selectedNames = new Set(lst.names);
   document.getElementById('statSearch').value = '';
+  document.getElementById('statSearchClear').classList.remove('visible');
   updateHoverBar();
   buildStatGrid('');
 }
