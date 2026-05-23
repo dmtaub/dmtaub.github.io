@@ -13,6 +13,19 @@
         .tab-btn:hover { border-color:var(--accent-soft); color:var(--text); }
         .tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
         .battle-pending-icon { filter:brightness(100); margin-right:0.25rem; display:inline-block; }
+        /* Edit banner reuses .floating-bar; only adds its own animation + font size. */
+        .battle-edit-banner { font-size:0.92rem; animation:editBannerIn 0.18s ease; }
+        @keyframes editBannerIn { from { transform:translateY(8px); opacity:0; } to { transform:none; opacity:1; } }
+        .battle-edit-banner .bnr-icon { font-size:1.1rem; filter:brightness(100); }
+        .battle-edit-banner .bnr-text strong { font-weight:700; }
+        .battle-edit-banner .bnr-count { font-size:0.82rem; opacity:0.85; background:rgba(0,0,0,.25); border-radius:5px; padding:0.15rem 0.5rem; }
+        .battle-edit-banner .bnr-combat { cursor:help; }
+        .battle-edit-banner .bnr-spacer { flex:1; }
+        .battle-edit-banner .btn { background:rgba(0,0,0,.3); color:#fff; border:1px solid rgba(255,255,255,.4); padding:0.32rem 0.75rem; font-weight:600; }
+        .battle-edit-banner .btn:hover:not(:disabled) { background:rgba(0,0,0,.5); opacity:1; }
+        .battle-edit-banner .btn.secondary { background:none; }
+        .battle-edit-banner .btn.secondary:hover { background:rgba(0,0,0,.25); }
+        .battle-edit-banner .btn:disabled { opacity:0.45; }
         .tab-panel { display:none; }
         .tab-panel.active { display:block; }
 
@@ -122,8 +135,11 @@
         .ability-grid .ab-val { font-weight:700; color:var(--text); font-size:0.8rem; }
         .stat-empty { color:var(--text-muted); font-size:0.9rem; padding:1rem 0; }
 
+        /* ── Floating bottom bars (selection + edit banner share this) ── */
+        .floating-bar { position:sticky; bottom:1.25rem; z-index:10; background:var(--accent); color:#fff; border-radius:8px; padding:0.6rem 1rem; margin-top:1rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; box-shadow:0 4px 16px rgba(0,0,0,.25); }
+
         /* ── Selection bar ── */
-        #selectionBar { display:none; position:sticky; bottom:1.25rem; z-index:10; background:var(--accent); color:#fff; border-radius:8px; padding:0.6rem 1rem; margin-top:1rem; align-items:center; gap:0.6rem; flex-wrap:wrap; box-shadow:0 4px 16px rgba(0,0,0,.25); }
+        #selectionBar { display:none; }
         #selectionBar.visible { display:flex; }
         #selectionBar .sel-count { font-size:0.88rem; font-weight:600; flex:1; }
         #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.28rem 0.65rem; font-size:0.82rem; cursor:pointer; transition:background .15s; }
@@ -328,8 +344,6 @@
         .btn-next-turn { padding:0.45rem 1.15rem; font-size:0.95rem; }
         @keyframes roundFlash { 0%,100%{color:inherit} 30%{color:var(--accent);transform:scale(1.35)} }
         .round-flash { animation:roundFlash 0.9s ease; }
-        .battle-mid-add { padding:0.5rem 0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; margin-bottom:0.5rem; display:flex; flex-direction:column; gap:0.4rem; }
-        .battle-mid-add-row { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
         .b-hp-group { display:flex; align-items:center; gap:0.35rem; }
         .b-detail-top { display:grid; grid-template-columns:130px 1fr auto; gap:0.6rem 1.2rem; align-items:start; margin-bottom:0.75rem; }
         .b-detail-statblock { border-top:1px solid var(--border); padding-top:0.65rem; font-size:0.82rem; }
@@ -456,7 +470,16 @@
             </div>
         </div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>
-        <div id="selectionBar">
+        <div class="floating-bar battle-edit-banner" id="battleEditBanner" style="display:none">
+            <span class="bnr-icon">✏️</span>
+            <span class="bnr-text">Editing: <strong id="battleEditBannerName">—</strong></span>
+            <span class="bnr-count" id="battleEditBannerCount">0 selected</span>
+            <span class="bnr-count bnr-combat" id="battleEditBannerCombat" title="Hover to preview the battle">0 combatants</span>
+            <span class="bnr-spacer"></span>
+            <button class="btn sm" id="btnBattleEditAdd" disabled>＋ Add to current battle</button>
+            <button class="btn sm secondary" id="btnBattleEditCancel">Cancel</button>
+        </div>
+        <div class="floating-bar" id="selectionBar">
             <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
             <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> ·</span>
             <span id="selListSaved" style="display:none"></span>
@@ -465,7 +488,6 @@
             <div class="sel-dropdown-wrap" id="selBattleAddWrap" style="display:none">
                 <button class="btn-sel dark" id="btnSelAddTo">Add to battle ▾</button>
                 <div class="sel-dropdown" id="selBattleDropdown"></div>
-                <div class="sel-dropdown-preview" id="selBattlePreview"></div>
             </div>
             <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
             <button class="btn-sel" id="btnSaveList">Save as…</button>
@@ -590,21 +612,6 @@
                     <button class="btn btn-next-turn" id="btnBattleNext" style="margin-left:auto">Next →</button>
                     <button class="btn secondary sm" id="btnMidAddEnemy">＋ Enemy</button>
                     <button class="btn secondary sm" id="btnEndBattle">End Battle</button>
-                </div>
-                <div class="battle-mid-add" id="battleMidAdd" style="display:none">
-                    <input class="enc-input" id="battleMidSearch" type="text" placeholder="Search monsters…" autocomplete="off">
-                    <div class="battle-enemy-results" id="battleMidResults"></div>
-                    <div class="battle-mid-add-row" id="battleMidSelected" style="display:none">
-                        <input class="enc-input" id="battleMidName" type="text" placeholder="Name" style="flex:1;font-weight:600;font-size:0.88rem">
-                        <label style="font-size:0.82rem;color:var(--text-muted)">Count</label>
-                        <input class="enc-input" id="battleMidCount" type="number" min="1" value="1" style="width:54px">
-                        <label style="font-size:0.82rem;color:var(--text-muted)">HP</label>
-                        <input class="enc-input" id="battleMidHp" type="number" min="1" placeholder="default" style="width:60px">
-                        <label style="font-size:0.82rem;color:var(--text-muted)">AC</label>
-                        <input class="enc-input" id="battleMidAc" type="number" min="1" placeholder="default" style="width:54px">
-                        <button class="btn sm" id="btnMidAddConfirm">Add</button>
-                        <button class="btn sm secondary" id="btnMidAddCancel">Cancel</button>
-                    </div>
                 </div>
                 <div class="battle-list" id="battleList"></div>
             </div>
@@ -790,6 +797,8 @@
 <div id="creatureInfoModal" class="creature-info-modal">
     <div class="creature-info-card" id="creatureInfoCard"></div>
 </div>
+<!-- Floating tooltip used by the Add-to-battle dropdown and the edit-banner combatant chip -->
+<div class="sel-dropdown-preview" id="selBattlePreview"></div>
 <script src="../util.js"></script>
 <script src="5e.js"></script>
 </body>

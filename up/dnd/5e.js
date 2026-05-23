@@ -29,6 +29,10 @@
 // The only thing hardcoded here is the path to the metadata file itself.
 const META_URL = '5e-meta.json';
 
+// Active-battle "+ Enemy" edit mode — banner-driven, no selection-bar UI.
+// Declared early because the tab-click handler (set up below) references it at restore time.
+let editingBattleIdx = null;
+
 // ─── SRD PARSING HELPERS ─────────────────────────────────────────────────────
 function elText(el) {
   return (el.textContent || '').replace(/\s+/g, ' ').trim();
@@ -223,11 +227,21 @@ const _topbar = document.querySelector('page-topbar');
 const LAST_TAB_KEY = '5e-last-tab';
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    // Leaving the Enemies tab while in edit mode → cancel edit mode (transient).
+    const target = btn.dataset.tab;
+    if (typeof editingBattleIdx !== 'undefined' && editingBattleIdx !== null && target !== 'statblocks') {
+      editingBattleIdx = null;
+      selectedNames.clear();
+      if (typeof refreshBattleEditBanner === 'function') refreshBattleEditBanner();
+      if (typeof updateBattleTabLabel === 'function') updateBattleTabLabel();
+      if (typeof updateHoverBar === 'function') updateHoverBar();
+      buildStatGrid(document.getElementById('statSearch').value);
+    }
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    localStorage.setItem(LAST_TAB_KEY, btn.dataset.tab);
+    document.getElementById('tab-' + target).classList.add('active');
+    localStorage.setItem(LAST_TAB_KEY, target);
   });
 });
 (function restoreTab() {
@@ -427,7 +441,7 @@ let selectedNames = new Set();
 let monsterLists  = (() => { try { return JSON.parse(localStorage.getItem('5e-monster-lists') || '[]'); } catch(e) { return []; } })();
 let activeListId  = null; // id of list currently being viewed, or null
 let showAllPool   = false; // when true, grid shows ALL_CREATURES even in list view
-// Editing a battle's enemy queue from the Enemies tab
+// Editing a battle's enemy queue from the Enemies tab (setup-phase picker flow)
 let activeBattleEdit   = null; // battle index being edited, or null
 let battleEditOriginal = null; // Set of names originally queued for that battle
 
@@ -438,6 +452,12 @@ function updateHoverBar() {
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
   const battle = (activeBattleEdit != null && battleEditOriginal) ? battles[activeBattleEdit] : null;
   const bar = document.getElementById('selectionBar');
+  // In active-battle "+ Enemy" edit mode, the top banner owns the UI — hide the bottom bar entirely.
+  if (editingBattleIdx !== null) {
+    bar.classList.remove('visible');
+    refreshBattleEditBanner();
+    return;
+  }
   bar.classList.toggle('visible', n > 0 || !!lst || !!battle);
 
   // List/battle context label + "Showing" vs "Editing"
@@ -1733,9 +1753,16 @@ function updateBattleTabLabel() {
   const text = document.getElementById('tabBtnEncounterText');
   const icon = document.getElementById('battlePendingIcon');
   if (!text || !icon) return;
+  if (editingBattleIdx !== null && battles[editingBattleIdx]) {
+    text.textContent = battles[editingBattleIdx].name;
+    icon.textContent = '✏️';
+    icon.style.display = '';
+    return;
+  }
   const b = curBattle();
   if (userEngagedBattle && b) {
     text.textContent = b.name;
+    icon.textContent = '🔜';
     icon.style.display = b.phase === 'setup' ? '' : 'none';
   } else {
     text.textContent = 'Battles';
@@ -1748,7 +1775,6 @@ function updateBattleTabLabel() {
 let battleEnemyQueue = [];
 let _openBattleDetails = new Set();
 let _battleDragIdx = null;
-let _midAddCreature = null;
 
 function _serializeQueueEntry(e) {
   return {
@@ -1806,6 +1832,94 @@ function battleHpClass(cur, max) {
 }
 
 function rollD20() { return Math.floor(Math.random() * 20) + 1; }
+
+// ── Enemies-tab edit mode for in-progress battles ─────────────────────────────
+function enterEnemyEditMode(idx) {
+  editingBattleIdx = idx;
+  selectedNames.clear();
+  activeListId = null;
+  activeBattleEdit = null;        // clear the parallel setup-queue edit mode
+  battleEditOriginal = null;
+  showAllPool = false;
+  document.querySelector('.tab-btn[data-tab="statblocks"]').click();
+  refreshBattleEditBanner();
+  updateBattleTabLabel();
+  buildStatGrid(document.getElementById('statSearch').value);
+  updateHoverBar();
+}
+function exitEnemyEditMode() {
+  if (editingBattleIdx === null) return;
+  editingBattleIdx = null;
+  selectedNames.clear();
+  refreshBattleEditBanner();
+  updateBattleTabLabel();
+  updateHoverBar();
+  buildStatGrid(document.getElementById('statSearch').value);
+}
+function refreshBattleEditBanner() {
+  const banner = document.getElementById('battleEditBanner');
+  if (!banner) return;
+  if (editingBattleIdx === null || !battles[editingBattleIdx]) {
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = '';
+  const b = battles[editingBattleIdx];
+  document.getElementById('battleEditBannerName').textContent = b.name;
+  const n = selectedNames.size;
+  document.getElementById('battleEditBannerCount').textContent = n === 1 ? '1 selected' : `${n} selected`;
+  const cnt = (b.combatants?.length || 0);
+  document.getElementById('battleEditBannerCombat').textContent = cnt === 1 ? '1 combatant' : `${cnt} combatants`;
+  const addBtn = document.getElementById('btnBattleEditAdd');
+  addBtn.disabled = n === 0;
+}
+
+// Combatant-list preview (reuses the dropdown's floating preview element)
+document.getElementById('battleEditBannerCombat')?.addEventListener('mouseenter', () => {
+  if (editingBattleIdx === null) return;
+  const preview = document.getElementById('selBattlePreview');
+  if (!preview) return;
+  preview.innerHTML = _battlePreviewHTML(battles[editingBattleIdx], editingBattleIdx);
+  preview.classList.add('visible');
+  const target = document.getElementById('battleEditBannerCombat').getBoundingClientRect();
+  preview.style.left = '0px'; preview.style.top = '0px';
+  const pvRect = preview.getBoundingClientRect();
+  const gap = 8;
+  // Position above the banner-chip, horizontally centered on it
+  let left = target.left + target.width / 2 - pvRect.width / 2;
+  if (left < 8) left = 8;
+  if (left + pvRect.width > window.innerWidth - 8) left = window.innerWidth - pvRect.width - 8;
+  let top  = target.top - pvRect.height - gap;
+  if (top < 8) top = target.bottom + gap; // fall back below if no room above
+  preview.style.left = `${left}px`;
+  preview.style.top  = `${top}px`;
+});
+document.getElementById('battleEditBannerCombat')?.addEventListener('mouseleave', () => {
+  document.getElementById('selBattlePreview')?.classList.remove('visible');
+});
+
+// Banner buttons — bound once at script load
+document.getElementById('btnBattleEditAdd')?.addEventListener('click', () => {
+  if (editingBattleIdx === null) return;
+  const creatures = _selectionToCreatures();
+  if (!creatures.length) return;
+  _enqueueCreaturesIntoBattle(editingBattleIdx, creatures);
+  const idx = editingBattleIdx;
+  editingBattleIdx = null;
+  selectedNames.clear();
+  refreshBattleEditBanner();
+  updateBattleTabLabel();
+  // Jump back to the battle tab and render it
+  document.querySelector('.tab-btn[data-tab="encounter"]').click();
+  // Ensure we render the correct battle
+  if (currentBattleIdx !== idx) currentBattleIdx = idx;
+  renderBattle();
+});
+document.getElementById('btnBattleEditCancel')?.addEventListener('click', () => {
+  exitEnemyEditMode();
+  document.querySelector('.tab-btn[data-tab="encounter"]').click();
+  renderBattle();
+});
 
 // ── Slot rendering ────────────────────────────────────────────────────────────
 function renderBattleSlots() {
@@ -2519,75 +2633,10 @@ function renderBattleActive() {
     renderBattle();
   };
 
-  // Mid-battle add-enemy panel
-  const btnMidAdd  = document.getElementById('btnMidAddEnemy');
-  const midPanel   = document.getElementById('battleMidAdd');
-  const midSearch  = document.getElementById('battleMidSearch');
-  const midResults = document.getElementById('battleMidResults');
-  const midSelRow  = document.getElementById('battleMidSelected');
-  const midName    = document.getElementById('battleMidName');
-
-  if (btnMidAdd && midPanel) {
-    btnMidAdd.onclick = () => {
-      const open = midPanel.style.display !== 'none';
-      midPanel.style.display = open ? 'none' : '';
-      if (!open) { midSearch.value = ''; midSearch.focus(); midResults.innerHTML = ''; midResults.classList.remove('open'); midSelRow.style.display = 'none'; _midAddCreature = null; }
-    };
-
-    midSearch.addEventListener('input', () => {
-      const q = midSearch.value.trim().toLowerCase();
-      midResults.innerHTML = '';
-      midSelRow.style.display = 'none'; _midAddCreature = null;
-      if (q.length < 2) { midResults.classList.remove('open'); return; }
-      const hits = (ALL_CREATURES || []).filter(m => m.name.toLowerCase().includes(q)).slice(0, 12);
-      if (!hits.length) { midResults.classList.remove('open'); return; }
-      midResults.innerHTML = hits.map(renderEnemyResultRow).join('');
-      midResults.classList.add('open');
-      midResults.querySelectorAll('.battle-enemy-result-row').forEach(row => {
-        row.addEventListener('click', () => {
-          _midAddCreature = (ALL_CREATURES || []).find(m => m.name === row.dataset.name);
-          if (!_midAddCreature) return;
-          midName.value = _midAddCreature.name;
-          document.getElementById('battleMidHp').value = _midAddCreature.hp ? parseInt(_midAddCreature.hp) || '' : '';
-          document.getElementById('battleMidAc').value = _midAddCreature.ac ? parseInt(_midAddCreature.ac) || '' : '';
-          document.getElementById('battleMidCount').value = 1;
-          midSelRow.style.display = '';
-          midResults.classList.remove('open');
-          midSearch.value = '';
-        });
-      });
-    });
-
-    document.getElementById('btnMidAddCancel').onclick = () => { _midAddCreature = null; midSelRow.style.display = 'none'; };
-
-    document.getElementById('btnMidAddConfirm').onclick = () => {
-      if (!_midAddCreature) return;
-      const count   = Math.max(1, parseInt(document.getElementById('battleMidCount').value) || 1);
-      const customHp = parseInt(document.getElementById('battleMidHp').value) || null;
-      const baseHp  = customHp || parseInt(_midAddCreature.hp) || 10;
-      const customAc = parseInt(document.getElementById('battleMidAc').value) || null;
-      const baseAc  = customAc || parseInt(_midAddCreature.ac) || 10;
-      const dexMod  = parseDexMod(_midAddCreature.dex);
-      const baseName = (document.getElementById('battleMidName').value.trim()) || _midAddCreature.name;
-      const b = curBattle();
-      for (let n = 0; n < count; n++) {
-        const label = count > 1 ? `${baseName} ${n + 1}` : baseName;
-        b.combatants.push({
-          id: Date.now() + '_mid_' + n + '_' + Math.random().toString(36).slice(2),
-          name: label, creatureName: _midAddCreature.name,
-          type: 'enemy',
-          hp: baseHp, maxHp: baseHp,
-          ac: baseAc,
-          initiative: rollD20() + dexMod,
-          tempHp: 0, conditions: [], notes: '', gone: false,
-        });
-      }
-      b.combatants.sort((a, z) => z.initiative - a.initiative);
-      saveBattles();
-      _midAddCreature = null; midSelRow.style.display = 'none';
-      midPanel.style.display = 'none';
-      renderBattleActive();
-    };
+  // "+ Enemy" → jump to the Enemies tab in edit mode for this battle
+  const btnMidAdd = document.getElementById('btnMidAddEnemy');
+  if (btnMidAdd) {
+    btnMidAdd.onclick = () => enterEnemyEditMode(currentBattleIdx);
   }
 }
 
