@@ -559,16 +559,19 @@ const QF_RANGES = {
   cr: { lt10:[null,10,'exclusive'], '10to20':[10,20,'inclusive'], gt20:[20,null,'inclusive'] },
   hp: { lt50:[null,50,'exclusive'], '50to150':[50,150,'inclusive'], gt150:[150,null,'inclusive'] },
 };
+// Order matters: first match wins. "folk" lists swarm before "beasts" so
+// a "swarm of beasts" type line lands in Folk, not Beasts.
 const QF_CLASSES = {
-  humanoid: ['humanoid'],
-  animalia: ['beast', 'plant', 'ooze'],
-  mythic:   ['dragon', 'fiend', 'celestial', 'fey', 'undead', 'aberration', 'elemental', 'giant', 'monstrosity', 'construct'],
+  folk:         ['humanoid', 'giant', 'plant', 'swarm'],
+  beasts:       ['beast'],
+  mythic:       ['dragon', 'monstrosity', 'aberration', 'ooze'],
+  otherworldly: ['fiend', 'celestial', 'fey', 'elemental', 'construct', 'undead'],
 };
 const quickFilters = { cr:new Set(), hp:new Set(), cls:new Set() };
 function creatureClass(c) {
   const t = ((c.typeLine || c.type || '') + '').toLowerCase();
   for (const [cls, words] of Object.entries(QF_CLASSES)) {
-    if (words.some(w => t.includes(w))) return cls;
+    if (words.some(w => new RegExp(`\\b${w}\\b`).test(t))) return cls;
   }
   return null;
 }
