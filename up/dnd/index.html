@@ -401,6 +401,12 @@
         .b-cond-tags { display:flex; flex-wrap:wrap; gap:0.3rem; margin-top:0.35rem; }
         .b-cond-tag { font-size:0.75rem; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:0.12rem 0.45rem; cursor:pointer; color:var(--text-muted); transition:all .12s; }
         .b-cond-tag.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+        /* ── Creature info modal ── */
+        .creature-info-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; padding:1rem; }
+        .creature-info-modal.visible { display:flex; }
+        .creature-info-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; max-width:520px; width:100%; max-height:85vh; overflow-y:auto; padding:1rem 1.2rem; box-shadow:0 12px 36px rgba(0,0,0,.5); color:var(--text); position:relative; }
+        .creature-info-card .stat-block { box-shadow:none; border:none; padding:0; background:none; }
     </style>
 </head>
 <body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>
@@ -780,6 +786,9 @@
         </div>
         </div><!-- /inner-tab-ref-weapons -->
     </div>
+</div>
+<div id="creatureInfoModal" class="creature-info-modal">
+    <div class="creature-info-card" id="creatureInfoCard"></div>
 </div>
 <script src="../util.js"></script>
 <script src="5e.js"></script>

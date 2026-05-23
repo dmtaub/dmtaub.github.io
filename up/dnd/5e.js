@@ -2089,6 +2089,7 @@ function renderBattleEnemyQueue() {
       <input class="enc-input bqr-hp" type="number" min="1" placeholder="${hpPlaceholder}" value="${entry.customHp||''}" data-qi="${i}" style="width:60px" title="HP override">
       <label style="font-size:0.78rem;color:var(--text-muted)">AC</label>
       <input class="enc-input bqr-ac" type="number" min="1" placeholder="${acPlaceholder}" value="${entry.customAc||''}" data-qi="${i}" style="width:54px" title="AC override">
+      <button class="btn sm bqr-info" data-qi="${i}" title="Stat block">ⓘ</button>
       <button class="btn sm bqr-dupe" data-qi="${i}" title="Duplicate">＋</button>
       <button class="btn danger sm bqr-remove" data-qi="${i}">✕</button>
     </div>`;
@@ -2112,6 +2113,11 @@ function renderBattleEnemyQueue() {
     battleEnemyQueue[+inp.dataset.qi].customAc = inp.value.trim();
     saveBattleQueue();
   }));
+  el.querySelectorAll('.bqr-info').forEach(btn => btn.addEventListener('click', () => {
+    const entry = battleEnemyQueue[+btn.dataset.qi];
+    const creature = entry?.creature || (entry && ALL_CREATURES.find(c => c.name === entry.name));
+    if (creature) showCreatureInfo(creature);
+  }));
   el.querySelectorAll('.bqr-dupe').forEach(btn => btn.addEventListener('click', () => {
     duplicateQueueEntry(+btn.dataset.qi);
   }));
@@ -2126,6 +2132,31 @@ function renderBattleEnemyQueue() {
 function statPill(label, value) {
   return `<span class="stat-pill"><strong>${label}</strong> ${value}</span>`;
 }
+
+function showCreatureInfo(creature) {
+  if (!creature) return;
+  const modal = document.getElementById('creatureInfoModal');
+  const card  = document.getElementById('creatureInfoCard');
+  if (!modal || !card) return;
+  card.innerHTML = renderFull(creature);
+  card.scrollTop = 0;
+  modal.classList.add('visible');
+}
+function hideCreatureInfo() {
+  const modal = document.getElementById('creatureInfoModal');
+  if (modal) modal.classList.remove('visible');
+}
+(function bindCreatureInfoModal() {
+  const modal = document.getElementById('creatureInfoModal');
+  if (!modal) return;
+  modal.addEventListener('click', e => {
+    // Dismiss only when clicking the backdrop itself, not the card.
+    if (e.target === modal) hideCreatureInfo();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('visible')) hideCreatureInfo();
+  });
+})();
 
 function renderEnemyResultRow(c) {
   return `<div class="battle-enemy-result-row" data-name="${c.name.replace(/"/g,'&quot;')}">
