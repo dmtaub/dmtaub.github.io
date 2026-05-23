@@ -37,6 +37,9 @@
         .list-chip { display:flex; align-items:center; gap:0.35rem; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.55rem; font-size:0.83rem; }
         .list-chip-name { font-weight:600; color:var(--text); cursor:pointer; background:none; border:none; padding:0; font-size:inherit; font-family:inherit; }
         .list-chip-name:hover { color:var(--accent); text-decoration:underline; }
+        .bp-label { font-size:0.9rem; color:var(--text-muted); font-weight:600; }
+        .bp-select { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.22rem 0.45rem; font-size:0.83rem; color:var(--text); cursor:pointer; }
+        .bp-select:focus { outline:none; border-color:var(--accent-soft); }
         .list-chip-count { font-size:0.74rem; color:var(--text-muted); }
         .list-chip-btn { background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--accent); padding:0 0.15rem; }
         .list-chip-btn:hover { text-decoration:underline; }
@@ -304,13 +307,17 @@
         .bpr-mod { font-size:0.82rem; font-weight:600; color:var(--accent); text-align:right; }
         .bpr-plus { font-size:0.78rem; color:var(--text-muted); text-align:center; }
         .b-setup-init { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.2rem 0.35rem; font-size:0.82rem; color:var(--text); text-align:center; }
-        .battle-enemy-search-row { display:flex; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap; }
+        .battle-enemy-search-row { position:relative; display:flex; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap; }
         .battle-enemy-search-row .enc-input { flex:1; min-width:120px; }
-        .battle-enemy-results { border:1px solid var(--border); border-radius:6px; max-height:150px; overflow-y:auto; display:none; background:var(--surface); margin-bottom:0.35rem; }
+        .battle-enemy-results { position:absolute; top:calc(100% + 0.25rem); left:0; right:0; z-index:20; border:1px solid var(--border); border-radius:6px; max-height:260px; overflow-y:auto; display:none; background:var(--surface); box-shadow:0 6px 18px rgba(0,0,0,.35); }
         .battle-enemy-results.open { display:block; }
         .battle-enemy-result-row { display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0.7rem; font-size:0.87rem; cursor:pointer; color:var(--text); }
-        .battle-enemy-result-row:hover { background:var(--bg); }
+        .battle-enemy-result-row:hover,
+        .battle-enemy-result-row.kbd-active { background:var(--bg); }
+        .battle-enemy-result-row.kbd-active { outline:1px solid var(--accent-soft); outline-offset:-1px; }
         .battle-enemy-result-row .ber-cr { font-size:0.76rem; color:var(--text-muted); margin-left:auto; }
+        .battle-enemy-result-row.template-row .ber-kind { font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#fff; background:var(--accent); padding:0.08rem 0.4rem; border-radius:3px; }
+        .battle-enemy-result-section { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); padding:0.3rem 0.7rem 0.15rem; background:var(--bg); border-bottom:1px solid var(--border); }
         .battle-queue { display:flex; flex-direction:column; gap:0.35rem; margin-top:0.2rem; }
         .battle-queue-row { display:flex; align-items:center; gap:0.5rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.65rem; flex-wrap:wrap; }
         .battle-queue-row .bqr-name { font-size:0.87rem; font-weight:600; flex:1; min-width:80px; }
@@ -432,8 +439,10 @@
             <button class="mode-btn qf-btn qf-reset" id="qfReset">Reset</button>
         </div>
         <div class="saved-lists-header">
-            <h3 id="savedListsHeading" style="display:none">Saved Lists:</h3>
+            <h3 id="savedListsHeading" style="display:none">Templates:</h3>
             <div class="list-chips" id="savedListsChips"></div>
+            <span id="battlesPickerLabel" class="bp-label">Battles:</span>
+            <select id="battlesPicker" class="bp-select"></select>
             <div class="card-mode-row" style="margin-left:auto">
                 <span class="card-mode-label">Cards:</span>
                 <button class="mode-btn" id="modeBtnFlip" data-mode="flip">Flip</button>
@@ -555,13 +564,10 @@
                 <div class="battle-setup-col" style="margin-top:0.75rem">
                     <h4>Enemies</h4>
                     <div class="battle-enemy-search-row">
-                        <select class="enc-input" id="battleListSelect">
-                            <option value="">— Load monster list —</option>
-                        </select>
-                        <input class="enc-input" id="battleEnemySearch" type="text" placeholder="Add a monster by name…" autocomplete="off">
+                        <input class="enc-input" id="battleEnemySearch" type="text" placeholder="Search a template or monster name…" autocomplete="off" style="flex:1;min-width:180px">
                         <button class="btn secondary sm" id="btnQueueToEnemies" title="Open these monsters in the Enemies tab with all selected">Show in 'Enemies'</button>
+                        <div class="battle-enemy-results" id="battleEnemyResults"></div>
                     </div>
-                    <div class="battle-enemy-results" id="battleEnemyResults"></div>
                     <div class="battle-queue" id="battleEnemyQueue"></div>
                 </div>
 

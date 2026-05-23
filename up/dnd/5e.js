@@ -427,35 +427,50 @@ let selectedNames = new Set();
 let monsterLists  = (() => { try { return JSON.parse(localStorage.getItem('5e-monster-lists') || '[]'); } catch(e) { return []; } })();
 let activeListId  = null; // id of list currently being viewed, or null
 let showAllPool   = false; // when true, grid shows ALL_CREATURES even in list view
+// Editing a battle's enemy queue from the Enemies tab
+let activeBattleEdit   = null; // battle index being edited, or null
+let battleEditOriginal = null; // Set of names originally queued for that battle
 
 function saveMonsterLists() { localStorage.setItem('5e-monster-lists', JSON.stringify(monsterLists)); }
 
 function updateHoverBar() {
   const n   = selectedNames.size;
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
+  const battle = (activeBattleEdit != null && battleEditOriginal) ? battles[activeBattleEdit] : null;
   const bar = document.getElementById('selectionBar');
-  bar.classList.toggle('visible', n > 0 || !!lst);
+  bar.classList.toggle('visible', n > 0 || !!lst || !!battle);
 
-  // List context label + "Showing" vs "Editing"
+  // List/battle context label + "Showing" vs "Editing"
   const ctxEl    = document.getElementById('selListCtx');
   const savedEl  = document.getElementById('selListSaved');
   // Hide the "Showing:" / "Editing:" chip when viewing all enemies — the Show-list button carries the context instead.
-  ctxEl.style.display   = (lst && !showAllPool) ? '' : 'none';
-  // Saved count stays visible whenever a list is active, regardless of Show-all.
-  savedEl.style.display = lst ? '' : 'none';
-  const updateBtn = document.getElementById('btnUpdateList');
+  ctxEl.style.display   = ((lst || battle) && !showAllPool) ? '' : 'none';
+  // Saved/queued count stays visible whenever a list or battle context is active.
+  savedEl.style.display = (lst || battle) ? '' : 'none';
+  const updateBtn  = document.getElementById('btnUpdateList');
   const showAllBtn = document.getElementById('btnShowAll');
   if (lst) {
-    const origSet = new Set(lst.names);
+    const origSet  = new Set(lst.names);
     const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    document.getElementById('selListLabel').textContent = diverged ? 'Editing:' : 'Showing:';
+    document.getElementById('selListLabel').textContent = diverged ? 'Editing template:' : 'Showing template:';
     document.getElementById('selListName').textContent  = `"${lst.name}"`;
     savedEl.textContent = `(${lst.names.length} saved) ·`;
     updateBtn.style.display = '';
     updateBtn.disabled = !diverged;
-    updateBtn.title = diverged ? 'Save changes to this list' : 'No unsaved changes';
+    updateBtn.title = diverged ? 'Save changes to this template' : 'No unsaved changes';
     showAllBtn.style.display = '';
     showAllBtn.textContent = showAllPool ? `Show "${lst.name}"` : 'Show all';
+  } else if (battle) {
+    const origSet  = battleEditOriginal;
+    const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    document.getElementById('selListLabel').textContent = 'Editing battle:';
+    document.getElementById('selListName').textContent  = `"${battle.name}"`;
+    savedEl.textContent = `(${origSet.size} queued) ·`;
+    updateBtn.style.display = '';
+    updateBtn.disabled = !diverged;
+    updateBtn.title = diverged ? "Apply changes to this battle's queue" : 'No unsaved changes';
+    showAllBtn.style.display = '';
+    showAllBtn.textContent = showAllPool ? `Show "${battle.name}"` : 'Show all';
   } else {
     updateBtn.style.display = 'none';
     updateBtn.disabled = false;
@@ -469,9 +484,41 @@ function updateHoverBar() {
   if (typeof updateSelectionBattleButtons === 'function') updateSelectionBattleButtons();
 }
 
+function renderBattlesPicker() {
+  const sel = document.getElementById('battlesPicker');
+  if (!sel) return;
+  // typeof check guards against init order — renderBattlesPicker runs before `battles` exists
+  if (typeof battles === 'undefined') return;
+  sel.innerHTML = '<option value="">— pick a battle —</option>' +
+    battles.map((b, i) =>
+      `<option value="${i}">${b.phase === 'setup' ? '🔜 ' : ''}${b.name}</option>`
+    ).join('');
+  sel.value = '';
+  sel.onchange = () => {
+    const idx = parseInt(sel.value);
+    sel.value = '';
+    if (!Number.isInteger(idx) || !battles[idx]) return;
+    startBattleEditFromPicker(idx);
+  };
+}
+
+function startBattleEditFromPicker(idx) {
+  const b = battles[idx];
+  if (!b) return;
+  const names = (b.enemyQueueData || []).map(d => d.name);
+  selectedNames = new Set(names);
+  battleEditOriginal = new Set(names);
+  activeBattleEdit = idx;
+  activeListId = null;
+  showAllPool = false;
+  buildStatGrid(document.getElementById('statSearch').value);
+  updateHoverBar();
+}
+
 function renderSavedLists() {
   const chipsEl = document.getElementById('savedListsChips');
   const heading = document.getElementById('savedListsHeading');
+  renderBattlesPicker();
   if (!monsterLists.length) {
     chipsEl.innerHTML = '';
     if (heading) heading.style.display = 'none';
@@ -480,7 +527,7 @@ function renderSavedLists() {
   if (heading) heading.style.display = '';
   chipsEl.innerHTML = monsterLists.map(lst => `
     <div class="list-chip" data-lid="${lst.id}">
-      <button class="list-chip-name show-btn" data-lid="${lst.id}" title="Filter to this list">${lst.name}</button>
+      <button class="list-chip-name show-btn" data-lid="${lst.id}" title="Filter to this template">${lst.name}</button>
       <span class="list-chip-count">(${lst.names.length})</span>
       <button class="list-chip-btn del" data-lid="${lst.id}" title="Delete list">✕</button>
     </div>`).join('');
@@ -492,6 +539,8 @@ function showList(id) {
   const lst = monsterLists.find(l => l.id === id);
   if (!lst) return;
   activeListId  = id;
+  activeBattleEdit = null;
+  battleEditOriginal = null;
   showAllPool   = false;
   selectedNames = new Set(lst.names);
   document.getElementById('statSearch').value = '';
@@ -522,6 +571,36 @@ function saveNewList(name, names) {
 }
 
 document.getElementById('btnUpdateList').addEventListener('click', () => {
+  // Battle-edit context takes precedence when active
+  if (activeBattleEdit != null) {
+    const b = battles[activeBattleEdit];
+    if (!b) return;
+    // Make sure the in-memory queue corresponds to the targeted battle so saveBattleQueue() writes to the right one.
+    if (activeBattleEdit !== currentBattleIdx) {
+      currentBattleIdx = activeBattleEdit;
+      loadBattleQueue(activeBattleEdit);
+    }
+    // Rebuild from selection, preserving per-entry overrides (count, customHp, customAc, customName) by name.
+    const oldByName = new Map(battleEnemyQueue.map(e => [e.name, e]));
+    battleEnemyQueue = [...selectedNames].map(name => {
+      if (oldByName.has(name)) return oldByName.get(name);
+      const creature = ALL_CREATURES.find(c => c.name === name);
+      return { name, count: 1, customHp: '', creature };
+    });
+    battleEditOriginal = new Set(selectedNames);
+    saveBattleQueue();
+    setBattleEngaged();
+    renderBattle();
+    // Clear battle-edit state so the selection bar resets, then jump to the tracker.
+    selectedNames.clear();
+    activeBattleEdit = null;
+    battleEditOriginal = null;
+    showAllPool = false;
+    updateHoverBar();
+    buildStatGrid(document.getElementById('statSearch').value);
+    document.querySelector('.tab-btn[data-tab="encounter"]').click();
+    return;
+  }
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
   if (!lst) return;
   lst.names = [...selectedNames];
@@ -532,11 +611,13 @@ document.getElementById('btnUpdateList').addEventListener('click', () => {
 
 document.getElementById('btnSaveList').addEventListener('click', () => {
   if (!selectedNames.size) return;
-  const name = prompt('List name:', 'My List');
+  const name = prompt('Template name:', 'My Template');
   if (!name) return;
   saveNewList(name, selectedNames);
   selectedNames.clear();
   activeListId = null;
+  activeBattleEdit = null;
+  battleEditOriginal = null;
   updateHoverBar();
   buildStatGrid(document.getElementById('statSearch').value);
 });
@@ -548,20 +629,25 @@ document.getElementById('btnShowAll').addEventListener('click', () => {
 });
 
 document.getElementById('btnClearSel').addEventListener('click', () => {
-  if (!selectedNames.size && !activeListId) return;
-  const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
+  if (!selectedNames.size && !activeListId && activeBattleEdit == null) return;
+  const lst    = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
+  const battle = (activeBattleEdit != null && battleEditOriginal) ? battles[activeBattleEdit] : null;
   let proceed = true;
   if (lst) {
     const origSet = new Set(lst.names);
     const diverged = selectedNames.size !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    if (diverged) proceed = confirm('Cancel updates to list?');
-    // else: just viewing a saved list — no confirm needed
+    if (diverged) proceed = confirm('Cancel updates to template?');
+  } else if (battle) {
+    const diverged = selectedNames.size !== battleEditOriginal.size || [...selectedNames].some(x => !battleEditOriginal.has(x));
+    if (diverged) proceed = confirm('Cancel updates to battle?');
   } else {
     proceed = confirm('Clear unsaved selection?');
   }
   if (!proceed) return;
   selectedNames.clear();
   activeListId  = null;
+  activeBattleEdit = null;
+  battleEditOriginal = null;
   showAllPool   = false;
   updateHoverBar();
   buildStatGrid(document.getElementById('statSearch').value);
@@ -615,9 +701,10 @@ function _enqueueCreaturesIntoBattle(battleIdx, creatures) {
     // Setup phase: queue is in-memory and tied to the currently selected battle
     if (battleIdx !== currentBattleIdx) {
       currentBattleIdx = battleIdx;
-      battleEnemyQueue = [];
+      loadBattleQueue(battleIdx);
     }
     creatures.forEach(creature => battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature }));
+    saveBattleQueue();
   }
   saveBattles();
 }
@@ -625,6 +712,8 @@ function _enqueueCreaturesIntoBattle(battleIdx, creatures) {
 function _finishSelectionToBattle() {
   selectedNames.clear();
   activeListId = null;
+  activeBattleEdit = null;
+  battleEditOriginal = null;
   showAllPool = false;
   setBattleEngaged();
   updateHoverBar();
@@ -666,7 +755,7 @@ function updateSelectionBattleButtons() {
         battles.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), name, phase: 'setup', round: 1, turnIdx: 0, combatants: [] });
         currentBattleIdx = battles.length - 1;
         battleEnemyQueue = creatures.map(creature => ({ name: creature.name, count: 1, customHp: '', creature }));
-        saveBattles();
+        saveBattleQueue();
       } else if (row.dataset.action === 'current') {
         _enqueueCreaturesIntoBattle(currentBattleIdx, creatures);
       } else {
@@ -788,10 +877,17 @@ function anyQuickFilterActive() { return quickFilters.cr.size || quickFilters.hp
 function buildStatGrid(filter) {
   const q   = (filter || '').toLowerCase();
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
-  // Use full pool when: no active list, showAllPool flag set, or user is typing a search
-  const pool = (lst && !showAllPool && !q)
-    ? ALL_CREATURES.filter(c => lst.names.includes(c.name))
-    : ALL_CREATURES;
+  // Pool selection: full unless filtering to a saved list or a battle-edit context
+  let pool;
+  if (showAllPool || q) {
+    pool = ALL_CREATURES;
+  } else if (lst) {
+    pool = ALL_CREATURES.filter(c => lst.names.includes(c.name));
+  } else if (activeBattleEdit != null && battleEditOriginal) {
+    pool = ALL_CREATURES.filter(c => battleEditOriginal.has(c.name));
+  } else {
+    pool = ALL_CREATURES;
+  }
   let result = q
     ? pool.filter(c =>
         c.name.toLowerCase().includes(q) ||
@@ -1614,9 +1710,15 @@ function buildPlayerRollPrompts() {
 // ─── BATTLE TRACKER ──────────────────────────────────────────────────────────
 let battles = (() => { try { return JSON.parse(localStorage.getItem('5e-battles') || '[]'); } catch(e) { return []; } })();
 if (!battles.length) battles = [{ id: Date.now() + '_0', name: 'Battle 1', phase: 'setup', round: 1, turnIdx: 0, combatants: [] }];
-let currentBattleIdx = 0;
+let currentBattleIdx = (() => {
+  const stored = parseInt(localStorage.getItem('5e-current-battle-idx'));
+  return Number.isInteger(stored) && stored >= 0 && stored < battles.length ? stored : 0;
+})();
 function curBattle() { return battles[currentBattleIdx]; }
-function saveBattles() { localStorage.setItem('5e-battles', JSON.stringify(battles)); }
+function saveBattles() {
+  localStorage.setItem('5e-battles', JSON.stringify(battles));
+  localStorage.setItem('5e-current-battle-idx', String(currentBattleIdx));
+}
 
 // Has the user explicitly engaged a specific battle? Drives the tab label.
 let userEngagedBattle = !!localStorage.getItem('5e-battle-engaged');
@@ -1641,11 +1743,51 @@ function updateBattleTabLabel() {
   }
 }
 
-// In-memory enemy queue for the setup phase (reset when switching battles)
+// In-memory enemy queue for the setup phase (reset when switching battles).
+// Per-battle, persisted to localStorage as `b.enemyQueueData` (serializable form).
 let battleEnemyQueue = [];
 let _openBattleDetails = new Set();
 let _battleDragIdx = null;
 let _midAddCreature = null;
+
+function _serializeQueueEntry(e) {
+  return {
+    name: e.name,
+    count: e.count || 1,
+    customHp: e.customHp || '',
+    customAc: e.customAc || '',
+    customName: e.customName || '',
+    creatureName: e.creature?.name || e.name,
+  };
+}
+function _deserializeQueueEntry(d) {
+  return {
+    name: d.name,
+    count: d.count || 1,
+    customHp: d.customHp || '',
+    customAc: d.customAc || '',
+    customName: d.customName || '',
+    creature: (ALL_CREATURES || []).find(c => c.name === d.creatureName) || null,
+  };
+}
+function saveBattleQueue() {
+  const b = curBattle();
+  if (!b) return;
+  b.enemyQueueData = battleEnemyQueue.map(_serializeQueueEntry);
+  saveBattles();
+}
+function loadBattleQueue(idx) {
+  const b = battles[idx];
+  battleEnemyQueue = (b && Array.isArray(b.enemyQueueData))
+    ? b.enemyQueueData.map(_deserializeQueueEntry)
+    : [];
+}
+// After SRD loads, re-link creature objects on the active queue.
+function rehydrateBattleQueueCreatures() {
+  battleEnemyQueue.forEach(e => {
+    if (!e.creature) e.creature = (ALL_CREATURES || []).find(c => c.name === e.name);
+  });
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function parseDexMod(dexStr) {
@@ -1670,11 +1812,11 @@ function renderBattleSlots() {
   const el = document.getElementById('battleSlots');
   if (!el) return;
   el.innerHTML = battles.map((b, i) =>
-    `<span class="enc-slot ${i === currentBattleIdx ? 'active' : ''}" data-bi="${i}">${b.name}</span>`
+    `<span class="enc-slot ${i === currentBattleIdx ? 'active' : ''}" data-bi="${i}">${b.phase === 'setup' ? '<span class="battle-pending-icon">🔜</span>' : ''}${b.name}</span>`
   ).join('');
   el.querySelectorAll('.enc-slot').forEach(sp => sp.addEventListener('click', () => {
     currentBattleIdx = parseInt(sp.dataset.bi);
-    battleEnemyQueue = [];
+    loadBattleQueue(currentBattleIdx);
     saveBattles();
     setBattleEngaged();
     renderBattle();
@@ -1749,58 +1891,127 @@ function renderBattleSetup() {
   renderPickList('battlePlayerPicks', playerRoster, 'player', true);
   renderPickList('battleNpcPicks',    npcRoster,    'npc',    false);
 
-  // Populate monster list select
-  const listSelect = document.getElementById('battleListSelect');
-  if (listSelect) {
-    listSelect.innerHTML = '<option value="">— Load monster list —</option>' +
-      monsterLists.map(l => `<option value="${l.id}">${l.name} (${l.names.length})</option>`).join('');
-    listSelect.addEventListener('change', () => {
-      const lid = listSelect.value;
-      if (!lid) return;
-      const lst = monsterLists.find(l => l.id === lid);
-      if (!lst) return;
-      lst.names.forEach(name => {
-        const creature = ALL_CREATURES.find(c => c.name === name);
-        if (creature) {
-          battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
-        }
-      });
-      listSelect.value = '';
-      renderBattleEnemyQueue();
-    });
-  }
-
-  // Enemy search
-  const searchEl = document.getElementById('battleEnemySearch');
+  // Unified search: templates first, then monsters
+  const searchEl  = document.getElementById('battleEnemySearch');
   const resultsEl = document.getElementById('battleEnemyResults');
   if (searchEl && resultsEl) {
-    searchEl.addEventListener('input', () => {
-      const q = searchEl.value.trim().toLowerCase();
-      if (!q || !ALL_CREATURES.length) { resultsEl.classList.remove('open'); resultsEl.innerHTML = ''; return; }
-      const matches = ALL_CREATURES.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
-      if (!matches.length) { resultsEl.classList.remove('open'); return; }
-      resultsEl.innerHTML = matches.map(renderEnemyResultRow).join('');
-      resultsEl.classList.add('open');
-      resultsEl.querySelectorAll('.battle-enemy-result-row').forEach(row => {
-        row.addEventListener('click', () => {
-          const creature = ALL_CREATURES.find(c => c.name === row.dataset.name);
-          if (creature) {
-            battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
-            renderBattleEnemyQueue();
-          }
-          searchEl.value = '';
-          resultsEl.classList.remove('open');
-          resultsEl.innerHTML = '';
-        });
+    const clearAndClose = () => {
+      searchEl.value = '';
+      resultsEl.classList.remove('open');
+      resultsEl.innerHTML = '';
+    };
+    const addTemplateToQueue = (tid) => {
+      const t = monsterLists.find(l => l.id === tid);
+      if (!t) return;
+      t.names.forEach(name => {
+        const creature = ALL_CREATURES.find(c => c.name === name);
+        if (creature) battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
       });
-    });
-
-    // Close results on outside click
-    document.addEventListener('click', e => {
-      if (!searchEl.contains(e.target) && !resultsEl.contains(e.target)) {
-        resultsEl.classList.remove('open');
+      saveBattleQueue();
+      renderBattleEnemyQueue();
+      clearAndClose();
+    };
+    const addMonsterToQueue = (name) => {
+      const creature = ALL_CREATURES.find(c => c.name === name);
+      if (!creature) return;
+      battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
+      saveBattleQueue();
+      renderBattleEnemyQueue();
+      clearAndClose();
+    };
+    const setActiveRow = (idx) => {
+      const rows = resultsEl.querySelectorAll('.battle-enemy-result-row');
+      if (!rows.length) return;
+      const clamped = Math.max(0, Math.min(rows.length - 1, idx));
+      rows.forEach((r, i) => r.classList.toggle('kbd-active', i === clamped));
+      rows[clamped].scrollIntoView({ block: 'nearest' });
+    };
+    const commitRow = (row) => {
+      if (!row) return;
+      if (row.classList.contains('template-row')) addTemplateToQueue(row.dataset.tid);
+      else addMonsterToQueue(row.dataset.name);
+    };
+    const renderResults = () => {
+      const q = searchEl.value.trim().toLowerCase();
+      // When the input is empty (e.g. just focused/clicked), show all templates as a quick-pick list.
+      let templateMatches, monsterMatches;
+      if (!q) {
+        templateMatches = monsterLists.slice(0, 10);
+        monsterMatches  = [];
+      } else {
+        templateMatches = monsterLists.filter(l => l.name.toLowerCase().includes(q)).slice(0, 6);
+        const monsterCap = Math.max(0, 10 - templateMatches.length);
+        monsterMatches = monsterCap
+          ? ALL_CREATURES.filter(c => c.name.toLowerCase().includes(q)).slice(0, monsterCap)
+          : [];
       }
-    }, { passive: true });
+      if (!templateMatches.length && !monsterMatches.length) {
+        resultsEl.classList.remove('open');
+        resultsEl.innerHTML = '';
+        return;
+      }
+      let html = '';
+      if (templateMatches.length) {
+        html += `<div class="battle-enemy-result-section">Templates</div>`;
+        html += templateMatches.map(t =>
+          `<div class="battle-enemy-result-row template-row" data-tid="${t.id}">
+             <span class="ber-kind">Template</span>
+             <span>${t.name}</span>
+             <span class="ber-cr">${t.names.length} monster${t.names.length === 1 ? '' : 's'}</span>
+           </div>`).join('');
+      }
+      if (monsterMatches.length) {
+        if (templateMatches.length) html += `<div class="battle-enemy-result-section">Monsters</div>`;
+        html += monsterMatches.map(renderEnemyResultRow).join('');
+      }
+      resultsEl.innerHTML = html;
+      resultsEl.classList.add('open');
+      resultsEl.querySelectorAll('.template-row').forEach(row => {
+        row.addEventListener('click', () => addTemplateToQueue(row.dataset.tid));
+      });
+      resultsEl.querySelectorAll('.battle-enemy-result-row:not(.template-row)').forEach(row => {
+        row.addEventListener('click', () => addMonsterToQueue(row.dataset.name));
+      });
+      // Track keyboard cursor with mouse hover
+      resultsEl.querySelectorAll('.battle-enemy-result-row').forEach((row, i) => {
+        row.addEventListener('mouseenter', () => setActiveRow(i));
+      });
+      setActiveRow(0);
+    };
+    searchEl.oninput = renderResults;
+    // Open on click/focus so users can browse templates without typing.
+    searchEl.onfocus = renderResults;
+    searchEl.onclick = renderResults;
+    searchEl.onkeydown = (e) => {
+      const rows = [...resultsEl.querySelectorAll('.battle-enemy-result-row')];
+      const activeIdx = rows.findIndex(r => r.classList.contains('kbd-active'));
+      if (e.key === 'ArrowDown') {
+        if (!rows.length) return;
+        e.preventDefault();
+        setActiveRow(activeIdx < 0 ? 0 : activeIdx + 1);
+      } else if (e.key === 'ArrowUp') {
+        if (!rows.length) return;
+        e.preventDefault();
+        setActiveRow(activeIdx < 0 ? rows.length - 1 : activeIdx - 1);
+      } else if (e.key === 'Enter') {
+        if (!rows.length) return;
+        e.preventDefault();
+        commitRow(rows[Math.max(0, activeIdx)]);
+      } else if (e.key === 'Escape') {
+        resultsEl.classList.remove('open');
+        resultsEl.innerHTML = '';
+        searchEl.blur();
+      }
+    };
+    // Close results on outside click (bind once)
+    if (!searchEl._closeBound) {
+      document.addEventListener('click', e => {
+        if (!searchEl.contains(e.target) && !resultsEl.contains(e.target)) {
+          resultsEl.classList.remove('open');
+        }
+      }, { passive: true });
+      searchEl._closeBound = true;
+    }
   }
 
   renderBattleEnemyQueue();
@@ -1818,6 +2029,8 @@ function renderBattleSetup() {
     btnQTE.onclick = () => {
       if (!battleEnemyQueue.length) return;
       selectedNames = new Set(battleEnemyQueue.map(q => q.name));
+      battleEditOriginal = new Set(battleEnemyQueue.map(q => q.name));
+      activeBattleEdit = currentBattleIdx;
       activeListId = null;
       showAllPool = false;
       document.querySelector('.tab-btn[data-tab="statblocks"]').click();
@@ -1844,6 +2057,7 @@ function duplicateQueueEntry(i) {
     entry.customName = `${base} - 1`;
     const clone = { ...entry, customName: `${base} - 2` };
     battleEnemyQueue.splice(i + 1, 0, clone);
+    saveBattleQueue();
   } else {
     // Find the highest trailing number among all entries sharing the same base
     const highestN = battleEnemyQueue.reduce((max, e) => {
@@ -1852,6 +2066,7 @@ function duplicateQueueEntry(i) {
     }, n);
     const clone = { ...entry, customName: `${base} - ${highestN + 1}` };
     battleEnemyQueue.splice(i + 1, 0, clone);
+    saveBattleQueue();
   }
   renderBattleEnemyQueue();
 }
@@ -1881,23 +2096,28 @@ function renderBattleEnemyQueue() {
 
   el.querySelectorAll('.bqr-name').forEach(inp => inp.addEventListener('change', () => {
     battleEnemyQueue[+inp.dataset.qi].customName = inp.value.trim() || battleEnemyQueue[+inp.dataset.qi].name;
+    saveBattleQueue();
   }));
   el.querySelectorAll('.bqr-count').forEach(inp => inp.addEventListener('change', () => {
     const i = +inp.dataset.qi;
     battleEnemyQueue[i].count = Math.max(1, Math.min(20, parseInt(inp.value) || 1));
     inp.value = battleEnemyQueue[i].count;
+    saveBattleQueue();
   }));
   el.querySelectorAll('.bqr-hp').forEach(inp => inp.addEventListener('change', () => {
     battleEnemyQueue[+inp.dataset.qi].customHp = inp.value.trim();
+    saveBattleQueue();
   }));
   el.querySelectorAll('.bqr-ac').forEach(inp => inp.addEventListener('change', () => {
     battleEnemyQueue[+inp.dataset.qi].customAc = inp.value.trim();
+    saveBattleQueue();
   }));
   el.querySelectorAll('.bqr-dupe').forEach(btn => btn.addEventListener('click', () => {
     duplicateQueueEntry(+btn.dataset.qi);
   }));
   el.querySelectorAll('.bqr-remove').forEach(btn => btn.addEventListener('click', () => {
     battleEnemyQueue.splice(+btn.dataset.qi, 1);
+    saveBattleQueue();
     renderBattleEnemyQueue();
   }));
 }
@@ -1961,8 +2181,8 @@ function beginBattle() {
   b.phase = 'active';
   b.round = 1;
   b.turnIdx = 0;
-  saveBattles();
   battleEnemyQueue = [];
+  saveBattleQueue();
   renderBattle();
 }
 
@@ -2244,7 +2464,7 @@ function renderBattleActive() {
     b.round = 1;
     b.turnIdx = 0;
     battleEnemyQueue = [];
-    saveBattles();
+    saveBattleQueue();
     renderBattle();
   };
 
@@ -2362,7 +2582,7 @@ document.getElementById('btnNewBattle').addEventListener('click', () => {
   battles.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), name, phase: 'setup', round: 1, turnIdx: 0, combatants: [] });
   currentBattleIdx = battles.length - 1;
   battleEnemyQueue = [];
-  saveBattles();
+  saveBattleQueue();
   setBattleEngaged();
   renderBattle();
 });
@@ -2377,7 +2597,7 @@ document.getElementById('btnDeleteBattle').addEventListener('click', () => {
   if (!confirm('Delete "' + curBattle().name + '"?')) return;
   battles.splice(currentBattleIdx, 1);
   currentBattleIdx = Math.max(0, currentBattleIdx - 1);
-  battleEnemyQueue = [];
+  loadBattleQueue(currentBattleIdx);
   saveBattles();
   renderBattle();
 });
@@ -2393,6 +2613,7 @@ function showBattlePhase() {
 
 function renderBattle() {
   renderBattleSlots();
+  renderBattlesPicker();
   showBattlePhase();
   updateBattleTabLabel();
   const b = curBattle();
@@ -2409,6 +2630,7 @@ buildPlayerRollPrompts();
 renderSavedLists();
 renderPlayerRoster();
 renderNpcRoster();
+loadBattleQueue(currentBattleIdx);
 renderBattle();
 
 (async function init() {
@@ -2434,6 +2656,10 @@ renderBattle();
     buildStatGrid('');
     buildAllRollTables(allTables);
     buildWeaponsTable(srd.weapons);
+    // SRD is loaded — link queue entries to their full creature objects so HP/AC
+    // placeholders and "Begin Battle" work correctly.
+    rehydrateBattleQueueCreatures();
+    renderBattleEnemyQueue();
     _topbar.showStatus(null);
   } catch(e) {
     console.error('SRD load failed:', e);
