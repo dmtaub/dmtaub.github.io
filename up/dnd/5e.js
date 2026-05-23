@@ -454,6 +454,9 @@ function updateHoverBar() {
 
   // Selection count
   document.getElementById('selectionCount').textContent = n === 1 ? '1 selected' : `${n} selected`;
+
+  // Battle-targeted buttons (New / Add to current / Add to…)
+  if (typeof updateSelectionBattleButtons === 'function') updateSelectionBattleButtons();
 }
 
 function renderSavedLists() {
@@ -542,6 +545,141 @@ document.getElementById('btnClearSel').addEventListener('click', () => {
   showAllPool   = false;
   updateHoverBar();
   buildStatGrid(document.getElementById('statSearch').value);
+});
+
+function _selectionToCreatures() {
+  return [...selectedNames]
+    .map(n => ALL_CREATURES.find(c => c.name === n))
+    .filter(Boolean);
+}
+
+function _battleHasContent(b, idx) {
+  return (b.combatants?.length || 0) > 0 || (idx === currentBattleIdx && battleEnemyQueue.length > 0);
+}
+
+function _battleSummary(b, idx) {
+  const queue = idx === currentBattleIdx ? battleEnemyQueue.length : 0;
+  const combat = b.combatants?.length || 0;
+  return `${b.phase === 'active' ? 'Active' : 'Setup'} · ${combat + queue}`;
+}
+
+function _battlePreviewHTML(b, idx) {
+  const isCur = idx === currentBattleIdx;
+  const lines = [];
+  if (b.combatants?.length) lines.push(...b.combatants.map(c => `• ${c.name}${b.phase==='active' ? ` (HP ${c.hp}/${c.maxHp})` : ''}`));
+  if (isCur && battleEnemyQueue.length) lines.push(...battleEnemyQueue.map(q => `• ${q.name}${q.count > 1 ? ` ×${q.count}` : ''} (queued)`));
+  const shown = lines.slice(0, 10).join('\n');
+  const more = lines.length > 10 ? `\n+ ${lines.length - 10} more…` : '';
+  const body = lines.length
+    ? `<div class="preview-list">${shown}${more}</div>`
+    : `<div class="preview-empty">(empty)</div>`;
+  return `<div class="preview-title">${b.name}</div><div class="preview-meta">${_battleSummary(b, idx)}</div>${body}`;
+}
+
+function _enqueueCreaturesIntoBattle(battleIdx, creatures) {
+  const b = battles[battleIdx];
+  if (b.phase === 'active') {
+    creatures.forEach(creature => {
+      const hp = parseInt(creature.hp) || 10;
+      b.combatants.push({
+        id: Date.now() + '_sel_' + Math.random().toString(36).slice(2),
+        name: creature.name, creatureName: creature.name, type: 'enemy',
+        hp, maxHp: hp,
+        ac: parseInt(creature.ac) || 10,
+        initiative: rollD20() + parseDexMod(creature.dex),
+        tempHp: 0, conditions: [], notes: '', gone: false,
+      });
+    });
+    b.combatants.sort((a, z) => z.initiative - a.initiative);
+  } else {
+    // Setup phase: queue is in-memory and tied to the currently selected battle
+    if (battleIdx !== currentBattleIdx) {
+      currentBattleIdx = battleIdx;
+      battleEnemyQueue = [];
+    }
+    creatures.forEach(creature => battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature }));
+  }
+  saveBattles();
+}
+
+function _finishSelectionToBattle() {
+  selectedNames.clear();
+  activeListId = null;
+  showAllPool = false;
+  updateHoverBar();
+  buildStatGrid(document.getElementById('statSearch').value);
+  document.querySelector('.tab-btn[data-tab="encounter"]').click();
+  renderBattle();
+}
+
+function updateSelectionBattleButtons() {
+  const cur = curBattle();
+  const curHasContent = cur && _battleHasContent(cur, currentBattleIdx);
+  document.getElementById('btnSelAddCurrent').style.display = curHasContent ? '' : 'none';
+  // Dropdown is useful whenever there's at least one battle with content (could be current OR others)
+  const anyWithContent = battles.some((b, i) => _battleHasContent(b, i));
+  document.getElementById('selBattleAddWrap').style.display = anyWithContent ? '' : 'none';
+  const dd = document.getElementById('selBattleDropdown');
+  dd.innerHTML = battles.map((b, i) =>
+    `<div class="sel-dropdown-item" data-bi="${i}">
+       <span>${b.name}${i === currentBattleIdx ? ' <span style="opacity:.55;font-size:.78em">(current)</span>' : ''}</span>
+       <span class="meta">${_battleSummary(b, i)}</span>
+     </div>`).join('');
+  // Re-bind row handlers
+  dd.querySelectorAll('.sel-dropdown-item').forEach(row => {
+    row.addEventListener('click', () => {
+      const idx = +row.dataset.bi;
+      const creatures = _selectionToCreatures();
+      if (!creatures.length) return;
+      _enqueueCreaturesIntoBattle(idx, creatures);
+      _hideBattleDropdown();
+      _finishSelectionToBattle();
+    });
+    row.addEventListener('mouseenter', () => {
+      const idx = +row.dataset.bi;
+      const preview = document.getElementById('selBattlePreview');
+      preview.innerHTML = _battlePreviewHTML(battles[idx], idx);
+      preview.classList.add('visible');
+    });
+    row.addEventListener('mouseleave', () => {
+      document.getElementById('selBattlePreview').classList.remove('visible');
+    });
+  });
+}
+
+function _hideBattleDropdown() {
+  document.getElementById('selBattleDropdown').classList.remove('open');
+  document.getElementById('selBattlePreview').classList.remove('visible');
+}
+
+document.getElementById('btnSelNewBattle').addEventListener('click', () => {
+  const creatures = _selectionToCreatures();
+  if (!creatures.length) return;
+  const name = 'Battle ' + (battles.length + 1);
+  battles.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), name, phase: 'setup', round: 1, turnIdx: 0, combatants: [] });
+  currentBattleIdx = battles.length - 1;
+  battleEnemyQueue = creatures.map(creature => ({ name: creature.name, count: 1, customHp: '', creature }));
+  saveBattles();
+  _finishSelectionToBattle();
+});
+
+document.getElementById('btnSelAddCurrent').addEventListener('click', () => {
+  const creatures = _selectionToCreatures();
+  if (!creatures.length) return;
+  _enqueueCreaturesIntoBattle(currentBattleIdx, creatures);
+  _finishSelectionToBattle();
+});
+
+document.getElementById('btnSelAddTo').addEventListener('click', e => {
+  e.stopPropagation();
+  const dd = document.getElementById('selBattleDropdown');
+  const open = dd.classList.toggle('open');
+  if (!open) document.getElementById('selBattlePreview').classList.remove('visible');
+});
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('selBattleAddWrap');
+  if (wrap && !wrap.contains(e.target)) _hideBattleDropdown();
 });
 
 function parseCrNum(cr) {

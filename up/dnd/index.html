@@ -125,6 +125,21 @@
         #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.28rem 0.65rem; font-size:0.82rem; cursor:pointer; transition:background .15s; }
         #selectionBar .btn-sel:hover { background:rgba(255,255,255,.35); }
         #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
+        #selectionBar .btn-sel.dark { background:rgba(0,0,0,.35); border-color:rgba(0,0,0,.45); font-weight:600; }
+        #selectionBar .btn-sel.dark:hover { background:rgba(0,0,0,.55); }
+        .sel-dropdown-wrap { position:relative; }
+        .sel-dropdown { display:none; position:absolute; bottom:100%; right:0; margin-bottom:0.5rem; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:30; overflow:hidden; }
+        .sel-dropdown.open { display:block; }
+        .sel-dropdown-item { padding:0.5rem 0.7rem; cursor:pointer; font-size:0.85rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:0.5rem; }
+        .sel-dropdown-item:last-child { border-bottom:none; }
+        .sel-dropdown-item:hover { background:var(--bg); }
+        .sel-dropdown-item .meta { color:var(--text-muted); font-size:0.74rem; white-space:nowrap; }
+        .sel-dropdown-preview { display:none; position:absolute; bottom:100%; right:100%; margin-right:0.5rem; margin-bottom:0.5rem; background:var(--surface); color:var(--text); border:1px solid var(--accent-soft); border-radius:6px; padding:0.55rem 0.7rem; min-width:200px; max-width:280px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:31; font-size:0.8rem; line-height:1.5; pointer-events:none; }
+        .sel-dropdown-preview.visible { display:block; }
+        .sel-dropdown-preview .preview-title { font-weight:700; color:var(--accent); margin-bottom:0.3rem; }
+        .sel-dropdown-preview .preview-meta { color:var(--text-muted); font-size:0.74rem; margin-bottom:0.35rem; }
+        .sel-dropdown-preview .preview-list { color:var(--text); white-space:pre-wrap; }
+        .sel-dropdown-preview .preview-empty { color:var(--text-muted); font-style:italic; }
 
         /* ── Inner Tabs (within Rolls panel) ── */
         .inner-tabs { display:flex; gap:0; flex-wrap:wrap; margin-bottom:1.25rem; border-bottom:1px solid var(--border); }
@@ -425,6 +440,13 @@
             <span class="sel-count" id="selectionCount"></span>
             <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
             <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
+            <button class="btn-sel dark" id="btnSelNewBattle">+ New battle</button>
+            <button class="btn-sel" id="btnSelAddCurrent" style="display:none">+ Add to current</button>
+            <div class="sel-dropdown-wrap" id="selBattleAddWrap" style="display:none">
+                <button class="btn-sel" id="btnSelAddTo">+ Add to… ▾</button>
+                <div class="sel-dropdown" id="selBattleDropdown"></div>
+                <div class="sel-dropdown-preview" id="selBattlePreview"></div>
+            </div>
             <button class="btn-sel" id="btnSaveList">Save as…</button>
             <button class="btn-sel ghost" id="btnClearSel">Clear</button>
         </div>
