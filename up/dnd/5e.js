@@ -809,17 +809,40 @@ function _battlePreviewHTML(b, idx) {
   return `<div class="preview-title">${b.name}</div><div class="preview-meta">${_battleSummary(b, idx)}</div>${body}`;
 }
 
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// Returns the highest trailing-number suffix already used for `baseName` in `taken`.
+// A bare match (just `baseName`) counts as 1, so the next number is 2.
+function highestCombatantNumber(taken, baseName) {
+  let max = taken.has(baseName) ? 1 : 0;
+  const re = new RegExp(`^${escapeRegex(baseName)}\\s+(\\d+)$`);
+  for (const name of taken) {
+    const m = name.match(re);
+    if (m) max = Math.max(max, parseInt(m[1]));
+  }
+  return max;
+}
+
 function _enqueueCreaturesIntoBattle(battleIdx, creatures) {
   const b = battles[battleIdx];
   if (b.phase === 'active') {
     // Active phase: push N combatants per creature, each with its own initiative roll.
+    // Names continue any existing numeric sequence — adding a Goblin when "Goblin 3"
+    // already exists yields "Goblin 4".
+    const taken = new Set(b.combatants.map(c => c.name));
     creatures.forEach(creature => {
       const hp = parseInt(creature.hp) || 10;
       const count = getSelCount(creature.name);
+      const startNum = highestCombatantNumber(taken, creature.name);
       for (let i = 0; i < count; i++) {
+        // Plain creature name only when adding a single fresh one to a battle with none.
+        const label = (count === 1 && startNum === 0)
+          ? creature.name
+          : `${creature.name} ${startNum + 1 + i}`;
+        taken.add(label);
         b.combatants.push({
           id: Date.now() + '_sel_' + i + '_' + Math.random().toString(36).slice(2),
-          name: count > 1 ? `${creature.name} ${i + 1}` : creature.name,
+          name: label,
           creatureName: creature.name, type: 'enemy',
           hp, maxHp: hp,
           ac: parseInt(creature.ac) || 10,
