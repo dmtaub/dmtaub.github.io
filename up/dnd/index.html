@@ -78,6 +78,11 @@
         .mode-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
         .mode-btn:hover:not(.active) { border-color:var(--accent-soft); color:var(--text); }
 
+        .quick-filter-bar { display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .quick-filter-bar .qf-label { font-size:0.78rem; color:var(--text-muted); margin-left:0.25rem; }
+        .quick-filter-bar .qf-label:first-child { margin-left:0; }
+        .quick-filter-bar .qf-btn { padding:0.22rem 0.55rem; font-size:0.8rem; }
+
         .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:0.85rem; }
         .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.1rem; box-shadow:0 1px 4px var(--shadow); position:relative; transition:transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
         .stat-block.homebrew { border-color:var(--accent-soft); }
@@ -377,6 +382,16 @@
                 <button class="mode-btn" id="modeBtnFlip" data-mode="flip">Flip</button>
                 <button class="mode-btn" id="modeBtnFull" data-mode="full">Full</button>
             </div>
+        </div>
+        <div class="quick-filter-bar" id="statQuickFilters">
+            <span class="qf-label">CR:</span>
+            <button class="mode-btn qf-btn" data-qf-group="cr" data-qf-value="lt10">&lt; 10</button>
+            <button class="mode-btn qf-btn" data-qf-group="cr" data-qf-value="10to20">10–20</button>
+            <button class="mode-btn qf-btn" data-qf-group="cr" data-qf-value="gt20">20+</button>
+            <span class="qf-label">HP:</span>
+            <button class="mode-btn qf-btn" data-qf-group="hp" data-qf-value="lt50">&lt; 50</button>
+            <button class="mode-btn qf-btn" data-qf-group="hp" data-qf-value="50to150">50–150</button>
+            <button class="mode-btn qf-btn" data-qf-group="hp" data-qf-value="gt150">150+</button>
         </div>
         <div id="savedListsSection"></div>
         <div id="statGrid"><p class="stat-empty">Loading SRD monsters…</p></div>

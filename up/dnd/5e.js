@@ -539,6 +539,42 @@ document.getElementById('btnClearSel').addEventListener('click', () => {
   buildStatGrid(document.getElementById('statSearch').value);
 });
 
+function parseCrNum(cr) {
+  if (cr == null) return null;
+  const s = String(cr).trim();
+  if (!s) return null;
+  if (s.includes('/')) {
+    const [n, d] = s.split('/').map(Number);
+    return d ? n / d : null;
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+function parseHpNum(hp) {
+  if (hp == null) return null;
+  const n = parseInt(String(hp), 10);
+  return isNaN(n) ? null : n;
+}
+const QF_RANGES = {
+  cr: { lt10:[null,10,'exclusive'], '10to20':[10,20,'inclusive'], gt20:[20,null,'inclusive'] },
+  hp: { lt50:[null,50,'exclusive'], '50to150':[50,150,'inclusive'], gt150:[150,null,'inclusive'] },
+};
+const quickFilters = { cr:null, hp:null };
+function matchesQuickFilter(c) {
+  for (const group of Object.keys(quickFilters)) {
+    const v = quickFilters[group];
+    if (!v) continue;
+    const [min, max, mode] = QF_RANGES[group][v];
+    const val = group === 'cr' ? parseCrNum(c.cr) : parseHpNum(c.hp);
+    if (val == null) return false;
+    if (min != null && val < min) return false;
+    if (max != null) {
+      if (mode === 'exclusive' ? val >= max : val > max) return false;
+    }
+  }
+  return true;
+}
+
 function buildStatGrid(filter) {
   const q   = (filter || '').toLowerCase();
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
@@ -546,16 +582,19 @@ function buildStatGrid(filter) {
   const pool = (lst && !showAllPool && !q)
     ? ALL_CREATURES.filter(c => lst.names.includes(c.name))
     : ALL_CREATURES;
-  CURRENT_FILTERED = q
+  let result = q
     ? pool.filter(c =>
         c.name.toLowerCase().includes(q) ||
         (c.typeLine||'').toLowerCase().includes(q) ||
         ('cr'+(c.cr||'')).includes(q)
       )
     : pool;
+  if (quickFilters.cr || quickFilters.hp) result = result.filter(matchesQuickFilter);
+  CURRENT_FILTERED = result;
   const grid = document.getElementById('statGrid');
   if (!CURRENT_FILTERED.length) {
-    grid.innerHTML = `<p class="stat-empty">${q ? 'No matches.' : 'No creatures loaded.'}</p>`;
+    const hasFilter = q || quickFilters.cr || quickFilters.hp;
+    grid.innerHTML = `<p class="stat-empty">${hasFilter ? 'No matches.' : 'No creatures loaded.'}</p>`;
     return;
   }
   grid.innerHTML = `<div class="stat-grid">${CURRENT_FILTERED.map((c, i) => renderStatBlock(c, i)).join('')}</div>`;
@@ -565,6 +604,20 @@ document.getElementById('statSearch').addEventListener('input', e => {
   if (activeListId && e.target.value) showAllPool = true;
   buildStatGrid(e.target.value);
   updateHoverBar();
+});
+
+document.querySelectorAll('#statQuickFilters .qf-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.qfGroup;
+    const value = btn.dataset.qfValue;
+    quickFilters[group] = quickFilters[group] === value ? null : value;
+    document.querySelectorAll(`#statQuickFilters .qf-btn[data-qf-group="${group}"]`).forEach(b => {
+      b.classList.toggle('active', b.dataset.qfValue === quickFilters[group]);
+    });
+    if (activeListId && (quickFilters.cr || quickFilters.hp)) showAllPool = true;
+    buildStatGrid(document.getElementById('statSearch').value);
+    updateHoverBar();
+  });
 });
 
 // ─── ROLL TABLES ─────────────────────────────────────────────────────────────
