@@ -251,7 +251,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     const target = btn.dataset.tab;
     if (inBattleEdit('active') && target !== 'statblocks') {
       exitBattleEdit();
-      selectedNames.clear();
+      selectedNames.clear(); selectedCounts.clear();
       if (typeof refreshBattleEditBanner === 'function') refreshBattleEditBanner();
       if (typeof updateBattleTabLabel === 'function') updateBattleTabLabel();
       if (typeof updateHoverBar === 'function') updateHoverBar();
@@ -416,8 +416,14 @@ function renderStatBlock(c, idx) {
   const sel  = selectedNames.has(c.name);
   const cls  = `stat-block${isHB?' homebrew':''}${cardMode==='flip'?' flip-mode':''}${sel?' selected':''}`;
   const inner = cardMode === 'full' ? renderFull(c) : renderFront(c);
+  const n = getSelCount(c.name);
   return `<div class="${cls}" data-idx="${idx}" data-face="front">
     <div class="sb-check" title="Select">${sel?'✓':''}</div>
+    <div class="sb-count" title="Quantity">
+      <button type="button" class="sb-count-btn" data-cdir="-1" ${n<=1?'disabled':''} aria-label="Decrease">−</button>
+      <span class="sb-count-val">${n}</span>
+      <button type="button" class="sb-count-btn" data-cdir="1" ${n>=20?'disabled':''} aria-label="Increase">+</button>
+    </div>
     <div class="sb-content">${inner}</div>
   </div>`;
 }
@@ -429,13 +435,39 @@ document.getElementById('statGrid').addEventListener('click', e => {
   const c = CURRENT_FILTERED[+block.dataset.idx];
   if (!c) return;
 
+  // Quantity +/- — adjust selectedCounts in place, no flip
+  const countBtn = e.target.closest('.sb-count-btn');
+  if (countBtn) {
+    e.stopPropagation();
+    if (!selectedNames.has(c.name)) return;
+    const dir = parseInt(countBtn.dataset.cdir);
+    const n = setSelCount(c.name, getSelCount(c.name) + dir);
+    const countEl = block.querySelector('.sb-count');
+    countEl.querySelector('.sb-count-val').textContent = n;
+    countEl.querySelector('[data-cdir="-1"]').disabled = n <= 1;
+    countEl.querySelector('[data-cdir="1"]').disabled  = n >= 20;
+    updateHoverBar();
+    return;
+  }
   // Checkbox click — toggle selection only, don't flip
   if (e.target.closest('.sb-check')) {
-    if (selectedNames.has(c.name)) selectedNames.delete(c.name);
-    else selectedNames.add(c.name);
+    if (selectedNames.has(c.name)) {
+      selectedNames.delete(c.name);
+      selectedCounts.delete(c.name);
+    } else {
+      selectedNames.add(c.name);
+    }
     const sel = selectedNames.has(c.name);
     block.classList.toggle('selected', sel);
     block.querySelector('.sb-check').textContent = sel ? '✓' : '';
+    // Reset count display
+    const countEl = block.querySelector('.sb-count');
+    if (countEl) {
+      const n = getSelCount(c.name);
+      countEl.querySelector('.sb-count-val').textContent = n;
+      countEl.querySelector('[data-cdir="-1"]').disabled = n <= 1;
+      countEl.querySelector('[data-cdir="1"]').disabled  = n >= 20;
+    }
     updateHoverBar();
     return;
   }
@@ -458,6 +490,15 @@ document.getElementById('statGrid').addEventListener('click', e => {
 
 // ── Monster lists ─────────────────────────────────────────────────────────────
 let selectedNames = new Set();
+// Per-selection quantity (only stored when > 1; absence means 1).
+let selectedCounts = new Map();
+function getSelCount(name) { return selectedCounts.get(name) || 1; }
+function setSelCount(name, n) {
+  n = Math.max(1, Math.min(20, parseInt(n) || 1));
+  if (n <= 1) selectedCounts.delete(name);
+  else selectedCounts.set(name, n);
+  return n;
+}
 let monsterLists  = (() => { try { return JSON.parse(localStorage.getItem('5e-monster-lists') || '[]'); } catch(e) { return []; } })();
 let activeListId  = null; // id of list currently being viewed, or null
 let showAllPool   = false; // when true, grid shows ALL_CREATURES even in list view
@@ -551,7 +592,7 @@ function renderBattlesPicker() {
       // User explicitly cleared — exit edit mode if we were in it.
       if (inBattleEdit('picker')) {
         exitBattleEdit();
-        selectedNames.clear();
+        selectedNames.clear(); selectedCounts.clear();
         refreshGrid();
         updateHoverBar();
       }
@@ -574,6 +615,15 @@ function startBattleEditFromPicker(idx) {
     .map(c => c.creatureName || c.name);
   const names = [...new Set([...queueNames, ...combatantNames])];
   selectedNames = new Set(names);
+  // Restore per-creature quantities: queue entry counts win; otherwise count combatants by creatureName.
+  selectedCounts = new Map();
+  (b.enemyQueueData || []).forEach(d => { if ((d.count || 1) > 1) selectedCounts.set(d.name, parseInt(d.count) || 1); });
+  const comboTallies = {};
+  (b.combatants || []).filter(c => c.type === 'enemy').forEach(c => {
+    const key = c.creatureName || c.name;
+    comboTallies[key] = (comboTallies[key] || 0) + 1;
+  });
+  Object.entries(comboTallies).forEach(([k, v]) => { if (v > 1 && !selectedCounts.has(k)) selectedCounts.set(k, v); });
   enterPickerEdit(idx, names);
   activeListId = null;
   showAllPool = false;
@@ -608,6 +658,7 @@ function showList(id) {
   exitBattleEdit();
   showAllPool   = false;
   selectedNames = new Set(lst.names);
+  selectedCounts = new Map(Object.entries(lst.counts || {}).map(([k, v]) => [k, parseInt(v) || 1]));
   document.getElementById('statSearch').value = '';
   document.getElementById('statSearchClear').classList.remove('visible');
   updateHoverBar();
@@ -621,16 +672,26 @@ function deleteList(id) {
   saveMonsterLists();
   if (activeListId === id) {
     activeListId = null;
-    selectedNames.clear();
+    selectedNames.clear(); selectedCounts.clear();
     updateHoverBar();
     refreshGrid();
   }
   renderSavedLists();
 }
 
+// Snapshot the current selectedCounts as a plain object, only keeping entries > 1.
+function selectionCountsObj(names) {
+  const out = {};
+  for (const n of names) {
+    const c = selectedCounts.get(n);
+    if (c && c > 1) out[n] = c;
+  }
+  return out;
+}
+
 function saveNewList(name, names) {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  monsterLists.push({ id, name, names: [...names] });
+  monsterLists.push({ id, name, names: [...names], counts: selectionCountsObj(names) });
   saveMonsterLists();
   renderSavedLists();
 }
@@ -646,18 +707,20 @@ document.getElementById('btnUpdateList').addEventListener('click', () => {
       currentBattleIdx = idx;
       loadBattleQueue(idx);
     }
-    // Rebuild from selection, preserving per-entry overrides (count, customHp, customAc, customName) by name.
+    // Rebuild from selection, preserving per-entry overrides (customHp, customAc, customName) by name.
+    // Count is taken from selectedCounts (the +/- widget) so users can adjust on the Enemies tab.
     const oldByName = new Map(battleEnemyQueue.map(e => [e.name, e]));
     battleEnemyQueue = [...selectedNames].map(name => {
-      if (oldByName.has(name)) return oldByName.get(name);
+      const count = getSelCount(name);
+      if (oldByName.has(name)) return { ...oldByName.get(name), count };
       const creature = ALL_CREATURES.find(c => c.name === name);
-      return { name, count: 1, customHp: '', creature };
+      return { name, count, customHp: '', creature };
     });
     saveBattleQueue();
     setBattleEngaged();
     renderBattle();
     // Clear battle-edit state so the selection bar resets, then jump to the tracker.
-    selectedNames.clear();
+    selectedNames.clear(); selectedCounts.clear();
     exitBattleEdit();
     showAllPool = false;
     updateHoverBar();
@@ -668,6 +731,7 @@ document.getElementById('btnUpdateList').addEventListener('click', () => {
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
   if (!lst) return;
   lst.names = [...selectedNames];
+  lst.counts = selectionCountsObj(selectedNames);
   saveMonsterLists();
   renderSavedLists();
   updateHoverBar();
@@ -678,7 +742,7 @@ document.getElementById('btnSaveList').addEventListener('click', () => {
   const name = prompt('Template name:', 'My Template');
   if (!name) return;
   saveNewList(name, selectedNames);
-  selectedNames.clear();
+  selectedNames.clear(); selectedCounts.clear();
   activeListId = null;
   exitBattleEdit();
   updateHoverBar();
@@ -708,7 +772,7 @@ document.getElementById('btnClearSel').addEventListener('click', () => {
     proceed = confirm('Clear unsaved selection?');
   }
   if (!proceed) return;
-  selectedNames.clear();
+  selectedNames.clear(); selectedCounts.clear();
   activeListId  = null;
   exitBattleEdit();
   showAllPool   = false;
@@ -748,32 +812,37 @@ function _battlePreviewHTML(b, idx) {
 function _enqueueCreaturesIntoBattle(battleIdx, creatures) {
   const b = battles[battleIdx];
   if (b.phase === 'active') {
+    // Active phase: push N combatants per creature, each with its own initiative roll.
     creatures.forEach(creature => {
       const hp = parseInt(creature.hp) || 10;
-      b.combatants.push({
-        id: Date.now() + '_sel_' + Math.random().toString(36).slice(2),
-        name: creature.name, creatureName: creature.name, type: 'enemy',
-        hp, maxHp: hp,
-        ac: parseInt(creature.ac) || 10,
-        initiative: rollD20() + parseDexMod(creature.dex),
-        tempHp: 0, conditions: [], notes: '', gone: false,
-      });
+      const count = getSelCount(creature.name);
+      for (let i = 0; i < count; i++) {
+        b.combatants.push({
+          id: Date.now() + '_sel_' + i + '_' + Math.random().toString(36).slice(2),
+          name: count > 1 ? `${creature.name} ${i + 1}` : creature.name,
+          creatureName: creature.name, type: 'enemy',
+          hp, maxHp: hp,
+          ac: parseInt(creature.ac) || 10,
+          initiative: rollD20() + parseDexMod(creature.dex),
+          tempHp: 0, conditions: [], notes: '', gone: false,
+        });
+      }
     });
     b.combatants.sort((a, z) => z.initiative - a.initiative);
   } else {
-    // Setup phase: queue is in-memory and tied to the currently selected battle
+    // Setup phase: queue is in-memory and tied to the currently selected battle.
     if (battleIdx !== currentBattleIdx) {
       currentBattleIdx = battleIdx;
       loadBattleQueue(battleIdx);
     }
-    creatures.forEach(creature => battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature }));
+    creatures.forEach(creature => battleEnemyQueue.push({ name: creature.name, count: getSelCount(creature.name), customHp: '', creature }));
     saveBattleQueue();
   }
   saveBattles();
 }
 
 function _finishSelectionToBattle() {
-  selectedNames.clear();
+  selectedNames.clear(); selectedCounts.clear();
   activeListId = null;
   exitBattleEdit();
   showAllPool = false;
@@ -815,7 +884,7 @@ function updateSelectionBattleButtons() {
       if (row.dataset.action === 'new') {
         battles.push(createBattle('Battle ' + (battles.length + 1)));
         currentBattleIdx = battles.length - 1;
-        battleEnemyQueue = creatures.map(creature => ({ name: creature.name, count: 1, customHp: '', creature }));
+        battleEnemyQueue = creatures.map(creature => ({ name: creature.name, count: getSelCount(creature.name), customHp: '', creature }));
         saveBattleQueue();
       } else if (row.dataset.action === 'current') {
         _enqueueCreaturesIntoBattle(currentBattleIdx, creatures);
@@ -1886,7 +1955,7 @@ function rollD20() { return Math.floor(Math.random() * 20) + 1; }
 // ── Enemies-tab edit mode for in-progress battles ─────────────────────────────
 function enterEnemyEditMode(idx) {
   enterActiveEdit(idx);
-  selectedNames.clear();
+  selectedNames.clear(); selectedCounts.clear();
   activeListId = null;
   showAllPool = false;
   document.querySelector('.tab-btn[data-tab="statblocks"]').click();
@@ -1898,7 +1967,7 @@ function enterEnemyEditMode(idx) {
 function exitEnemyEditMode() {
   if (!inBattleEdit('active')) return;
   exitBattleEdit();
-  selectedNames.clear();
+  selectedNames.clear(); selectedCounts.clear();
   refreshBattleEditBanner();
   updateBattleTabLabel();
   updateHoverBar();
@@ -1954,7 +2023,7 @@ document.getElementById('btnBattleEditAdd')?.addEventListener('click', () => {
   const idx = battleEdit.idx;
   _enqueueCreaturesIntoBattle(idx, creatures);
   exitBattleEdit();
-  selectedNames.clear();
+  selectedNames.clear(); selectedCounts.clear();
   refreshBattleEditBanner();
   updateBattleTabLabel();
   // Jump back to the battle tab and render it
@@ -2099,9 +2168,10 @@ function renderBattleSetup() {
     const addTemplateToQueue = (tid) => {
       const t = monsterLists.find(l => l.id === tid);
       if (!t) return;
+      const counts = t.counts || {};
       t.names.forEach(name => {
         const creature = ALL_CREATURES.find(c => c.name === name);
-        if (creature) battleEnemyQueue.push({ name: creature.name, count: 1, customHp: '', creature });
+        if (creature) battleEnemyQueue.push({ name: creature.name, count: parseInt(counts[name]) || 1, customHp: '', creature });
       });
       saveBattleQueue();
       renderBattleEnemyQueue();
@@ -2226,6 +2296,8 @@ function renderBattleSetup() {
       if (!battleEnemyQueue.length) return;
       const names = battleEnemyQueue.map(q => q.name);
       selectedNames = new Set(names);
+      selectedCounts = new Map();
+      battleEnemyQueue.forEach(e => { if ((e.count || 1) > 1) selectedCounts.set(e.name, e.count); });
       enterPickerEdit(currentBattleIdx, names);
       activeListId = null;
       showAllPool = false;
