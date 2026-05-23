@@ -955,11 +955,42 @@ function _hideBattleDropdown() {
   document.getElementById('selBattlePreview').classList.remove('visible');
 }
 
+function _positionBattleDropdown() {
+  const dd = document.getElementById('selBattleDropdown');
+  const btn = document.getElementById('btnSelAddTo');
+  if (!dd || !btn) return;
+  // Reset so we can measure natural size, then clamp into the viewport.
+  dd.style.left = '0px'; dd.style.top = '0px';
+  const ddRect  = dd.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  const gap = 6;
+  const margin = 8;
+  // Prefer right-aligning the dropdown with the button's right edge.
+  let left = btnRect.right - ddRect.width;
+  // If that pushes off the left edge of the viewport, switch to left-aligning to button.
+  if (left < margin) left = Math.max(margin, btnRect.left);
+  // If still extends past the right edge, clamp to viewport.
+  if (left + ddRect.width > window.innerWidth - margin) {
+    left = Math.max(margin, window.innerWidth - ddRect.width - margin);
+  }
+  // Default: open upward above the button.
+  let top = btnRect.top - ddRect.height - gap;
+  if (top < margin) top = Math.min(btnRect.bottom + gap, window.innerHeight - ddRect.height - margin);
+  dd.style.left = `${left}px`;
+  dd.style.top  = `${top}px`;
+}
+
 document.getElementById('btnSelAddTo').addEventListener('click', e => {
   e.stopPropagation();
   const dd = document.getElementById('selBattleDropdown');
   const open = dd.classList.toggle('open');
-  if (!open) document.getElementById('selBattlePreview').classList.remove('visible');
+  if (open) _positionBattleDropdown();
+  else document.getElementById('selBattlePreview').classList.remove('visible');
+});
+
+// Re-position on window resize / scroll while open so the dropdown stays anchored.
+window.addEventListener('resize', () => {
+  if (document.getElementById('selBattleDropdown')?.classList.contains('open')) _positionBattleDropdown();
 });
 
 document.addEventListener('click', e => {

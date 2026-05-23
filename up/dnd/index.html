@@ -160,7 +160,7 @@
         #selectionBar .btn-sel[disabled] { opacity:0.4; cursor:not-allowed; }
         #selectionBar .btn-sel[disabled]:hover { background:rgba(255,255,255,.2); }
         .sel-dropdown-wrap { position:relative; }
-        .sel-dropdown { display:none; position:absolute; bottom:100%; right:0; margin-bottom:0.5rem; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; min-width:220px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:30; overflow:hidden; }
+        .sel-dropdown { display:none; position:fixed; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; min-width:220px; max-width:calc(100vw - 16px); box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:30; overflow:hidden; }
         .sel-dropdown.open { display:block; }
         .sel-dropdown-item { padding:0.5rem 0.7rem; cursor:pointer; font-size:0.85rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:0.5rem; }
         .sel-dropdown-item:last-child { border-bottom:none; }
