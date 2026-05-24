@@ -531,7 +531,7 @@ function updateHoverBar() {
   if (lst) {
     const origSet  = new Set(lst.names);
     const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    document.getElementById('selListLabel').textContent = diverged ? 'Editing template:' : 'Showing template:';
+    document.getElementById('selListLabel').textContent = diverged ? 'Editing' : 'Viewing';
     document.getElementById('selListName').textContent  = `"${lst.name}"`;
     savedEl.textContent = `(${lst.names.length} saved) ·`;
     updateBtn.style.display = '';
@@ -542,7 +542,7 @@ function updateHoverBar() {
   } else if (battle) {
     const origSet  = battleEdit.originalNames;
     const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    document.getElementById('selListLabel').textContent = 'Editing battle:';
+    document.getElementById('selListLabel').textContent = 'Editing:';
     document.getElementById('selListName').textContent  = `"${battle.name}"`;
     savedEl.textContent = `(${origSet.size} queued) ·`;
     updateBtn.style.display = '';
