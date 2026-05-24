@@ -149,16 +149,21 @@
         .floating-bar { position:sticky; bottom:1.25rem; z-index:10; background:var(--accent); color:#fff; border-radius:8px; padding:0.6rem 1rem; margin-top:1rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; box-shadow:0 4px 16px rgba(0,0,0,.25); }
 
         /* ── Selection bar ── */
-        #selectionBar { display:none; }
+        #selectionBar { display:none; font-size:0.78rem; padding-right:2.4rem; }
         #selectionBar.visible { display:flex; }
-        #selectionBar .sel-count { font-size:0.88rem; font-weight:600; flex:1; }
-        #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.28rem 0.65rem; font-size:0.82rem; cursor:pointer; transition:background .15s; }
+        #selectionBar .sel-count { font-size:0.82rem; font-weight:600; }
+        #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.24rem 0.55rem; font-size:0.76rem; cursor:pointer; transition:background .15s; }
+        /* Top row: centered, fills width so Clear (absolutely placed) gets its corner. */
+        .sel-bar-top { flex:1 1 100%; display:flex; justify-content:center; align-items:center; gap:0.5rem; flex-wrap:wrap; min-height:1.4rem; }
+        .sel-clear-x { position:absolute; top:0.45rem; right:0.55rem; padding:0.15rem 0.5rem !important; font-size:0.9rem !important; line-height:1; }
         #selectionBar .btn-sel:hover { background:rgba(255,255,255,.35); }
         #selectionBar .btn-sel.ghost { background:none; border-color:rgba(255,255,255,.3); }
         #selectionBar .btn-sel.dark { background:rgba(0,0,0,.35); border-color:rgba(0,0,0,.45); font-weight:600; }
         #selectionBar .btn-sel.dark:hover { background:rgba(0,0,0,.55); }
         #selectionBar .btn-sel[disabled] { opacity:0.4; cursor:not-allowed; }
         #selectionBar .btn-sel[disabled]:hover { background:rgba(255,255,255,.2); }
+        /* Right-side actions always wrap to their own row, centered. */
+        .sel-bar-actions { display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap; flex-basis:100%; justify-content:center; }
         .sel-dropdown-wrap { position:relative; }
         .sel-dropdown { display:none; position:fixed; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; min-width:220px; max-width:calc(100vw - 16px); box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:30; overflow:hidden; }
         .sel-dropdown.open { display:block; }
@@ -498,17 +503,21 @@
             <button class="btn sm secondary" id="btnBattleEditCancel">Cancel</button>
         </div>
         <div class="floating-bar" id="selectionBar">
-            <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
-            <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> ·</span>
-            <span id="selListSaved" style="display:none"></span>
-            <span class="sel-count" id="selectionCount"></span>
-            <button class="btn-sel ghost" id="btnClearSel">Clear</button>
-            <div class="sel-dropdown-wrap" id="selBattleAddWrap" style="display:none">
-                <button class="btn-sel dark" id="btnSelAddTo">Add to battle ▾</button>
-                <div class="sel-dropdown" id="selBattleDropdown"></div>
+            <div class="sel-bar-top">
+                <button class="btn-sel" id="btnShowAll" style="display:none">Show all</button>
+                <span id="selListCtx" style="display:none"><span id="selListLabel">Showing:</span> <strong id="selListName"></strong> ·</span>
+                <span id="selListSaved" style="display:none"></span>
+                <span class="sel-count" id="selectionCount"></span>
             </div>
-            <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
-            <button class="btn-sel" id="btnSaveList">Save as…</button>
+            <button class="btn-sel ghost sel-clear-x" id="btnClearSel" title="Clear selection" aria-label="Clear">✕</button>
+            <div class="sel-bar-actions">
+                <div class="sel-dropdown-wrap" id="selBattleAddWrap" style="display:none">
+                    <button class="btn-sel dark" id="btnSelAddTo">Add to battle ▾</button>
+                    <div class="sel-dropdown" id="selBattleDropdown"></div>
+                </div>
+                <button class="btn-sel" id="btnUpdateList" style="display:none">Update</button>
+                <button class="btn-sel" id="btnSaveList">Save as…</button>
+            </div>
         </div>
     </div>
 
