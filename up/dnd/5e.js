@@ -357,11 +357,15 @@ function entryList(arr, title) {
     + arr.map(e => `<div class="sb-entry"><span class="sb-entry-name">${e.name}.</span> ${e.text}</div>`).join('');
 }
 
+function statBlockNameRow(c, showHB, meta) {
+  const hb = showHB && c._homebrew ? ' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>' : '';
+  const n = getSelCount(c.name);
+  return `<div class="stat-block-name"><div class="stat-block-name-left"><span class="stat-block-name-text">${c.name}${hb}</span>${meta?`<span class="stat-block-meta">${meta}</span>`:''}</div><div class="stat-block-name-right">${c.cr?`<span class="stat-block-cr">CR ${c.cr}</span>`:''}<div class="sb-count" title="Quantity"><button type="button" class="sb-count-btn" data-cdir="-1" ${n<=1?'disabled':''} aria-label="Decrease">−</button><span class="sb-count-val">${n}</span><button type="button" class="sb-count-btn" data-cdir="1" ${n>=20?'disabled':''} aria-label="Increase">+</button></div></div></div>`;
+}
+
 function renderFront(c) {
-  const isHB = c._homebrew;
   return `
-    <div class="stat-block-name">${c.name}${isHB?' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>':''}</div>
-    <div class="stat-block-meta">${c.typeLine||c.type||''}${c.cr?' — CR '+c.cr:''}</div>
+    ${statBlockNameRow(c, true, c.typeLine||c.type||'')}
     <div class="stat-row">
       ${hpPill(c)}
       <span class="stat-pill"><strong>AC</strong> ${c.ac||'?'}</span>
@@ -376,8 +380,7 @@ function renderBack(c) {
   const hasTraits = c.traits && c.traits.length;
   const hasActions = c.actions || c.reactions || c.legendaryActions || c.bonusActions;
   return `
-    <div class="stat-block-name">${c.name}</div>
-    <div class="stat-block-meta">${c.typeLine||''}${c.cr?' — CR '+c.cr:''}</div>
+    ${statBlockNameRow(c, false, c.typeLine||'')}
     ${fields ? `<hr class="sb-divider">${fields}` : ''}
     ${hasTraits ? entryList(c.traits) : ''}
     ${c.actions ? entryList(c.actions, 'Actions') : ''}
@@ -389,11 +392,9 @@ function renderBack(c) {
 }
 
 function renderFull(c) {
-  const isHB = c._homebrew;
   const fields = backFields(c);
   let h = `
-    <div class="stat-block-name">${c.name}${isHB?' <span style="font-size:0.7rem;color:var(--accent-soft)">[HB]</span>':''}</div>
-    <div class="stat-block-meta">${c.typeLine||c.type||''}${c.cr?' — CR '+c.cr:''}</div>
+    ${statBlockNameRow(c, true, c.typeLine||c.type||'')}
     <div class="stat-row">
       ${hpPill(c)}
       <span class="stat-pill"><strong>AC</strong> ${c.ac||'?'}</span>
@@ -416,14 +417,8 @@ function renderStatBlock(c, idx) {
   const sel  = selectedNames.has(c.name);
   const cls  = `stat-block${isHB?' homebrew':''}${cardMode==='flip'?' flip-mode':''}${sel?' selected':''}`;
   const inner = cardMode === 'full' ? renderFull(c) : renderFront(c);
-  const n = getSelCount(c.name);
   return `<div class="${cls}" data-idx="${idx}" data-face="front">
     <div class="sb-check" title="Select">${sel?'✓':''}</div>
-    <div class="sb-count" title="Quantity">
-      <button type="button" class="sb-count-btn" data-cdir="-1" ${n<=1?'disabled':''} aria-label="Decrease">−</button>
-      <span class="sb-count-val">${n}</span>
-      <button type="button" class="sb-count-btn" data-cdir="1" ${n>=20?'disabled':''} aria-label="Increase">+</button>
-    </div>
     <div class="sb-content">${inner}</div>
   </div>`;
 }
