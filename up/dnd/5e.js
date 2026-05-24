@@ -519,45 +519,57 @@ function updateHoverBar() {
   }
   bar.classList.toggle('visible', n > 0 || !!lst || !!battle);
 
-  // List/battle context label + "Showing" vs "Editing"
-  const ctxEl    = document.getElementById('selListCtx');
-  const savedEl  = document.getElementById('selListSaved');
-  // Hide the "Showing:" / "Editing:" chip when viewing all enemies — the Show-list button carries the context instead.
-  ctxEl.style.display   = ((lst || battle) && !showAllPool) ? '' : 'none';
-  // Saved/queued count stays visible whenever a list or battle context is active.
-  savedEl.style.display = (lst || battle) ? '' : 'none';
+  // List/battle context label + "Showing" vs "Editing" — stays visible regardless of the
+  // Show-all toggle, so users always see what they're editing.
+  const ctxEl = document.getElementById('selListCtx');
+  ctxEl.style.display = (lst || battle) ? '' : 'none';
   const updateBtn  = document.getElementById('btnUpdateList');
   const showAllBtn = document.getElementById('btnShowAll');
+  let diverged = false;
+  let total = null;        // total in active context (template or battle queue), or null for ad-hoc
+  let totalLabel = '';     // tooltip suffix
   if (lst) {
     const origSet  = new Set(lst.names);
-    const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    document.getElementById('selListLabel').textContent = diverged ? 'Editing' : 'Viewing';
+    diverged   = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    total      = lst.names.length;
+    totalLabel = `${total} in template "${lst.name}"`;
+    document.getElementById('selListLabel').textContent = diverged ? 'Editing:' : 'Viewing:';
     document.getElementById('selListName').textContent  = `"${lst.name}"`;
-    savedEl.textContent = `(${lst.names.length} saved) ·`;
     updateBtn.style.display = '';
     updateBtn.disabled = !diverged;
     updateBtn.title = diverged ? 'Save changes to this template' : 'No unsaved changes';
     showAllBtn.style.display = '';
-    showAllBtn.textContent = showAllPool ? `Show "${lst.name}"` : 'Show all';
+    showAllBtn.textContent = showAllPool ? 'Show saved' : 'Show all';
   } else if (battle) {
     const origSet  = battleEdit.originalNames;
-    const diverged = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    diverged   = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    total      = origSet.size;
+    totalLabel = `${total} in battle "${battle.name}"`;
     document.getElementById('selListLabel').textContent = 'Editing:';
     document.getElementById('selListName').textContent  = `"${battle.name}"`;
-    savedEl.textContent = `(${origSet.size} queued) ·`;
     updateBtn.style.display = '';
     updateBtn.disabled = !diverged;
     updateBtn.title = diverged ? "Apply changes to this battle's queue" : 'No unsaved changes';
     showAllBtn.style.display = '';
-    showAllBtn.textContent = showAllPool ? `Show "${battle.name}"` : 'Show all';
+    showAllBtn.textContent = showAllPool ? 'Show saved' : 'Show all';
   } else {
     updateBtn.style.display = 'none';
     updateBtn.disabled = false;
     showAllBtn.style.display = 'none';
   }
 
-  // Selection count
-  document.getElementById('selectionCount').textContent = n === 1 ? '1 selected' : `${n} selected`;
+  // Top-left badge: combined "selected / total" indicator.
+  const badge = document.getElementById('selBadge');
+  if (badge) {
+    if (total != null) {
+      badge.innerHTML = `<span class="badge-num">${n}</span><span class="badge-sep">/</span><span class="badge-total">${total}</span>`;
+      badge.title = `${n} selected · ${totalLabel}${diverged ? ' (unsaved changes)' : ''}`;
+    } else {
+      badge.innerHTML = `<span class="badge-num">${n}</span>`;
+      badge.title = n === 1 ? '1 selected' : `${n} selected`;
+    }
+    badge.classList.toggle('diverged', diverged);
+  }
 
   // Battle-targeted buttons (New / Add to…)
   if (typeof updateSelectionBattleButtons === 'function') updateSelectionBattleButtons();
