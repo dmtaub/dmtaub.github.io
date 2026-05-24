@@ -152,10 +152,10 @@
         #selectionBar { display:none; font-size:0.78rem; padding-right:2.4rem; }
         #selectionBar.visible { display:flex; }
         /* Badge: concise "selected / total" indicator, sits inline with the Show button on the left. */
-        .sel-badge { background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.18); border-radius:5px; padding:0.15rem 0.5rem; font-size:0.78rem; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.2; white-space:nowrap; }
+        .sel-badge { background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.18); border-radius:5px; padding:0.15rem 0.5rem; font-size:0.78rem; font-weight:400; font-variant-numeric:tabular-nums; line-height:1.2; white-space:nowrap; }
         .sel-badge.diverged { background:rgba(255,221,79,.28); border-color:rgba(255,221,79,.5); }
         .sel-badge .badge-sep { opacity:0.5; padding:0 0.2rem; }
-        .sel-badge .badge-total { opacity:0.72; font-weight:500; }
+        .sel-badge .badge-total { opacity:1.0; font-weight:500; text-decoration: underline; }
         #selectionBar .btn-sel { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:5px; padding:0.24rem 0.55rem; font-size:0.76rem; cursor:pointer; transition:background .15s; }
         /* Top row: three-column grid — left (badge + Show), centered context label, right gutter. */
         .sel-bar-top { flex:1 1 100%; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:0.5rem; min-height:1.4rem; }
@@ -164,7 +164,7 @@
         /* Title (Editing/Viewing context) is the centerpiece — render it larger. */
         #selListCtx { justify-self:center; text-align:center; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; font-size:0.95rem; }
         #selListCtx strong { font-weight:700; }
-        #selectionBar .show-saved-btn { padding:0.4rem 1rem; font-size:0.88rem; font-weight:600; }
+        #selectionBar .show-saved-btn { padding:0.4rem 1rem; font-size:0.88rem; font-weight:500; }
         /* Show button spans the full width of the action row below it. */
         .sel-bar-actions .show-saved-btn { grid-column:1 / -1; width:100%; box-sizing:border-box; }
         .sel-clear-x { position:absolute; top:0.45rem; right:0.55rem; padding:0.15rem 0.5rem !important; font-size:0.9rem !important; line-height:1; }
@@ -174,8 +174,8 @@
         #selectionBar .btn-sel.dark:hover { background:rgba(0,0,0,.55); }
         #selectionBar .btn-sel[disabled] { opacity:0.4; cursor:not-allowed; }
         #selectionBar .btn-sel[disabled]:hover { background:rgba(255,255,255,.2); }
-        /* Action row: 3-col grid so Show (above, grid-column:1/-1) spans the full width. */
-        .sel-bar-actions { display:grid; grid-template-columns:auto auto auto; gap:0.3rem; flex-basis:100%; justify-content:center; align-items:center; }
+        /* Right-side actions always wrap to their own row, centered. */
+        .sel-bar-actions { display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap; flex-basis:100%; justify-content:center; }
         .sel-dropdown-wrap { position:relative; }
         .sel-dropdown { display:none; position:fixed; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; min-width:220px; max-width:calc(100vw - 16px); box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:30; overflow:hidden; }
         .sel-dropdown.open { display:block; }

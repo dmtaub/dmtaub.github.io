@@ -492,6 +492,8 @@ document.getElementById('statGrid').addEventListener('click', e => {
 let selectedNames = new Set();
 // Per-selection quantity (only stored when > 1; absence means 1).
 let selectedCounts = new Map();
+// Snapshot of counts when entering a list/battle edit context. Used to detect divergence on update.
+let originalCounts = new Map();
 function getSelCount(name) { return selectedCounts.get(name) || 1; }
 function setSelCount(name, n) {
   n = Math.max(1, Math.min(20, parseInt(n) || 1));
@@ -505,6 +507,16 @@ let showAllPool   = false; // when true, grid shows ALL_CREATURES even in list v
 // Battle-edit state lives in `battleEdit` (declared near the top of this file).
 
 function saveMonsterLists() { localStorage.setItem('5e-monster-lists', JSON.stringify(monsterLists)); }
+
+// True if the current selection (names + counts) differs from the supplied snapshot.
+function selectionDiverges(origNames, origCounts) {
+  if (selectedNames.size !== origNames.size) return true;
+  for (const name of selectedNames) {
+    if (!origNames.has(name)) return true;
+    if (getSelCount(name) !== ((origCounts && origCounts.get(name)) || 1)) return true;
+  }
+  return false;
+}
 
 function updateHoverBar() {
   const n   = selectedNames.size;
@@ -530,7 +542,7 @@ function updateHoverBar() {
   let totalLabel = '';     // tooltip suffix
   if (lst) {
     const origSet  = new Set(lst.names);
-    diverged   = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    diverged   = selectionDiverges(origSet, originalCounts);
     total      = lst.names.length;
     totalLabel = `${total} in template "${lst.name}"`;
     document.getElementById('selListLabel').textContent = diverged ? 'Editing:' : 'Viewing:';
@@ -542,7 +554,7 @@ function updateHoverBar() {
     showAllBtn.textContent = showAllPool ? 'Show saved' : 'Show all';
   } else if (battle) {
     const origSet  = battleEdit.originalNames;
-    diverged   = n !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
+    diverged   = selectionDiverges(origSet, originalCounts);
     total      = origSet.size;
     totalLabel = `${total} in battle "${battle.name}"`;
     document.getElementById('selListLabel').textContent = 'Editing:';
@@ -635,7 +647,13 @@ function startBattleEditFromPicker(idx) {
     const key = c.creatureName || c.name;
     comboTallies[key] = (comboTallies[key] || 0) + 1;
   });
-  Object.entries(comboTallies).forEach(([k, v]) => { if (v > 1 && !selectedCounts.has(k)) selectedCounts.set(k, v); });
+  // For active battles, include every count (even 1) so divergence detection knows the baseline.
+  if (b.phase === 'active') {
+    Object.entries(comboTallies).forEach(([k, v]) => { selectedCounts.set(k, v); });
+  } else {
+    Object.entries(comboTallies).forEach(([k, v]) => { if (v > 1 && !selectedCounts.has(k)) selectedCounts.set(k, v); });
+  }
+  originalCounts = new Map(selectedCounts);
   enterPickerEdit(idx, names);
   activeListId = null;
   showAllPool = false;
@@ -671,6 +689,7 @@ function showList(id) {
   showAllPool   = false;
   selectedNames = new Set(lst.names);
   selectedCounts = new Map(Object.entries(lst.counts || {}).map(([k, v]) => [k, parseInt(v) || 1]));
+  originalCounts = new Map(selectedCounts);
   document.getElementById('statSearch').value = '';
   document.getElementById('statSearchClear').classList.remove('visible');
   updateHoverBar();
@@ -714,30 +733,36 @@ document.getElementById('btnUpdateList').addEventListener('click', () => {
     const idx = battleEdit.idx;
     const b = battles[idx];
     if (!b) return;
-    // Make sure the in-memory queue corresponds to the targeted battle so saveBattleQueue() writes to the right one.
-    if (idx !== currentBattleIdx) {
-      currentBattleIdx = idx;
-      loadBattleQueue(idx);
+    if (b.phase === 'active') {
+      // Rebalance live combatants to match selectedNames + counts.
+      applyEditToActiveBattle(b);
+    } else {
+      // Setup phase: make sure the in-memory queue corresponds to the targeted battle so saveBattleQueue() writes to the right one.
+      if (idx !== currentBattleIdx) {
+        currentBattleIdx = idx;
+        loadBattleQueue(idx);
+      }
+      // Rebuild from selection, preserving per-entry overrides (customHp, customAc, customName) by name.
+      const oldByName = new Map(battleEnemyQueue.map(e => [e.name, e]));
+      battleEnemyQueue = [...selectedNames].map(name => {
+        const count = getSelCount(name);
+        if (oldByName.has(name)) return { ...oldByName.get(name), count };
+        const creature = ALL_CREATURES.find(c => c.name === name);
+        return { name, count, customHp: '', creature };
+      });
+      saveBattleQueue();
     }
-    // Rebuild from selection, preserving per-entry overrides (customHp, customAc, customName) by name.
-    // Count is taken from selectedCounts (the +/- widget) so users can adjust on the Enemies tab.
-    const oldByName = new Map(battleEnemyQueue.map(e => [e.name, e]));
-    battleEnemyQueue = [...selectedNames].map(name => {
-      const count = getSelCount(name);
-      if (oldByName.has(name)) return { ...oldByName.get(name), count };
-      const creature = ALL_CREATURES.find(c => c.name === name);
-      return { name, count, customHp: '', creature };
-    });
-    saveBattleQueue();
     setBattleEngaged();
-    renderBattle();
+    if (idx === currentBattleIdx) renderBattle();
     // Clear battle-edit state so the selection bar resets, then jump to the tracker.
     selectedNames.clear(); selectedCounts.clear();
+    originalCounts = new Map();
     exitBattleEdit();
     showAllPool = false;
     updateHoverBar();
     refreshGrid();
     document.querySelector('.tab-btn[data-tab="encounter"]').click();
+    if (idx !== currentBattleIdx) { currentBattleIdx = idx; renderBattle(); }
     return;
   }
   const lst = activeListId ? monsterLists.find(l => l.id === activeListId) : null;
@@ -773,13 +798,9 @@ document.getElementById('btnClearSel').addEventListener('click', () => {
   const battle = inBattleEdit('picker') ? battles[battleEdit.idx] : null;
   let proceed = true;
   if (lst) {
-    const origSet = new Set(lst.names);
-    const diverged = selectedNames.size !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    if (diverged) proceed = confirm('Cancel updates to template?');
+    if (selectionDiverges(new Set(lst.names), originalCounts)) proceed = confirm('Cancel updates to template?');
   } else if (battle) {
-    const origSet = battleEdit.originalNames;
-    const diverged = selectedNames.size !== origSet.size || [...selectedNames].some(x => !origSet.has(x));
-    if (diverged) proceed = confirm('Cancel updates to battle?');
+    if (selectionDiverges(battleEdit.originalNames, originalCounts)) proceed = confirm('Cancel updates to battle?');
   } else {
     proceed = confirm('Clear unsaved selection?');
   }
@@ -876,8 +897,84 @@ function _enqueueCreaturesIntoBattle(battleIdx, creatures) {
   saveBattles();
 }
 
+// Apply the current selection (selectedNames + selectedCounts) to an *active* battle,
+// adding combatants for new/increased counts and removing combatants for decreased ones.
+// When removing, prioritize dead enemies (hp <= 0) first, then lowest current hp.
+function applyEditToActiveBattle(b) {
+  const indicesByCreature = new Map(); // creatureName -> [combatant indices]
+  b.combatants.forEach((c, i) => {
+    if (c.type !== 'enemy') return;
+    const key = c.creatureName || c.name;
+    if (!indicesByCreature.has(key)) indicesByCreature.set(key, []);
+    indicesByCreature.get(key).push(i);
+  });
+
+  const toRemove = new Set();
+  // 1) Drop creatures no longer in the selection.
+  for (const [name, indices] of indicesByCreature) {
+    if (!selectedNames.has(name)) indices.forEach(i => toRemove.add(i));
+  }
+  // 2) For each selected creature, drop excess (prefer dead, then lowest hp).
+  for (const name of selectedNames) {
+    const wanted = getSelCount(name);
+    const indices = (indicesByCreature.get(name) || []).filter(i => !toRemove.has(i));
+    if (indices.length > wanted) {
+      const sorted = indices.slice().sort((a, c) => {
+        const ca = b.combatants[a], cc = b.combatants[c];
+        const aDead = ca.hp <= 0 ? 0 : 1;
+        const cDead = cc.hp <= 0 ? 0 : 1;
+        if (aDead !== cDead) return aDead - cDead;
+        return ca.hp - cc.hp;
+      });
+      for (let r = 0; r < indices.length - wanted; r++) toRemove.add(sorted[r]);
+    }
+  }
+  // Remember the currently-acting combatant id so we can re-find it after splices.
+  const currentId = b.combatants[b.turnIdx]?.id;
+  b.combatants = b.combatants.filter((_, i) => !toRemove.has(i));
+
+  // 3) Add combatants for shortfalls / newly-added creatures.
+  for (const name of selectedNames) {
+    const wanted = getSelCount(name);
+    const have = b.combatants.filter(c => (c.creatureName || c.name) === name).length;
+    if (wanted <= have) continue;
+    const creature = ALL_CREATURES.find(c => c.name === name);
+    if (!creature) continue;
+    const hp = parseInt(creature.hp) || 10;
+    const taken = new Set(b.combatants.map(c => c.name));
+    const startNum = highestCombatantNumber(taken, name);
+    const toAdd = wanted - have;
+    for (let i = 0; i < toAdd; i++) {
+      const label = (toAdd === 1 && have === 0 && startNum === 0)
+        ? name
+        : `${name} ${startNum + 1 + i}`;
+      taken.add(label);
+      b.combatants.push({
+        id: Date.now() + '_upd_' + i + '_' + Math.random().toString(36).slice(2),
+        name: label,
+        creatureName: name, type: 'enemy',
+        hp, maxHp: hp,
+        ac: parseInt(creature.ac) || 10,
+        initiative: rollD20() + parseDexMod(creature.dex),
+        tempHp: 0, conditions: [], notes: '', gone: false,
+      });
+    }
+  }
+
+  b.combatants.sort((a, z) => z.initiative - a.initiative);
+  // Re-anchor the turn to the previously-acting combatant if it still exists; otherwise clamp.
+  if (currentId) {
+    const newIdx = b.combatants.findIndex(c => c.id === currentId);
+    b.turnIdx = newIdx >= 0 ? newIdx : Math.min(b.turnIdx, Math.max(0, b.combatants.length - 1));
+  } else {
+    b.turnIdx = Math.min(b.turnIdx, Math.max(0, b.combatants.length - 1));
+  }
+  saveBattles();
+}
+
 function _finishSelectionToBattle() {
   selectedNames.clear(); selectedCounts.clear();
+  originalCounts = new Map();
   activeListId = null;
   exitBattleEdit();
   showAllPool = false;
