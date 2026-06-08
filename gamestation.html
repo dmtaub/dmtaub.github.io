@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Game Station</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body {
+      margin: 0; min-height: 100%;
+      background: radial-gradient(120% 120% at 50% 0%, #16203a 0%, #060912 60%, #03050b 100%);
+      color: #e6ecff;
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 64px 24px 48px; }
+    header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: 0.5px; }
+    header p { margin: 0 0 36px; color: #8da0c8; font-size: 14px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    a.card {
+      display: block; padding: 22px 20px; border-radius: 14px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      text-decoration: none; color: inherit; transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    a.card:hover { transform: translateY(-3px); border-color: rgba(120,160,255,0.6); background: rgba(120,160,255,0.08); }
+    a.card .name { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
+    a.card .desc { font-size: 13px; color: #93a4c9; }
+    footer { margin-top: 40px; font-size: 12px; color: #5d6b8c; }
+    footer a { color: #8da0c8; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🕹️ Game Station</h1>
+      <p>Pick a game:</p>
+    </header>
+    <div class="grid">
+      <a class="card" href="games/pewpew/">
+        <div class="name">PewPew</div>
+        <div class="desc">Free-flight space demo (Three.js)</div>
+      </a>
+      <a class="card" href="boxadon.html">
+        <div class="name">Boxadon</div>
+        <div class="desc">Box-pushing puzzler (Phaser)</div>
+      </a>
+    </div>
+    <footer><a href="index.html">← back to dmtaub.com</a></footer>
+  </div>
+</body>
+</html>
