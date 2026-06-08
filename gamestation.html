@@ -3,48 +3,193 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Game Station</title>
+  <title>GAME STATION</title>
+  <!-- Pull the site's color tokens (--bg, --accent, ...) so the CRT matches the
+       brand. The arcade screen is always the dark phosphor variant. -->
+  <link rel="stylesheet" href="theme.css" />
   <style>
-    :root { color-scheme: dark; }
-    html, body {
-      margin: 0; min-height: 100%;
-      background: radial-gradient(120% 120% at 50% 0%, #16203a 0%, #060912 60%, #03050b 100%);
-      color: #e6ecff;
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    /* Force the dark token set — a CRT is a dark screen by nature. */
+    :root, html {
+      --bg:           #100f1a;
+      --surface:      #1c1b2a;
+      --text:         #e8e4f0;
+      --text-muted:   #9b96ae;
+      --accent:       #9b8bbb;
+      --accent-soft:  #7b6e9a;
+      --header-text:  #e8e4f0;
     }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 64px 24px 48px; }
-    header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: 0.5px; }
-    header p { margin: 0 0 36px; color: #8da0c8; font-size: 14px; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-    a.card {
-      display: block; padding: 22px 20px; border-radius: 14px;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      text-decoration: none; color: inherit; transition: transform .12s ease, border-color .12s ease, background .12s ease;
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+
+    body {
+      background: #08070d;
+      color: var(--accent);
+      font-family: "Courier New", "DejaVu Sans Mono", monospace;
+      font-weight: 700;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      /* Subtle whole-screen power flicker */
+      animation: flicker 6s steps(1) infinite;
     }
-    a.card:hover { transform: translateY(-3px); border-color: rgba(120,160,255,0.6); background: rgba(120,160,255,0.08); }
-    a.card .name { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
-    a.card .desc { font-size: 13px; color: #93a4c9; }
-    footer { margin-top: 40px; font-size: 12px; color: #5d6b8c; }
-    footer a { color: #8da0c8; }
+
+    /* The curved monitor "glass" holding everything */
+    .screen {
+      position: relative;
+      width: min(720px, 92vw);
+      padding: 48px clamp(20px, 6vw, 64px);
+      background:
+        radial-gradient(120% 120% at 50% 0%, rgba(155,139,187,0.10) 0%, transparent 55%),
+        var(--bg);
+      border-radius: 22px / 36px;
+      box-shadow:
+        inset 0 0 120px rgba(0,0,0,0.9),
+        inset 0 0 24px rgba(155,139,187,0.18),
+        0 0 60px rgba(0,0,0,0.8);
+      overflow: hidden;
+    }
+
+    /* Static scanlines */
+    .screen::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.35) 3px,
+        rgba(0,0,0,0.35) 4px
+      );
+      mix-blend-mode: multiply;
+    }
+
+    /* Rolling refresh bar + vignette */
+    .screen::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+      background:
+        radial-gradient(130% 120% at 50% 50%, transparent 60%, rgba(0,0,0,0.55) 100%),
+        linear-gradient(rgba(155,139,187,0.10), rgba(155,139,187,0.10));
+      background-size: 100% 100%, 100% 12px;
+      background-repeat: no-repeat, repeat-y;
+      animation: roll 8s linear infinite;
+    }
+
+    .content { position: relative; z-index: 3; }
+
+    .title {
+      font-size: clamp(22px, 5vw, 34px);
+      letter-spacing: 0.35em;
+      margin: 0 0 4px;
+      text-shadow: 0 0 8px var(--accent), 0 0 22px rgba(155,139,187,0.5);
+      animation: glitch 5.5s infinite steps(1);
+    }
+    .subtitle {
+      color: var(--accent-soft);
+      font-size: 12px; letter-spacing: 0.25em; margin: 0 0 32px;
+      text-shadow: 0 0 6px rgba(155,139,187,0.4);
+    }
+
+    ul.menu { list-style: none; margin: 0 0 28px; padding: 0; }
+    li.item {
+      display: flex; align-items: baseline; gap: 14px;
+      padding: 10px 14px;
+      font-size: clamp(16px, 3.4vw, 22px);
+      letter-spacing: 0.12em;
+      color: var(--accent-soft);
+      cursor: pointer;
+      border: 1px solid transparent;
+      text-shadow: 0 0 6px rgba(155,139,187,0.35);
+      transition: color .08s, background .08s;
+    }
+    li.item .prompt { width: 1.2em; opacity: 0; }
+    li.item .desc { margin-left: auto; font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); }
+
+    li.item.sel {
+      color: #fff;
+      background: rgba(155,139,187,0.14);
+      border-color: rgba(155,139,187,0.55);
+      text-shadow: 0 0 10px var(--accent), 0 0 20px rgba(155,139,187,0.6);
+    }
+    li.item.sel .prompt { opacity: 1; animation: blink 1s steps(1) infinite; }
+    li.item.sel .desc { color: var(--accent-soft); }
+
+    .hint {
+      color: var(--text-muted); font-size: 11px; letter-spacing: 0.2em;
+      text-shadow: 0 0 5px rgba(155,139,187,0.3);
+    }
+    .hint .blink { animation: blink 1.1s steps(1) infinite; }
+    .back { display: inline-block; margin-top: 18px; color: var(--accent-soft); text-decoration: none; font-size: 11px; letter-spacing: 0.2em; }
+    .back:hover { color: #fff; text-shadow: 0 0 10px var(--accent); }
+
+    @keyframes flicker {
+      0%, 96%, 100% { opacity: 1; }
+      97% { opacity: 0.82; }
+      97.5% { opacity: 1; }
+      98% { opacity: 0.9; }
+    }
+    @keyframes roll {
+      0% { background-position: 0 0, 0 -100%; }
+      100% { background-position: 0 0, 0 100%; }
+    }
+    @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+    @keyframes glitch {
+      0%, 94%, 100% { transform: none; text-shadow: 0 0 8px var(--accent), 0 0 22px rgba(155,139,187,0.5); }
+      94.5% { transform: translate(-2px, 0); text-shadow: 2px 0 #ff3b6b, -2px 0 #3bd1ff; }
+      95%   { transform: translate(2px, 0);  text-shadow: -2px 0 #ff3b6b, 2px 0 #3bd1ff; }
+      95.5% { transform: translate(-1px, 0); text-shadow: 1px 0 #ff3b6b, -1px 0 #3bd1ff; }
+      96%   { transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body, .title, .screen::after, li.item.sel .prompt, .hint .blink { animation: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>🕹️ Game Station</h1>
-      <p>Pick a game:</p>
-    </header>
-    <div class="grid">
-      <a class="card" href="games/pewpew/">
-        <div class="name">PewPew</div>
-        <div class="desc">Free-flight space demo (Three.js)</div>
-      </a>
-      <a class="card" href="boxadon.html">
-        <div class="name">Boxadon</div>
-        <div class="desc">Box-pushing puzzler (Phaser)</div>
-      </a>
+  <div class="screen">
+    <div class="content">
+      <h1 class="title">GAME STATION</h1>
+      <p class="subtitle">▓ INSERT COIN ▓ SELECT GAME ▓</p>
+
+      <ul class="menu" id="menu">
+        <li class="item" data-href="games/pewpew/">
+          <span class="prompt">&gt;</span><span class="name">PEWPEW</span>
+          <span class="desc">SPACE / THREE.JS</span>
+        </li>
+        <li class="item" data-href="boxadon.html">
+          <span class="prompt">&gt;</span><span class="name">BOXADON</span>
+          <span class="desc">PUZZLER / PHASER</span>
+        </li>
+      </ul>
+
+      <p class="hint">↑ ↓ MOVE &nbsp;·&nbsp; ENTER START &nbsp;·&nbsp; CLICK SELECT<span class="blink">_</span></p>
+      <a class="back" href="index.html">&lt; BACK TO DMTAUB.COM</a>
     </div>
-    <footer><a href="index.html">← back to dmtaub.com</a></footer>
   </div>
+
+  <script>
+    (function () {
+      var items = Array.prototype.slice.call(document.querySelectorAll('.item'));
+      var i = 0;
+      function render() { items.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
+      function move(d) { i = (i + d + items.length) % items.length; render(); }
+      function start() { var h = items[i].getAttribute('data-href'); if (h) window.location.href = h; }
+
+      document.addEventListener('keydown', function (e) {
+        switch (e.key) {
+          case 'ArrowUp': case 'w': case 'W': move(-1); e.preventDefault(); break;
+          case 'ArrowDown': case 's': case 'S': move(1); e.preventDefault(); break;
+          case 'Enter': case ' ': start(); e.preventDefault(); break;
+          default:
+            if (e.key >= '1' && e.key <= String(items.length)) { i = +e.key - 1; render(); start(); }
+        }
+      });
+
+      items.forEach(function (el, n) {
+        el.addEventListener('mouseenter', function () { i = n; render(); });
+        el.addEventListener('click', function () { i = n; render(); start(); });
+      });
+
+      render();
+    })();
+  </script>
 </body>
 </html>
