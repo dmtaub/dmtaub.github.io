@@ -17,6 +17,8 @@
       --accent:       #9b8bbb;
       --accent-soft:  #7b6e9a;
       --header-text:  #e8e4f0;
+      --locked:       #e0533f;  /* red phosphor for coin-gated games */
+      --locked-soft:  #b23a2c;
     }
 
     * { box-sizing: border-box; }
@@ -38,7 +40,7 @@
       position: relative;
       width: min(720px, 92vw);
       padding: 48px clamp(20px, 6vw, 64px);
-      background:
+      background:q
         radial-gradient(120% 120% at 50% 0%, rgba(155,139,187,0.10) 0%, transparent 55%),
         var(--bg);
       border-radius: 22px / 36px;
@@ -48,20 +50,15 @@
         0 0 60px rgba(0,0,0,0.8);
       overflow: hidden;
     }
-
     /* Static scanlines */
     .screen::before {
       content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
       background: repeating-linear-gradient(
         to bottom,
-        rgba(0,0,0,0) 0px,
-        rgba(0,0,0,0) 2px,
-        rgba(0,0,0,0.35) 3px,
-        rgba(0,0,0,0.35) 4px
-      );
+        rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.35) 3px, rgba(0,0,0,0.35) 4px);
       mix-blend-mode: multiply;
     }
-
     /* Rolling refresh bar + vignette */
     .screen::after {
       content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
@@ -77,18 +74,16 @@
 
     .title {
       font-size: clamp(22px, 5vw, 34px);
-      letter-spacing: 0.35em;
-      margin: 0 0 4px;
+      letter-spacing: 0.35em; margin: 0 0 4px;
       text-shadow: 0 0 8px var(--accent), 0 0 22px rgba(155,139,187,0.5);
       animation: glitch 5.5s infinite steps(1);
     }
     .subtitle {
-      color: var(--accent-soft);
-      font-size: 12px; letter-spacing: 0.25em; margin: 0 0 32px;
+      color: var(--accent-soft); font-size: 12px; letter-spacing: 0.25em; margin: 0 0 28px;
       text-shadow: 0 0 6px rgba(155,139,187,0.4);
     }
 
-    ul.menu { list-style: none; margin: 0 0 28px; padding: 0; }
+    ul.menu { list-style: none; margin: 0 0 22px; padding: 0; }
     li.item {
       display: flex; align-items: baseline; gap: 14px;
       padding: 10px 14px;
@@ -103,6 +98,21 @@
     li.item .prompt { width: 1.2em; opacity: 0; }
     li.item .desc { margin-left: auto; font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); }
 
+    /* Coin-gated (encrypted) games: red + locked until INSERT COIN */
+    li.item.locked {
+      color: var(--locked-soft);
+      cursor: not-allowed;
+      text-shadow: 0 0 6px rgba(224,83,63,0.45);
+      animation: redflicker 3.7s steps(1) infinite;
+    }
+    li.item.locked .desc { color: var(--locked-soft); }
+    li.item.locked .lock { margin-left: 8px; font-size: 12px; opacity: 0.8; }
+
+    /* Unlocked encrypted games look like the rest (white-hot accent) */
+    li.item.unlocked { color: var(--accent-soft); cursor: pointer; text-shadow: 0 0 6px rgba(155,139,187,0.35); animation: none; }
+    li.item.unlocked .desc { color: var(--text-muted); }
+    li.item.unlocked .lock { display: none; }
+
     li.item.sel {
       color: #fff;
       background: rgba(155,139,187,0.14);
@@ -112,24 +122,37 @@
     li.item.sel .prompt { opacity: 1; animation: blink 1s steps(1) infinite; }
     li.item.sel .desc { color: var(--accent-soft); }
 
+    /* INSERT COIN control */
+    .coin {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin: 0 0 6px; padding: 9px 16px;
+      font-family: inherit; font-weight: 700; font-size: 13px; letter-spacing: 0.22em;
+      color: var(--locked); background: transparent;
+      border: 1px solid var(--locked-soft); border-radius: 4px;
+      cursor: pointer;
+      text-shadow: 0 0 8px rgba(224,83,63,0.6);
+      box-shadow: inset 0 0 18px rgba(224,83,63,0.12), 0 0 10px rgba(224,83,63,0.18);
+      animation: redflicker 2.3s steps(1) infinite;
+    }
+    .coin:hover, .coin:focus { background: rgba(224,83,63,0.12); outline: none; }
+    .coin[hidden] { display: none; }
+    .coin .slot { animation: blink 0.9s steps(1) infinite; }
+
     .hint {
-      color: var(--text-muted); font-size: 11px; letter-spacing: 0.2em;
+      color: var(--text-muted); font-size: 11px; letter-spacing: 0.2em; margin-top: 16px;
       text-shadow: 0 0 5px rgba(155,139,187,0.3);
     }
     .hint .blink { animation: blink 1.1s steps(1) infinite; }
-    .back { display: inline-block; margin-top: 18px; color: var(--accent-soft); text-decoration: none; font-size: 11px; letter-spacing: 0.2em; }
+    .back { display: inline-block; margin-top: 14px; color: var(--accent-soft); text-decoration: none; font-size: 11px; letter-spacing: 0.2em; }
     .back:hover { color: #fff; text-shadow: 0 0 10px var(--accent); }
 
     @keyframes flicker {
-      0%, 96%, 100% { opacity: 1; }
-      97% { opacity: 0.82; }
-      97.5% { opacity: 1; }
-      98% { opacity: 0.9; }
+      0%, 96%, 100% { opacity: 1; } 97% { opacity: 0.82; } 97.5% { opacity: 1; } 98% { opacity: 0.9; }
     }
-    @keyframes roll {
-      0% { background-position: 0 0, 0 -100%; }
-      100% { background-position: 0 0, 0 100%; }
+    @keyframes redflicker {
+      0%, 92%, 100% { opacity: 1; } 93% { opacity: 0.55; } 93.6% { opacity: 1; } 96% { opacity: 0.7; } 96.5% { opacity: 1; }
     }
+    @keyframes roll { 0% { background-position: 0 0, 0 -100%; } 100% { background-position: 0 0, 0 100%; } }
     @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     @keyframes glitch {
       0%, 94%, 100% { transform: none; text-shadow: 0 0 8px var(--accent), 0 0 22px rgba(155,139,187,0.5); }
@@ -139,7 +162,7 @@
       96%   { transform: none; }
     }
     @media (prefers-reduced-motion: reduce) {
-      body, .title, .screen::after, li.item.sel .prompt, .hint .blink { animation: none; }
+      body, .title, .screen::after, li.item.sel .prompt, li.item.locked, .coin, .hint .blink { animation: none; }
     }
   </style>
 </head>
@@ -147,7 +170,11 @@
   <div class="screen">
     <div class="content">
       <h1 class="title">GAME STATION</h1>
-      <p class="subtitle">▓ INSERT COIN ▓ SELECT GAME ▓</p>
+      <p class="subtitle">▓ SELECT GAME ▓</p>
+
+      <button class="coin" id="coin" type="button">
+        <span class="slot">◉</span> INSERT COIN
+      </button>
 
       <ul class="menu" id="menu">
         <li class="item" data-href="games/pewpew/">
@@ -157,6 +184,14 @@
         <li class="item" data-href="boxadon.html">
           <span class="prompt">&gt;</span><span class="name">BOXADON</span>
           <span class="desc">PUZZLER / PHASER</span>
+        </li>
+        <li class="item locked" data-locked data-href="games/orca/">
+          <span class="prompt">&gt;</span><span class="name">ORCA</span>
+          <span class="desc">DEEP SEA / WASM</span><span class="lock">🔒</span>
+        </li>
+        <li class="item locked" data-locked data-href="games/sun-weasel/">
+          <span class="prompt">&gt;</span><span class="name">SUN WEASEL</span>
+          <span class="desc">RAIL SHOOTER / WASM</span><span class="lock">🔒</span>
         </li>
       </ul>
 
@@ -168,24 +203,57 @@
   <script>
     (function () {
       var items = Array.prototype.slice.call(document.querySelectorAll('.item'));
+      var coin = document.getElementById('coin');
+      var unlocked = false;
       var i = 0;
+
+      function playable(el) { return !el.classList.contains('locked'); }
       function render() { items.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
-      function move(d) { i = (i + d + items.length) % items.length; render(); }
-      function start() { var h = items[i].getAttribute('data-href'); if (h) window.location.href = h; }
+
+      function move(d) {
+        var n = i;
+        do { n = (n + d + items.length) % items.length; } while (!playable(items[n]) && n !== i);
+        i = n; render();
+      }
+      function start() {
+        var el = items[i];
+        if (!playable(el)) { flashCoin(); return; }
+        var h = el.getAttribute('data-href');
+        if (h) window.location.href = h;
+      }
+      function flashCoin() {
+        coin.animate(
+          [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' },
+           { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
+          { duration: 220, iterations: 2 });
+      }
+      function insertCoin() {
+        if (unlocked) return;
+        unlocked = true;
+        items.forEach(function (el) {
+          if (el.hasAttribute('data-locked')) { el.classList.remove('locked'); el.classList.add('unlocked'); }
+        });
+        coin.setAttribute('hidden', '');
+        document.querySelector('.subtitle').textContent = '▓ ALL GAMES UNLOCKED ▓';
+      }
+
+      coin.addEventListener('click', insertCoin);
 
       document.addEventListener('keydown', function (e) {
         switch (e.key) {
           case 'ArrowUp': case 'w': case 'W': move(-1); e.preventDefault(); break;
           case 'ArrowDown': case 's': case 'S': move(1); e.preventDefault(); break;
           case 'Enter': case ' ': start(); e.preventDefault(); break;
-          default:
-            if (e.key >= '1' && e.key <= String(items.length)) { i = +e.key - 1; render(); start(); }
+          case 'c': case 'C': insertCoin(); break;
         }
       });
 
       items.forEach(function (el, n) {
-        el.addEventListener('mouseenter', function () { i = n; render(); });
-        el.addEventListener('click', function () { i = n; render(); start(); });
+        el.addEventListener('mouseenter', function () { if (playable(el)) { i = n; render(); } });
+        el.addEventListener('click', function () {
+          if (!playable(el)) { flashCoin(); return; }
+          i = n; render(); start();
+        });
       });
 
       render();
