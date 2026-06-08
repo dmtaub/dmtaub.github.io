@@ -19,6 +19,8 @@
       --header-text:  #e8e4f0;
       --locked:       #e0533f;  /* red phosphor for coin-gated games */
       --locked-soft:  #b23a2c;
+      --credit:       #54e08a;  /* green phosphor when credits are banked */
+      --credit-soft:  #39b06a;
     }
 
     * { box-sizing: border-box; }
@@ -124,7 +126,8 @@
 
     /* INSERT COIN control */
     .coin {
-      display: inline-flex; align-items: center; gap: 10px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      min-width: 13.5em;  /* hold width (≥ widest label) so INSERT COIN ↔ N CREDITS doesn't reflow */
       margin: 0 0 6px; padding: 9px 16px;
       font-family: inherit; font-weight: 700; font-size: 13px; letter-spacing: 0.22em;
       color: var(--locked); background: transparent;
@@ -137,6 +140,15 @@
     .coin:hover, .coin:focus { background: rgba(224,83,63,0.12); outline: none; }
     .coin[hidden] { display: none; }
     .coin .slot { animation: blink 0.9s steps(1) infinite; }
+
+    /* Credits in the bank → green instead of red */
+    .coin.credited {
+      color: var(--credit); border-color: var(--credit-soft);
+      text-shadow: 0 0 8px rgba(84,224,138,0.6);
+      box-shadow: inset 0 0 18px rgba(84,224,138,0.12), 0 0 10px rgba(84,224,138,0.18);
+      animation: none;
+    }
+    .coin.credited:hover, .coin.credited:focus { background: rgba(84,224,138,0.12); }
 
     .hint {
       color: var(--text-muted); font-size: 11px; letter-spacing: 0.2em; margin-top: 16px;
@@ -173,7 +185,7 @@
       <p class="subtitle">▓ SELECT GAME ▓</p>
 
       <button class="coin" id="coin" type="button">
-        <span class="slot">◉</span> INSERT COIN
+        <span class="slot">◉</span> <span class="coin-label" id="coinLabel">INSERT COIN</span>
       </button>
 
       <ul class="menu" id="menu">
@@ -204,20 +216,30 @@
     (function () {
       var items = Array.prototype.slice.call(document.querySelectorAll('.item'));
       var coin = document.getElementById('coin');
-      var unlocked = false;
+      var coinLabel = document.getElementById('coinLabel');
+      var CREDITS_KEY = 'gamestation_credits';
+      var UNLOCK_KEY = 'gamestation_unlocked';
+      var PLAY_COST = 1;          // every game costs 1 credit to play
+      var UNLOCK_AT = 10;         // coin-gated games unlock once you bank 10
+      var credits = parseInt(localStorage.getItem(CREDITS_KEY), 10) || 0;
+      var unlocked = localStorage.getItem(UNLOCK_KEY) === '1' || credits >= UNLOCK_AT;
       var i = 0;
 
-      function playable(el) { return !el.classList.contains('locked'); }
+      // Structurally available (not coin-gated, or already unlocked). Distinct
+      // from "can afford" — you still need PLAY_COST credits to launch.
+      function isUnlocked(el) { return !el.hasAttribute('data-locked') || unlocked; }
       function render() { items.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
 
       function move(d) {
         var n = i;
-        do { n = (n + d + items.length) % items.length; } while (!playable(items[n]) && n !== i);
+        do { n = (n + d + items.length) % items.length; } while (!isUnlocked(items[n]) && n !== i);
         i = n; render();
       }
       function start() {
         var el = items[i];
-        if (!playable(el)) { flashCoin(); return; }
+        if (!isUnlocked(el)) { flashCoin(); return; }   // coin-gated: bank 10 first
+        if (credits < PLAY_COST) { flashCoin(); return; } // need a credit to play
+        spend(PLAY_COST);
         var h = el.getAttribute('data-href');
         if (h) window.location.href = h;
       }
@@ -227,14 +249,26 @@
            { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
           { duration: 220, iterations: 2 });
       }
-      function insertCoin() {
-        if (unlocked) return;
-        unlocked = true;
+      function renderCredits() {
+        coinLabel.textContent = credits > 0
+          ? credits + (credits === 1 ? ' CREDIT' : ' CREDITS')
+          : 'INSERT COIN';
+        coin.classList.toggle('credited', credits > 0);  // green when positive
+      }
+      function applyUnlock() {
+        if (!unlocked) return;
         items.forEach(function (el) {
           if (el.hasAttribute('data-locked')) { el.classList.remove('locked'); el.classList.add('unlocked'); }
         });
-        coin.setAttribute('hidden', '');
-        document.querySelector('.subtitle').textContent = '▓ ALL GAMES UNLOCKED ▓';
+      }
+      function persist() { localStorage.setItem(CREDITS_KEY, String(credits)); }
+      function spend(n) { credits = Math.max(0, credits - n); persist(); renderCredits(); }
+      function insertCoin() {
+        credits += 1; persist();
+        if (!unlocked && credits >= UNLOCK_AT) {
+          unlocked = true; localStorage.setItem(UNLOCK_KEY, '1'); applyUnlock();
+        }
+        renderCredits();
       }
 
       coin.addEventListener('click', insertCoin);
@@ -249,13 +283,16 @@
       });
 
       items.forEach(function (el, n) {
-        el.addEventListener('mouseenter', function () { if (playable(el)) { i = n; render(); } });
+        el.addEventListener('mouseenter', function () { if (isUnlocked(el)) { i = n; render(); } });
         el.addEventListener('click', function () {
-          if (!playable(el)) { flashCoin(); return; }
+          if (!isUnlocked(el)) { flashCoin(); return; }
           i = n; render(); start();
         });
       });
 
+      // Restore persisted state: show counter, reveal unlocked games.
+      renderCredits();
+      applyUnlock();
       render();
     })();
   </script>
