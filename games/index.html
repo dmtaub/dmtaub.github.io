@@ -6,7 +6,7 @@
   <title>GAME STATION</title>
   <!-- Pull the site's color tokens (--bg, --accent, ...) so the CRT matches the
        brand. The arcade screen is always the dark phosphor variant. -->
-  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="../theme.css" />
   <style>
     /* Force the dark token set — a CRT is a dark screen by nature. */
     :root, html {
@@ -80,8 +80,15 @@
       text-shadow: 0 0 8px var(--accent), 0 0 22px rgba(155,139,187,0.5);
       animation: glitch 5.5s infinite steps(1);
     }
+
+    /* Header row: SELECT GAME label on the left, INSERT COIN control top-right */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+      margin: 0 0 28px;
+    }
     .subtitle {
-      color: var(--accent-soft); font-size: 12px; letter-spacing: 0.25em; margin: 0 0 28px;
+      color: var(--accent-soft); font-size: 15px; letter-spacing: 0.25em; margin: 0;
       text-shadow: 0 0 6px rgba(155,139,187,0.4);
     }
 
@@ -137,8 +144,8 @@
     /* INSERT COIN control */
     .coin {
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-      min-width: 13.5em;  /* hold width (≥ widest label) so INSERT COIN ↔ N CREDITS doesn't reflow */
-      margin: 0 0 6px; padding: 9px 16px;
+      min-width: 12em;  /* hold width (≥ widest label) so INSERT COIN ↔ N CREDITS doesn't reflow */
+      margin: 0; padding: 9px 16px;
       font-family: inherit; font-weight: 700; font-size: 13px; letter-spacing: 0.22em;
       color: var(--locked); background: transparent;
       border: 1px solid var(--locked-soft); border-radius: 4px;
@@ -151,6 +158,13 @@
     .coin[hidden] { display: none; }
     .coin .slot { animation: blink 0.9s steps(1) infinite; }
 
+    /* Keyboard-selected: matches the menu's .sel highlight (red phosphor) */
+    .coin.sel {
+      background: rgba(224,83,63,0.18);
+      border-color: var(--locked);
+      box-shadow: inset 0 0 18px rgba(224,83,63,0.22), 0 0 16px rgba(224,83,63,0.45);
+    }
+
     /* Credits in the bank → green instead of red */
     .coin.credited {
       color: var(--credit); border-color: var(--credit-soft);
@@ -159,6 +173,11 @@
       animation: none;
     }
     .coin.credited:hover, .coin.credited:focus { background: rgba(84,224,138,0.12); }
+    .coin.credited.sel {
+      background: rgba(84,224,138,0.18);
+      border-color: var(--credit);
+      box-shadow: inset 0 0 18px rgba(84,224,138,0.22), 0 0 16px rgba(84,224,138,0.45);
+    }
 
     .hint {
       color: var(--text-muted); font-size: 11px; letter-spacing: 0.2em; margin-top: 16px;
@@ -192,17 +211,19 @@
   <div class="screen">
     <div class="content">
       <h1 class="title">GAME STATION</h1>
-      <p class="subtitle">▓ SELECT GAME ▓</p>
 
-      <button class="coin" id="coin" type="button">
-        <span class="slot">◉</span> <span class="coin-label" id="coinLabel">INSERT COIN</span>
-      </button>
+      <div class="topbar">
+        <p class="subtitle">▓ SELECT GAME ▓</p>
+        <button class="coin" id="coin" type="button">
+          <span class="slot">◉</span> <span class="coin-label" id="coinLabel">INSERT COIN</span>
+        </button>
+      </div>
 
-      <!-- Items are built at load from games/games.json (published from private repo) -->
+      <!-- Items are built at load from games.json (published from private repo) -->
       <ul class="menu" id="menu" aria-busy="true"></ul>
 
      <p class="hint"> &nbsp;&nbsp;⬆ MOVE ⬇ &nbsp;·&nbsp; ENTER OR CLICK TO START &nbsp;·&nbsp; DON'T FORGET TO PAY!&nbsp;</p>
-      <a class="back" href="index.html">&lt; BACK TO DMTAUB.COM</a>
+      <a class="back" href="../index.html">&lt; BACK TO DMTAUB.COM</a>
     </div>
   </div>
 
@@ -222,7 +243,12 @@
         var li = document.createElement('li');
         li.className = 'item' + (g.locked ? ' locked' : '');
         if (g.locked) li.setAttribute('data-locked', '');
-        if (g.href) li.setAttribute('data-href', g.href);
+        // Manifest hrefs are site-root paths (e.g. "games/boxadon/"); this page
+        // lives under /games/, so anchor them to root so they don't double up.
+        if (g.href) {
+          var href = /^(\/|https?:)/.test(g.href) ? g.href : '/' + g.href;
+          li.setAttribute('data-href', href);
+        }
 
         var prompt = document.createElement('span');
         prompt.className = 'prompt'; prompt.textContent = '>';
@@ -264,20 +290,26 @@
       function init(items) {
         var credits = parseInt(localStorage.getItem(CREDITS_KEY), 10) || 0;
         var unlocked = localStorage.getItem(UNLOCK_KEY) === '1' || credits >= UNLOCK_AT;
+
+        // INSERT COIN joins the keyboard cycle as a navigable target after the
+        // games, so ⬆/⬇ reach it and ENTER drops a coin.
+        var nav = items.concat([coin]);
         var i = 0;
 
+        function isCoin(el) { return el === coin; }
         // Structurally available (not coin-gated, or already unlocked). Distinct
         // from "can afford" — you still need PLAY_COST credits to launch.
-        function isUnlocked(el) { return !el.hasAttribute('data-locked') || unlocked; }
-        function render() { items.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
+        function isUnlocked(el) { return isCoin(el) || !el.hasAttribute('data-locked') || unlocked; }
+        function render() { nav.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
 
         function move(d) {
           var n = i;
-          do { n = (n + d + items.length) % items.length; } while (!isUnlocked(items[n]) && n !== i);
+          do { n = (n + d + nav.length) % nav.length; } while (!isUnlocked(nav[n]) && n !== i);
           i = n; render();
         }
         function start() {
-          var el = items[i];
+          var el = nav[i];
+          if (isCoin(el)) { insertCoin(); return; }
           if (!isUnlocked(el)) { flashCoin(); return; }   // coin-gated: bank 10 first
           if (credits < PLAY_COST) { flashCoin(); return; } // need a credit to play
           spend(PLAY_COST);
@@ -313,6 +345,7 @@
         }
 
         coin.addEventListener('click', insertCoin);
+        coin.addEventListener('mouseenter', function () { i = nav.length - 1; render(); });
 
         document.addEventListener('keydown', function (e) {
           switch (e.key) {
@@ -338,7 +371,7 @@
       }
 
       // Build the menu from the published manifest, then wire it up.
-      fetch('games/games.json', { cache: 'no-cache' })
+      fetch('games.json', { cache: 'no-cache' })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
           var games = (data && data.games) || [];
