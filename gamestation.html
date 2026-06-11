@@ -99,6 +99,16 @@
     }
     li.item .prompt { width: 1.2em; opacity: 0; }
     li.item .desc { margin-left: auto; font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); }
+    /* Optional source-code link on a card */
+    li.item .src {
+      font-size: 10px; letter-spacing: 0.15em;
+      margin-right: 10px;
+      color: var(--accent-soft); text-decoration: none; white-space: nowrap;
+      border: 1px solid rgba(155,139,187,0.35); border-radius: 3px; padding: 2px 6px;
+    }
+    li.item .src:hover { color: #fff; border-color: rgba(155,139,187,0.7); text-shadow: 0 0 8px var(--accent); }
+
+    .menu-error { color: var(--locked); font-size: 13px; letter-spacing: 0.12em; padding: 10px 14px; text-shadow: 0 0 6px rgba(224,83,63,0.45); }
 
     /* Coin-gated (encrypted) games: red + locked until INSERT COIN */
     li.item.locked {
@@ -188,116 +198,158 @@
         <span class="slot">◉</span> <span class="coin-label" id="coinLabel">INSERT COIN</span>
       </button>
 
-      <ul class="menu" id="menu">
-        <li class="item" data-href="games/boxadon/">
-          <span class="prompt">&gt;</span><span class="name">BOXADON</span>
-          <span class="desc">PUZZLER / PHASER</span>
-        </li>
-        <li class="item" data-href="games/pewpew/">
-          <span class="prompt">&gt;</span><span class="name">PEWPEW</span>
-          <span class="desc">SPACE / THREE.JS</span>
-        </li>
-        <li class="item" data-href="games/ball-game/">
-          <span class="prompt">&gt;</span><span class="name">BALL GAME</span>
-          <span class="desc">PHYSICS / THREE.JS</span>
-        </li>
-        <li class="item locked" data-locked data-href="games/orca/">
-          <span class="prompt">&gt;</span><span class="name">ORCA</span>
-          <span class="desc">DEEP SEA / WASM</span><span class="lock">🔒</span>
-        </li>
-        <li class="item locked" data-locked data-href="games/sun-weasel/">
-          <span class="prompt">&gt;</span><span class="name">SUN WEASEL</span>
-          <span class="desc">RAIL SHOOTER / WASM</span><span class="lock">🔒</span>
-        </li>
-      </ul>
+      <!-- Items are built at load from games/games.json (published from private repo) -->
+      <ul class="menu" id="menu" aria-busy="true"></ul>
 
-      <p class="hint">↑ ↓ MOVE &nbsp;·&nbsp; ENTER START &nbsp;·&nbsp; CLICK SELECT<span class="blink">_</span></p>
+     <p class="hint"> &nbsp;&nbsp;⬆ MOVE ⬇ &nbsp;·&nbsp; ENTER OR CLICK TO START &nbsp;·&nbsp; DON'T FORGET TO PAY!&nbsp;</p>
       <a class="back" href="index.html">&lt; BACK TO DMTAUB.COM</a>
     </div>
   </div>
 
   <script>
     (function () {
-      var items = Array.prototype.slice.call(document.querySelectorAll('.item'));
+      var menu = document.getElementById('menu');
       var coin = document.getElementById('coin');
       var coinLabel = document.getElementById('coinLabel');
       var CREDITS_KEY = 'gamestation_credits';
       var UNLOCK_KEY = 'gamestation_unlocked';
       var PLAY_COST = 1;          // every game costs 1 credit to play
       var UNLOCK_AT = 10;         // coin-gated games unlock once you bank 10
-      var credits = parseInt(localStorage.getItem(CREDITS_KEY), 10) || 0;
-      var unlocked = localStorage.getItem(UNLOCK_KEY) === '1' || credits >= UNLOCK_AT;
-      var i = 0;
 
-      // Structurally available (not coin-gated, or already unlocked). Distinct
-      // from "can afford" — you still need PLAY_COST credits to launch.
-      function isUnlocked(el) { return !el.hasAttribute('data-locked') || unlocked; }
-      function render() { items.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
+      // Build one <li> from a manifest entry, matching the markup the menu logic
+      // keys off (data-locked / .locked / .prompt / .name / .desc / .lock).
+      function buildItem(g) {
+        var li = document.createElement('li');
+        li.className = 'item' + (g.locked ? ' locked' : '');
+        if (g.locked) li.setAttribute('data-locked', '');
+        if (g.href) li.setAttribute('data-href', g.href);
 
-      function move(d) {
-        var n = i;
-        do { n = (n + d + items.length) % items.length; } while (!isUnlocked(items[n]) && n !== i);
-        i = n; render();
-      }
-      function start() {
-        var el = items[i];
-        if (!isUnlocked(el)) { flashCoin(); return; }   // coin-gated: bank 10 first
-        if (credits < PLAY_COST) { flashCoin(); return; } // need a credit to play
-        spend(PLAY_COST);
-        var h = el.getAttribute('data-href');
-        if (h) window.location.href = h;
-      }
-      function flashCoin() {
-        coin.animate(
-          [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' },
-           { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
-          { duration: 220, iterations: 2 });
-      }
-      function renderCredits() {
-        coinLabel.textContent = credits > 0
-          ? credits + (credits === 1 ? ' CREDIT' : ' CREDITS')
-          : 'INSERT COIN';
-        coin.classList.toggle('credited', credits > 0);  // green when positive
-      }
-      function applyUnlock() {
-        if (!unlocked) return;
-        items.forEach(function (el) {
-          if (el.hasAttribute('data-locked')) { el.classList.remove('locked'); el.classList.add('unlocked'); }
-        });
-      }
-      function persist() { localStorage.setItem(CREDITS_KEY, String(credits)); }
-      function spend(n) { credits = Math.max(0, credits - n); persist(); renderCredits(); }
-      function insertCoin() {
-        credits += 1; persist();
-        if (!unlocked && credits >= UNLOCK_AT) {
-          unlocked = true; localStorage.setItem(UNLOCK_KEY, '1'); applyUnlock();
+        var prompt = document.createElement('span');
+        prompt.className = 'prompt'; prompt.textContent = '>';
+        var name = document.createElement('span');
+        name.className = 'name'; name.textContent = g.name || g.id || '';
+        var desc = document.createElement('span');
+        desc.className = 'desc'; desc.textContent = g.desc || '';
+        li.appendChild(prompt);
+
+        if (g.locked) {
+          var lock = document.createElement('span');
+          lock.className = 'lock'; lock.textContent = '🔒';
+          li.appendChild(lock);
         }
+        li.appendChild(name);
+
+        if (g.src) {
+          var a = document.createElement('a');
+          a.className = 'src'; a.href = g.src; a.target = '_blank'; a.rel = 'noopener';
+          a.textContent = 'SRC 🔗';
+          // don't launch the game (or spend a credit) when opening source
+          a.addEventListener('click', function (e) { e.stopPropagation(); });
+          desc.prepend(a);
+        }
+        li.appendChild(desc);
+        return li;
+      }
+
+      function showError(msg) {
+        menu.removeAttribute('aria-busy');
+        menu.innerHTML = '';
+        var li = document.createElement('li');
+        li.className = 'menu-error';
+        li.textContent = '⚠ ' + msg;
+        menu.appendChild(li);
+      }
+
+      // Wire the arcade behaviour over the rendered items.
+      function init(items) {
+        var credits = parseInt(localStorage.getItem(CREDITS_KEY), 10) || 0;
+        var unlocked = localStorage.getItem(UNLOCK_KEY) === '1' || credits >= UNLOCK_AT;
+        var i = 0;
+
+        // Structurally available (not coin-gated, or already unlocked). Distinct
+        // from "can afford" — you still need PLAY_COST credits to launch.
+        function isUnlocked(el) { return !el.hasAttribute('data-locked') || unlocked; }
+        function render() { items.forEach(function (el, n) { el.classList.toggle('sel', n === i); }); }
+
+        function move(d) {
+          var n = i;
+          do { n = (n + d + items.length) % items.length; } while (!isUnlocked(items[n]) && n !== i);
+          i = n; render();
+        }
+        function start() {
+          var el = items[i];
+          if (!isUnlocked(el)) { flashCoin(); return; }   // coin-gated: bank 10 first
+          if (credits < PLAY_COST) { flashCoin(); return; } // need a credit to play
+          spend(PLAY_COST);
+          var h = el.getAttribute('data-href');
+          if (h) window.location.href = h;
+        }
+        function flashCoin() {
+          coin.animate(
+            [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' },
+             { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
+            { duration: 220, iterations: 2 });
+        }
+        function renderCredits() {
+          coinLabel.textContent = credits > 0
+            ? credits + (credits === 1 ? ' CREDIT' : ' CREDITS')
+            : 'INSERT COIN';
+          coin.classList.toggle('credited', credits > 0);  // green when positive
+        }
+        function applyUnlock() {
+          if (!unlocked) return;
+          items.forEach(function (el) {
+            if (el.hasAttribute('data-locked')) { el.classList.remove('locked'); el.classList.add('unlocked'); }
+          });
+        }
+        function persist() { localStorage.setItem(CREDITS_KEY, String(credits)); }
+        function spend(n) { credits = Math.max(0, credits - n); persist(); renderCredits(); }
+        function insertCoin() {
+          credits += 1; persist();
+          if (!unlocked && credits >= UNLOCK_AT) {
+            unlocked = true; localStorage.setItem(UNLOCK_KEY, '1'); applyUnlock();
+          }
+          renderCredits();
+        }
+
+        coin.addEventListener('click', insertCoin);
+
+        document.addEventListener('keydown', function (e) {
+          switch (e.key) {
+            case 'ArrowUp': case 'w': case 'W': move(-1); e.preventDefault(); break;
+            case 'ArrowDown': case 's': case 'S': move(1); e.preventDefault(); break;
+            case 'Enter': case ' ': start(); e.preventDefault(); break;
+            case 'c': case 'C': insertCoin(); break;
+          }
+        });
+
+        items.forEach(function (el, n) {
+          el.addEventListener('mouseenter', function () { if (isUnlocked(el)) { i = n; render(); } });
+          el.addEventListener('click', function () {
+            if (!isUnlocked(el)) { flashCoin(); return; }
+            i = n; render(); start();
+          });
+        });
+
+        // Restore persisted state: show counter, reveal unlocked games.
         renderCredits();
+        applyUnlock();
+        render();
       }
 
-      coin.addEventListener('click', insertCoin);
-
-      document.addEventListener('keydown', function (e) {
-        switch (e.key) {
-          case 'ArrowUp': case 'w': case 'W': move(-1); e.preventDefault(); break;
-          case 'ArrowDown': case 's': case 'S': move(1); e.preventDefault(); break;
-          case 'Enter': case ' ': start(); e.preventDefault(); break;
-          case 'c': case 'C': insertCoin(); break;
-        }
-      });
-
-      items.forEach(function (el, n) {
-        el.addEventListener('mouseenter', function () { if (isUnlocked(el)) { i = n; render(); } });
-        el.addEventListener('click', function () {
-          if (!isUnlocked(el)) { flashCoin(); return; }
-          i = n; render(); start();
-        });
-      });
-
-      // Restore persisted state: show counter, reveal unlocked games.
-      renderCredits();
-      applyUnlock();
-      render();
+      // Build the menu from the published manifest, then wire it up.
+      fetch('games/games.json', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (data) {
+          var games = (data && data.games) || [];
+          menu.innerHTML = '';
+          games.forEach(function (g) { menu.appendChild(buildItem(g)); });
+          menu.removeAttribute('aria-busy');
+          var items = Array.prototype.slice.call(menu.querySelectorAll('.item'));
+          if (!items.length) { showError('NO GAMES FOUND'); return; }
+          init(items);
+        })
+        .catch(function (err) { showError('MENU UNAVAILABLE — ' + err.message); });
     })();
   </script>
 </body>
