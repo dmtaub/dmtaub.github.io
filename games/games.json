@@ -1,9 +1,40 @@
 {
   "games": [
-    { "id": "boxadon",    "name": "BOXADON",    "desc": "PUZZLER / PHASER",    "href": "games/boxadon/",    "locked": false },
-    { "id": "pewpew",     "name": "PEWPEW",      "desc": "SPACE / THREE.JS",    "href": "games/pewpew/",     "locked": false },
-    { "id": "ball-game",  "name": "BALL GAME",   "desc": "PHYSICS / THREE.JS",  "href": "games/ball-game/",  "locked": false, "src": "https://github.com/dmtaub/3d-fun" },
-    { "id": "orca",       "name": "ORCA",        "desc": "DEEP SEA / WASM",     "href": "games/orca/",       "locked": true },
-    { "id": "sun-weasel", "name": "SUN WEASEL",  "desc": "RAIL SHOOTER / WASM", "href": "games/sun-weasel/", "locked": true }
+    {
+      "id": "boxadon",
+      "name": "BOXADON",
+      "desc": "PUZZLER / PHASER",
+      "href": "games/boxadon/",
+      "locked": false
+    },
+    {
+      "id": "pewpew",
+      "name": "PEWPEW",
+      "desc": "SPACE / THREE.JS",
+      "href": "games/pewpew/",
+      "locked": false
+    },
+    {
+      "id": "ball-game",
+      "name": "BALL GAME",
+      "desc": "PHYSICS / THREE.JS",
+      "href": "games/ball-game/",
+      "locked": false,
+      "src": "https://github.com/dmtaub/3d-fun"
+    },
+    {
+      "id": "orca",
+      "name": "ORCA",
+      "desc": "DEEP SEA / WASM",
+      "href": "games/orca/",
+      "locked": true
+    },
+    {
+      "id": "sun-weasel",
+      "name": "SUN WEASEL",
+      "desc": "RAIL SHOOTER / WASM",
+      "href": "games/sun-weasel/",
+      "locked": true
+    }
   ]
 }
