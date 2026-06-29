@@ -153,6 +153,41 @@
         };
 
         // ─────────────────────────────────────────────────────────────────────────
+        // Stats — localStorage persistence keyed by activation source × result
+        // ─────────────────────────────────────────────────────────────────────────
+        const STATS_KEY = 'coinFlipper_stats';
+
+        function loadStats() {
+            try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch { return {}; }
+        }
+
+        function recordFlip(source, result) {
+            if (result !== 'Heads' && result !== 'Tails') return;
+            const s = loadStats();
+            const key = `${source}_${result.toLowerCase()}`;
+            s[key] = (s[key] || 0) + 1;
+            localStorage.setItem(STATS_KEY, JSON.stringify(s));
+        }
+
+        window.showStats = function () {
+            const s    = loadStats();
+            const bh   = s.button_heads  || 0;
+            const bt   = s.button_tails  || 0;
+            const ph   = s.pointer_heads || 0;
+            const pt   = s.pointer_tails || 0;
+            const bTot = bh + bt;
+            const pTot = ph + pt;
+            const tot  = bTot + pTot;
+            const pct  = (n, d) => d ? `${(n / d * 100).toFixed(1)}%` : '—';
+            console.table({
+                Button:  { Heads: bh,      Tails: bt,      Total: bTot,  'Heads%': pct(bh, bTot),  'Tails%': pct(bt, bTot)  },
+                Pointer: { Heads: ph,      Tails: pt,      Total: pTot,  'Heads%': pct(ph, pTot),  'Tails%': pct(pt, pTot)  },
+                Overall: { Heads: bh + ph, Tails: bt + pt, Total: tot,   'Heads%': pct(bh+ph, tot),'Tails%': pct(bt+pt, tot) },
+            });
+            return s;
+        };
+
+        // ─────────────────────────────────────────────────────────────────────────
         // DOM references
         // ─────────────────────────────────────────────────────────────────────────
         const canvas  = document.getElementById('canvas');
@@ -360,12 +395,14 @@
         // ─────────────────────────────────────────────────────────────────────────
         // Flip state machine
         // ─────────────────────────────────────────────────────────────────────────
-        // state:       'idle' while resting, 'flipping' while airborne/settling
-        // settleTimer: counts how long the coin has been continuously still
-        // flipTimer:   counts total time since launch (for fault detection)
-        let state       = 'idle';
-        let settleTimer = 0;
-        let flipTimer   = 0;
+        // state:         'idle' while resting, 'flipping' while airborne/settling
+        // settleTimer:   counts how long the coin has been continuously still
+        // flipTimer:     counts total time since launch (for fault detection)
+        // pendingSource: activation source for the in-flight flip ('button'|'pointer')
+        let state         = 'idle';
+        let settleTimer   = 0;
+        let flipTimer     = 0;
+        let pendingSource = 'button';
 
         // Snap the coin back to the default resting position and re-enable the button.
         function resetCoin() {
@@ -386,11 +423,12 @@
         // flipAxis       horizontal world-space unit vector for the primary spin axis;
         //                derived from the coin's settled orientation so the spin feels
         //                continuous with the pre-launch preview
-        function doFlip(gestureVelX = 0, gestureVelY = 0, launchX = 0, launchZ = 0, flipAxis = null) {
+        function doFlip(gestureVelX = 0, gestureVelY = 0, launchX = 0, launchZ = 0, flipAxis = null, source = 'button') {
             if (state !== 'idle') return;
-            state       = 'flipping';
-            settleTimer = 0;
-            flipTimer   = 0;
+            state         = 'flipping';
+            settleTimer   = 0;
+            flipTimer     = 0;
+            pendingSource = source;
             camZoomTarget = 1;
             flipBtn.disabled = true;
             resultEl.classList.remove('show');
@@ -533,7 +571,7 @@
                 // If the coin was lifted but the pointer stopped before release,
                 // still launch with a small minimum upward velocity.
                 const effectiveVelY = wasLifted ? Math.min(velY, -0.3) : velY;
-                doFlip(velX, effectiveVelY, pivot.position.x, pivot.position.z, drag.flipAxis);
+                doFlip(velX, effectiveVelY, pivot.position.x, pivot.position.z, drag.flipAxis, 'pointer');
             } else {
                 // No meaningful gesture — slide coin back to centre.
                 pivot.position.set(0, HH, 0);
@@ -632,7 +670,9 @@
                     if (settleTimer > C.settleDelay) {
                         state = 'idle';
                         coinBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
-                        resultEl.textContent = getResult();
+                        const result = getResult();
+                        recordFlip(pendingSource, result);
+                        resultEl.textContent = result;
                         resultEl.classList.add('show');
                         flipBtn.disabled    = false;
                         flipBtn.textContent = 'Flip again';
