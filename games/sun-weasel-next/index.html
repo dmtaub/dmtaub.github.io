@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sun Weasel</title>
+
+    <!--
+      The shipping page. ONE source of truth: `npm run build` copies this to
+      dist/index.html, the deploy copies dist/ wholesale, and the Playwright smoke
+      drives that same built page — so what is tested is what is served.
+
+      Three.js comes from the CDN via this importmap and is marked external in the
+      Vite build, which is what keeps the bundle a single ESM chunk. That single-chunk
+      constraint is not cosmetic: the encrypted deploy path (M2) encrypts exactly one
+      JS file and the loader injects exactly one module script.
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #05070d;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #help {
+        position: fixed;
+        left: 12px;
+        bottom: 10px;
+        color: #7e8ea8;
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        pointer-events: none;
+        user-select: none;
+      }
+      #help b {
+        color: #cddcf0;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="help">
+      <b>WASD</b> / arrows steer &nbsp;·&nbsp; <b>space</b> fire &nbsp;·&nbsp;
+      <b>V</b> cockpit / chase &nbsp;·&nbsp; <b>F</b> aim mode
+    </div>
+    <script type="module" src="./sunweasel.min.js"></script>
+  </body>
+</html>
