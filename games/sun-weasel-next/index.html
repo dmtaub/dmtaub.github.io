@@ -2,7 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      `viewport-fit=cover` lets the page reach under a notch, which is what makes
+      `env(safe-area-inset-*)` report anything but 0 — the touch layout reads those to
+      keep the chips off the home indicator. `user-scalable=no` and `maximum-scale=1`
+      are the pair that stops a double-tap or a two-finger spread from zooming the page
+      mid-run; on a normal document that would be an accessibility mistake, but this
+      one is a 3D canvas driven with both thumbs, and a zoomed canvas is simply broken.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <!--
+      Added to the home screen, these launch it without browser chrome — which on iOS
+      is the only way to get a genuinely fullscreen canvas, since the Fullscreen API
+      does not apply to non-video elements there.
+    -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#05070d" />
     <title>Sun Weasel</title>
 
     <!--
@@ -31,11 +51,22 @@
         padding: 0;
         overflow: hidden;
         background: #05070d;
+        /* Stops Android's pull-to-refresh and iOS rubber-banding. Without it a
+           downward drag on the left half of the screen reloads the game mid-run. */
+        overscroll-behavior: none;
+        -webkit-text-size-adjust: 100%;
       }
+      /* Fixed rather than `100vh`: on mobile Safari `100vh` is the height of the
+         viewport with the URL bar HIDDEN, so a `100vh` canvas is taller than what you
+         can see until you scroll — and the page is scroll-locked, so you cannot. The
+         canvas is sized from JS anyway; this only has to agree with it. */
       canvas {
         display: block;
-        width: 100vw;
-        height: 100vh;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
       }
       #help {
         position: fixed;
@@ -49,6 +80,13 @@
       #help b {
         color: #cddcf0;
         font-weight: 600;
+      }
+      /* The keyboard legend is noise on a device with no keyboard, and it sits exactly
+         where the left thumb goes. */
+      @media (pointer: coarse) {
+        #help {
+          display: none;
+        }
       }
     </style>
   </head>
