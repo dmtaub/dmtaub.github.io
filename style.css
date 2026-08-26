@@ -261,8 +261,11 @@ nav a:hover {
     color: var(--nav-hover);
 }
 
+/* Projects forces dark mode for its scroll experience, so the theme toggle is
+   hidden there; Philosophy only drops the left-side Utils pill and keeps the
+   dark/light toggle available. */
 body[data-section="projects"] nav .nav-pill,
-body[data-section="philosophy"] nav .nav-pill {
+body[data-section="philosophy"] nav .nav-pill.left-side {
     display: none;
 }
 
