@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amy's Level Editor</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <div id="storage-banner" class="banner" style="display:none"></div>
+
+  <div id="topbar">
+    <h1>Amy's Level Editor</h1>
+
+    <button id="btn-new" title="Start a brand new meal">New meal</button>
+    <button id="btn-duplicate" title="Make a copy of this meal">Duplicate</button>
+    <button id="btn-example" title="Open a copy of a level from the game">Add example</button>
+    <button id="btn-import" title="Open a level file from your computer">Open file…</button>
+    <button id="btn-open-project" title="Open a whole project: manifest.json plus all its level files">Open project…</button>
+
+    <span class="spacer"></span>
+
+    <button id="btn-undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+    <button id="btn-redo" title="Redo (Ctrl+Y)">↷ Redo</button>
+
+    <button id="btn-export-one" title="Save just this meal as a .json file">Save this meal</button>
+    <button id="btn-export-all" class="primary" title="Save every meal plus the manifest, as one zip for the game">Save everything for the game</button>
+
+    <span id="save-state"></span>
+  </div>
+
+  <div id="rail">
+    <div id="palette"></div>
+  </div>
+
+  <div id="stage">
+    <canvas id="canvas"></canvas>
+
+    <!-- The game itself, as a Godot web build in play/. Same origin as this
+         page, so the level goes across with postMessage — see js/playtest.js. -->
+    <div id="playtest" hidden>
+      <div id="playtest-bar">
+        <span id="playtest-status">Starting the game…</span>
+        <span class="spacer"></span>
+        <label id="playtest-live" title="Send the level over again whenever you change it">
+          <input type="checkbox" id="chk-live" checked>
+          Update as I build
+        </label>
+        <button id="btn-replay" title="Start this level again from the beginning">↻ Start again</button>
+        <button id="btn-stop-play" title="Back to building">✕ Stop</button>
+      </div>
+      <div id="playtest-body"></div>
+    </div>
+    <div id="stage-tools">
+      <button id="btn-zoom-out" title="Zoom out">−</button>
+      <button id="btn-zoom-in" title="Zoom in">+</button>
+      <button id="btn-fit" title="Fit the whole level on screen">Fit</button>
+      <button id="btn-grid" title="Show or hide the grid">Grid</button>
+      <button id="btn-preview" title="Look at the level the way the game does, with the background drifting behind you">Have a look</button>
+      <button id="btn-play" title="Play this level, right here">▶ Play</button>
+    </div>
+  </div>
+
+  <div id="side">
+    <div class="section">
+      <h2>Checks</h2>
+      <div id="validation"></div>
+    </div>
+
+    <div class="section">
+      <h2>Meals, in order</h2>
+      <div id="meal-list"></div>
+    </div>
+
+    <div class="section">
+      <div id="inspector"></div>
+    </div>
+  </div>
+
+  <div id="hintbar">
+    <span id="hint">Pick something on the left, then drag on the grid.</span>
+    <span class="keys">
+      <kbd>Space</kbd>+drag or middle-drag to move around ·
+      <kbd>scroll</kbd> to zoom ·
+      right-click to rub out ·
+      <kbd>Del</kbd> removes what's picked
+    </span>
+  </div>
+
+</div>
+
+<input type="file" id="file-input" accept=".json,application/json" multiple hidden>
+<input type="file" id="project-input" accept=".json,application/json" multiple hidden>
+<input type="file" id="picture-input" accept="image/*" multiple hidden>
+
+<!-- Generated from the game's own data. Re-run buildtools/gen_web_assets.py
+     after editing data/palette.json, redrawing art/, or changing levels/. -->
+<script src="js/palette.data.js"></script>
+<script src="js/assets.data.js"></script>
+<script src="js/examples.data.js"></script>
+
+<!-- Plain scripts, not modules, so the page also works when opened straight
+     off the filesystem. -->
+<script src="js/palette.js"></script>
+<script src="js/level.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/images.js"></script>
+<script src="js/zip.js"></script>
+<script src="js/render.js"></script>
+<script src="js/playtest.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
