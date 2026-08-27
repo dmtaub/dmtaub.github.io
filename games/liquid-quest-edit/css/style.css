@@ -299,6 +299,32 @@ body.previewing #hintbar { border-top-color: var(--gold); }
 #playtest-live input { width: 16px; height: 16px; }
 
 #playtest-body { flex: 1; min-height: 0; }
+
+/* What the game printed, in front of whoever is playing rather than behind a
+   devtools panel. Shut by default; opens itself when something goes wrong. */
+#playtest-log-wrap {
+  border-top: 1px solid var(--line);
+  background: #05060a;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+#playtest-log-wrap summary {
+  padding: 4px 10px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+#playtest-log-wrap[open] summary { color: var(--accent); }
+#playtest-log {
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 4px 10px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.35;
+}
+.log-line { white-space: pre-wrap; word-break: break-word; color: var(--muted); }
+.log-warn { color: var(--warn); }
+.log-error { color: var(--bad); }
 #playtest-frame {
   display: block;
   width: 100%;
