@@ -9,6 +9,10 @@
   let levels = [];          // [{id, name, order, planned, data}]
   let currentId = null;
   let saveTimer = null;
+  // Which palette groups are folded away, by their stable key. Read once at
+  // boot so the rail paints in the state it was left in rather than opening
+  // everything and snapping shut a moment later.
+  let foldedGroups = [];
 
   const $ = function (sel) { return document.querySelector(sel); };
   const el = function (tag, cls, text) {
@@ -23,17 +27,47 @@
     await window.Render.loadAll();
     const mode = await window.Storage.init();
     showStorageMode(mode);
+    foldedGroups = await window.Storage.getMeta("folded_groups", []) || [];
     await window.ImageLibrary.init();
+    await window.Layers.load();
 
     editor = new window.Editor($("#canvas"));
     editor.onChange = onDocChanged;
     editor.onSelect = renderInspector;
+    editor.onSelectionChanged = onSelectionChanged;
+    editor.onLayer = onLayerChanged;
     editor.onPreview = onPreviewChanged;
 
     // Handles for the browser tests in web_editor/test/. Harmless in normal use
     // and worth far more than keeping the module hermetic.
     window.__editor = editor;
     window.__revalidate = validate;
+    window.__buildPalette = buildPalette;
+    window.__renderMealList = renderMealList;
+
+    // The furniture goes up before anything is drawn into it: every render
+    // below writes into a panel body, and those bodies only have a home once
+    // Panels has put them in one.
+    await window.Panels.init([
+      { id: "layers", title: "Layers", body: "layer-panel", dock: "left" },
+      { id: "tools", title: "Tools", body: "tool-panel", dock: "left" },
+      { id: "items", title: "Items", body: "palette", dock: "left" },
+      { id: "meals", title: "Meals, in order", body: "meal-list", dock: "right" },
+      { id: "inspector", title: "Details", body: "inspector", dock: "right" },
+    ]);
+    const onPanelLayout = function () {
+      // A dock emptied, filled or resized moves the stage's edges, and the
+      // canvas is sized in pixels. Same one-frame wait as the play panel.
+      requestAnimationFrame(function () { editor.resize(); });
+      refreshResetButton();
+    };
+    window.Panels.onLayoutChange(onPanelLayout);
+    // Once now, because filling the docks is itself a layout change: the editor
+    // measured its canvas in its constructor, when both docks were still empty
+    // and `display: none`, so it took the full width of the window. Without
+    // this the grid draws to a backing store half again as wide as the box it
+    // is shown in — square tiles come out squashed until you resize the window.
+    onPanelLayout();
 
     buildPalette();
     buildToolbar();
@@ -136,6 +170,11 @@
       };
     });
     window.Playtest.onStateChange(refreshPlayButton);
+    window.Playtest.onBuildChange(refreshBuildNotice);
+    // Asked once at boot and again whenever the game is played, because the
+    // answer changes with every save to the game's source rather than with
+    // anything the editor does.
+    window.Playtest.buildStatus();
     window.Playtest.onResize(function () {
       // The canvas is sized in pixels, so it has to be told when the stage
       // splits. Deferred one frame: the layout hasn't happened yet.
@@ -163,6 +202,19 @@
       });
     });
 
+    $("#btn-rebuild-game").addEventListener("click", function () {
+      window.Playtest.rebuild().then(function () {
+        window.Playtest.buildStatus();
+      });
+    });
+
+    $("#btn-expand").addEventListener("click", function () {
+      window.Playtest.setExpanded(!window.Playtest.isExpanded());
+    });
+    $("#btn-fullscreen").addEventListener("click", function () {
+      window.Playtest.toggleFullscreen();
+    });
+
     $("#btn-stop-play").addEventListener("click", function () { window.Playtest.stop(); });
     $("#btn-replay").addEventListener("click", function () { window.Playtest.replay(); });
     $("#chk-live").addEventListener("change", function () {
@@ -172,11 +224,59 @@
     refreshPlayButton();
   }
 
+  // Nothing moved means nothing to put back — an enabled button that does
+  // nothing is a button you learn to ignore.
+  function refreshResetButton() {
+    const btn = $("#btn-reset-ui");
+    if (!btn || !window.Panels.isDefault) return;
+    const asItWas = window.Panels.isDefault();
+    btn.disabled = asItWas;
+    btn.title = asItWas
+      ? "Every panel is already where it started"
+      : "Put every panel back where it started, windows and all";
+  }
+
+  // play/ is a build, and a build goes out of date on its own — nothing in the
+  // editor makes it happen. Saying so beside Play is the difference between
+  // "my change didn't work" and "I haven't built it yet". Absent a dev server
+  // that can see the game's source, there is nothing to say and this stays
+  // hidden, which is also the deployed site's case.
+  function refreshBuildNotice() {
+    const wrap = $("#build-stale");
+    if (!wrap) return;
+    const state = window.Playtest.buildState();
+    const building = !!(state && state.building);
+    wrap.hidden = !state || (!state.stale && !building);
+    $("#build-stale-text").textContent = building
+      ? "Building the game…"
+      : "Game build is behind your changes";
+    $("#btn-rebuild-game").disabled = building;
+  }
+
   function refreshPlayButton() {
     const btn = $("#btn-play");
     const playing = window.Playtest.isPlaying();
     btn.textContent = playing ? "✕ Stop" : "▶ Play";
     btn.classList.toggle("on", playing);
+
+    // The two sizes say what pressing them does now, not what they are: the
+    // browser can leave full screen without the button being touched, so both
+    // labels are read back off the state rather than toggled in the handler.
+    const expanded = window.Playtest.isExpanded();
+    const full = window.Playtest.isFullscreen();
+    const expandBtn = $("#btn-expand");
+    expandBtn.textContent = expanded ? "⤡ Shrink" : "⤢ Expand";
+    expandBtn.classList.toggle("on", expanded);
+    expandBtn.title = expanded
+      ? "Give the grid its half of the window back"
+      : "Fill the editor window with the game";
+    const fullBtn = $("#btn-fullscreen");
+    fullBtn.textContent = full ? "⛶ Leave full screen" : "⛶ Full screen";
+    fullBtn.classList.toggle("on", full);
+    fullBtn.title = full
+      ? "Back to the editor window"
+      : "Take over the whole screen — Esc comes back";
+
     if (window.Playtest.isBuilt() === false) {
       btn.title = "The game hasn't been built in this folder yet — "
         + "run buildtools/build_web.py.";
@@ -186,29 +286,129 @@
   }
 
   // ---------------------------------------------------------------- palette
-  function buildPalette(opts) {
-    const rail = $("#palette");
-    rail.innerHTML = "";
+  // A group of placeable things that folds away and scrolls on its own, so a
+  // long list of props doesn't push the blocks off the bottom of the rail.
+  // Only these — Layers and Tools are short and always wanted, and folding
+  // them would cost a click for nothing.
+  //
+  // `key` is stored, so it has to be something that survives: the category's
+  // own id, not its label. Labels come out of palette.json and a relabel there
+  // would quietly orphan what was folded.
+  function foldableGroup(key, label) {
+    const group = el("div", "pal-group pal-foldable");
+    const head = el("button", "pal-title pal-fold");
+    const caret = el("span", "pal-caret");
+    head.appendChild(caret);
+    head.appendChild(el("span", null, label));
+    const items = el("div", "pal-items pal-scroll");
+    group.appendChild(head);
+    group.appendChild(items);
 
-    const tools = el("div", "pal-group");
-    tools.appendChild(el("div", "pal-title", "Tools"));
-    const toolRow = el("div", "pal-items");
+    function paint(folded) {
+      group.classList.toggle("folded", folded);
+      caret.textContent = folded ? "▸" : "▾";
+      head.setAttribute("aria-expanded", folded ? "false" : "true");
+      head.title = folded ? "Show " + label : "Fold " + label + " away";
+    }
+    paint(foldedGroups.indexOf(key) !== -1);
+
+    head.addEventListener("click", function () {
+      const folded = !group.classList.contains("folded");
+      paint(folded);
+      rememberFold(key, folded);
+    });
+    return { group: group, items: items };
+  }
+
+  function rememberFold(key, folded) {
+    const at = foldedGroups.indexOf(key);
+    if (folded && at === -1) foldedGroups.push(key);
+    else if (!folded && at !== -1) foldedGroups.splice(at, 1);
+    // Fire and forget: setMeta swallows its own failures, and a rail that
+    // forgets a fold is not worth blocking a click over.
+    window.Storage.setMeta("folded_groups", foldedGroups.slice());
+  }
+
+  // Landing on a brush inside a folded group would pick something invisible.
+  function revealGroupOf(button) {
+    const group = button && button.closest(".pal-foldable.folded");
+    if (group) group.querySelector(".pal-fold").click();
+  }
+
+  // Tools, Layers and Items are three panels, and a rebuild has to refresh all
+  // three: reaching for a brush can move you to another layer, and adding a
+  // picture puts a new button in Items.
+  function buildPalette(opts) {
+    refreshLayersPanel();
+    const moveBtn = buildToolsPanel();
+    buildItemsPanel(opts, moveBtn);
+  }
+
+  function buildToolsPanel() {
+    const tools = window.Panels.body("tools");
+    tools.innerHTML = "";
+
+    // All four are modes, not brushes: Look, Select, Move and Remove change
+    // what dragging on the grid means rather than what it puts down. Nothing
+    // in this panel is a thing you place, so nothing in it wears the square
+    // brush tile the Items rail uses — one row shape, one meaning.
+    //
+    // Built here rather than in buildToolbar because the panel is emptied and
+    // filled again — a listener bound once outside would die on the first
+    // rebuild.
+    const modeRow = el("div", "pal-modes");
+    const lookBtn = el("button", "mode-btn");
+    lookBtn.dataset.tool = "Look";
+    lookBtn.id = "btn-preview";
+    lookBtn.title = "Look at the level the way the game does, with the "
+      + "background drifting behind you";
+    lookBtn.addEventListener("click", function () {
+      // A mode, not a toggle: pressing the one you are already in does
+      // nothing, the same as pressing Move twice. You leave it by picking
+      // another tool, or with Escape.
+      if (!editor.preview) editor.setPreview(true);
+    });
+    const selectBtn = el("button", "mode-btn");
+    selectBtn.dataset.tool = "Select";
+    selectBtn.id = "btn-select";
+    selectBtn.textContent = "⬚ Select";
+    selectBtn.title = "Click a thing to pick it, or drag a box round part of the "
+      + "level to pick everything inside it.";
+    selectBtn.addEventListener("click", function () {
+      selectBrush({ kind: "select" }, selectBtn);
+    });
+    modeRow.appendChild(lookBtn);
+    modeRow.appendChild(selectBtn);
+
+    let moveBtn = null;
     [
-      { kind: "select", label: "Pick", icon: "↖", hint: "Click a thing to change its settings, or drag it somewhere else." },
-      { kind: "erase", label: "Rub Out", icon: "✕", hint: "Drag to remove blocks and things. Right-click does this too." },
+      { kind: "move", label: "Move", icon: "✥", hint: MOVE_HINT },
+      { kind: "erase", label: "Remove", icon: "✕", hint: "Drag over blocks and things to remove them; drag from blank space to box a lot and remove it all." },
     ].forEach(function (t) {
-      const b = paletteButton(t.icon, t.label, t.hint, null);
+      const b = el("button", "mode-btn");
+      b.dataset.tool = t.label;
+      b.textContent = t.icon + " " + t.label;
+      b.title = t.hint;
+      if (t.kind === "move") moveBtn = b;
       b.addEventListener("click", function () {
         selectBrush({ kind: t.kind }, b);
       });
-      toolRow.appendChild(b);
+      modeRow.appendChild(b);
     });
-    tools.appendChild(toolRow);
-    rail.appendChild(tools);
+    tools.appendChild(modeRow);
 
-    const blocks = el("div", "pal-group");
-    blocks.appendChild(el("div", "pal-title", "Blocks"));
-    const blockRow = el("div", "pal-items");
+    // A rebuild mid-look must not leave the button saying the opposite of what
+    // the editor is doing.
+    paintLookButton(editor.preview, lookBtn);
+    return moveBtn;
+  }
+
+  function buildItemsPanel(opts, moveBtn) {
+    const rail = window.Panels.body("items");
+    rail.innerHTML = "";
+
+    const blocks = foldableGroup("blocks", "Blocks");
+    const blockRow = blocks.items;
     window.Palette.tiles.forEach(function (t) {
       const b = paletteButton(null, t.label, t.hint, { tile: t.id });
       b.addEventListener("click", function () {
@@ -216,12 +416,10 @@
       });
       blockRow.appendChild(b);
     });
-    blocks.appendChild(blockRow);
-    rail.appendChild(blocks);
+    rail.appendChild(blocks.group);
 
-    const bg = el("div", "pal-group");
-    bg.appendChild(el("div", "pal-title", "Background"));
-    const bgRow = el("div", "pal-items");
+    const bg = foldableGroup("background", "Background");
+    const bgRow = bg.items;
     window.Palette.decor.forEach(function (item) {
       const b = paletteButton(null, item.label, item.hint, { sprite: item.sprite });
       b.addEventListener("click", function () {
@@ -234,7 +432,7 @@
     // props, because from where she's standing they are the same kind of thing.
     window.ImageLibrary.list().forEach(function (record) {
       const b = paletteButton(null, pictureLabel(record),
-        "A picture you added. Click to drop it, then use Pick to move it.",
+        "A picture you added. Click to drop it, then use Move to shift it.",
         { image: window.ImageLibrary.element(record.id) });
       b.classList.add("pal-picture");
       b.classList.add("pal-picture-" + record.id);
@@ -257,13 +455,11 @@
     add.addEventListener("click", function () { $("#picture-input").click(); });
     bgRow.appendChild(add);
 
-    bg.appendChild(bgRow);
-    rail.appendChild(bg);
+    rail.appendChild(bg.group);
 
     window.Palette.byCategory().forEach(function (group) {
-      const g = el("div", "pal-group");
-      g.appendChild(el("div", "pal-title", group.label));
-      const row = el("div", "pal-items");
+      const g = foldableGroup(group.id, group.label);
+      const row = g.items;
       group.items.forEach(function (item) {
         const b = paletteButton(null, item.label, item.hint, { sprite: item.icon });
         b.addEventListener("click", function () {
@@ -271,22 +467,210 @@
         });
         row.appendChild(b);
       });
-      g.appendChild(row);
-      rail.appendChild(g);
+      rail.appendChild(g.group);
     });
 
     // Rebuilt after importing a picture: land on that picture rather than
     // dumping you back on the default brush mid-thought.
     if (opts && opts.selectPicture && window.ImageLibrary.has(opts.selectPicture)) {
       const btn = rail.querySelector(".pal-picture-" + opts.selectPicture);
+      revealGroupOf(btn);
       selectBrush(pictureBrush(opts.selectPicture), btn);
       return;
     }
 
-    // Default brush: the block you build everything out of.
-    const groundBtn = rail.querySelectorAll(".pal-group")[1]
-      .querySelector(".pal-btn");
-    selectBrush({ kind: "tile", id: 1 }, groundBtn);
+    // Default tool: Move. Landing on a brush means the first drag on the grid
+    // builds something you didn't ask for; Move only ever picks and shifts what
+    // is already there, so an accidental drag is harmless.
+    selectBrush({ kind: "move" }, moveBtn);
+  }
+
+  // ---------------------------------------------------------------- layers
+  // The Layers panel — the DOM half. What a layer edit actually means lives in
+  // js/layers.js; see docs/LAYERS.md.
+
+  function refreshLayersPanel() {
+    const panel = window.Panels.body("layers");
+    if (panel) buildLayersPanel(panel);
+  }
+
+  // Every meal's props, the live document standing in for its own record — so a
+  // count or a reassignment covers the whole project, not just what's open.
+  function allDecorDocs() {
+    return levels.map(function (record) {
+      return {
+        name: record.name || record.id,
+        decor: record.id === currentId
+          ? editor.doc.decor
+          : ((record.data && record.data.decor) || []),
+        record: record,
+      };
+    });
+  }
+
+  function saveTouchedDocs(touched) {
+    touched.forEach(function (d) {
+      if (d.record.id === currentId) editor.onChange();
+      else window.Storage.saveLevel(d.record);
+    });
+  }
+
+  function buildLayersPanel(container) {
+    container.innerHTML = "";
+    // No heading of its own any more: the panel it sits in is called Layers.
+
+    const row = el("div", "layer-row");
+    const pick = el("select", "layer-pick");
+    pick.id = "layer-pick";
+    pick.title = "Which plane of the level you're working on. Everything on the "
+      + "others is faded, and left alone. All works on every plane at once.";
+    // All first, and not from palette.json: it isn't a plane the game knows
+    // about, it's the view of every plane at once. See Editor.ALL_LAYERS.
+    const allOpt = el("option", null, "All");
+    allOpt.value = window.Editor.ALL_LAYERS;
+    pick.appendChild(allOpt);
+    window.Palette.layers.forEach(function (l) {
+      const o = el("option", null, l.label);
+      o.value = l.id;
+      pick.appendChild(o);
+    });
+    pick.value = editor.activeLayer;
+    pick.addEventListener("change", function () {
+      // Picking All by hand is not a plane to be given back to, so it doesn't
+      // count as a choice to protect.
+      layerPickedByHand = pick.value !== window.Editor.ALL_LAYERS;
+      editor.setLayer(pick.value);   // onLayerChanged rebuilds this panel
+    });
+    row.appendChild(pick);
+
+    // Next to the picker because it's about the same thing: how the planes
+    // you're not working on are shown. Ticked, they come up to full strength so
+    // you can line this one up against them.
+    const showOther = el("label", "layer-showother");
+    const box = el("input");
+    box.type = "checkbox";
+    // On All there are no other layers to fade, so the tick has nothing to say:
+    // it reads as already on, and can't be turned off. The editor's own flag is
+    // left alone, so whatever it was set to comes back with the next plane.
+    const onAll = editor.isAllLayers();
+    box.checked = onAll || editor.showOtherLayers;
+    box.disabled = onAll;
+    showOther.title = onAll
+      ? "Nothing is faded on All — every layer is already at full strength."
+      : "Show the other layers at full opacity instead of faded.";
+    box.addEventListener("change", function () {
+      editor.showOtherLayers = box.checked;
+      editor.draw();
+    });
+    showOther.appendChild(box);
+    showOther.appendChild(document.createTextNode(" Show others"));
+    row.appendChild(showOther);
+    container.appendChild(row);
+
+    const active = window.Palette.layer(editor.activeLayer);
+    if (onAll) {
+      container.appendChild(el("div", "layer-note",
+        "Every plane at once. Nothing is faded, and a click or a box picks up "
+        + "whatever it lands on — blocks, things and scenery together. "
+        + "Pick a plane to work on just that one."));
+    } else if (active && window.Layers.isEditable(active.id)) {
+      container.appendChild(layerDepthEditor(active));
+    } else if (active) {
+      container.appendChild(el("div", "layer-note",
+        active.label + " is a fixed layer \u2014 one plane for all your "
+        + (active.holds === "tile" ? "blocks." : "things.")));
+    }
+
+    const add = el("button", "layer-add", "\uff0b New background layer");
+    add.title = "Add another parallax plane behind the ones you have.";
+    add.addEventListener("click", addLayer);
+    container.appendChild(add);
+  }
+
+  // Generated from Layers.DEPTH_FIELDS, so a new knob is an entry there rather
+  // than another hand-built input here.
+  function layerDepthEditor(layer) {
+    const wrap = el("div", "layer-depth");
+    window.Layers.DEPTH_FIELDS.forEach(function (field) {
+      const l = el("label", "layer-field");
+      l.appendChild(el("span", "layer-field-label", field.label));
+      const input = el("input");
+      input.type = "number";
+      if (field.min !== undefined) input.min = field.min;
+      if (field.max !== undefined) input.max = field.max;
+      input.step = field.step;
+      input.value = layer[field.key];
+      input.title = field.help;
+      input.addEventListener("change", function () {
+        const applied = window.Layers.setField(layer.id, field.key, input.value);
+        input.value = applied === null ? layer[field.key] : applied;
+        editor.draw();   // the preview reads parallax and z off the layer
+      });
+      l.appendChild(input);
+      wrap.appendChild(l);
+    });
+
+    const del = el("button", "layer-delete", "Delete this layer");
+    del.addEventListener("click", function () { deleteLayer(layer.id); });
+    wrap.appendChild(del);
+    return wrap;
+  }
+
+  function addLayer() {
+    const name = (window.prompt("Name this background layer", "Background") || "").trim();
+    if (!name) return;
+    const layer = window.Layers.add(name);
+    // Land on it, which also rebuilds the panel. If somehow already there,
+    // rebuild anyway so the new option shows.
+    if (!editor.setLayer(layer.id)) refreshLayersPanel();
+  }
+
+  function deleteLayer(id) {
+    const layer = window.Palette.layer(id);
+    if (!layer || !window.Layers.isEditable(id)) return;
+
+    if (!window.Layers.canDelete(id)) {
+      modal("Keep at least two", function (body) {
+        body.appendChild(el("p", null,
+          "The game needs at least two background layers, so props can sit at "
+          + "different distances. Add another before removing this one."));
+      }, [{ label: "OK", primary: true }]);
+      return;
+    }
+
+    const fallback = window.Layers.nearest(id);
+    const usage = window.Layers.usage(id, allDecorDocs());
+
+    const doDelete = function () {
+      saveTouchedDocs(window.Layers.reassign(id, fallback.id, allDecorDocs()));
+      window.Layers.remove(id);
+      // Or activeLayer dangles, layerHolds() goes null, and every tool
+      // silently does nothing. The editor put you there, not you, so Select or
+      // Move will hand All back rather than stranding you on a fallback.
+      if (editor.activeLayer === id) {
+        layerPickedByHand = false;
+        editor.setLayer(fallback.id);
+      }
+      refreshLayersPanel();
+      editor.draw();
+    };
+
+    if (usage.count === 0) { doDelete(); return; }
+
+    modal("Delete \u201c" + layer.label + "\u201d?", function (body) {
+      body.appendChild(el("p", null,
+        usage.count + " background thing" + (usage.count === 1 ? " sits" : "s sit")
+        + " on this layer, across " + usage.meals.length
+        + " meal" + (usage.meals.length === 1 ? "" : "s")
+        + ". Deleting it moves " + (usage.count === 1 ? "it" : "them")
+        + " to \u201c" + fallback.label + "\u201d."));
+      body.appendChild(el("p", "muted", usage.meals.join(", ")));
+      body.appendChild(el("p", "modal-warn",
+        "Removing a layer can't be undone \u2014 layers aren't part of a meal."));
+    }, [
+      { label: "Cancel" },
+      { label: "Delete layer", danger: true, onClick: doDelete },
+    ]);
   }
 
   // ---------------------------------------------------------------- pictures
@@ -341,7 +725,7 @@
         }, [{ label: "OK", primary: true }]);
       } else if (last) {
         $("#hint").textContent =
-          "Click on the grid to drop the picture. Use Pick to move or resize it.";
+          "Click on the grid to drop the picture. Use Move to shift it, Select to resize it.";
       }
     });
   }
@@ -414,17 +798,65 @@
     return b;
   }
 
+  // Whether the plane you are on is one you chose from the picker, or one the
+  // editor moved you to when you reached for a brush. Only the editor's own
+  // moves are undone — see returnsToAll.
+  let layerPickedByHand = false;
+
+  // Select and Move place nothing, so they have no plane to need: reaching for
+  // one gives All back. Remove is deliberately not in here — it destroys, and
+  // silently widening an eraser from "blocks" to "everything under it" is the
+  // exact surprise layers exist to prevent.
+  function returnsToAll(brush) {
+    return brush.kind === "select" || brush.kind === "move";
+  }
+
+  // Which plane a brush works on. Reaching for a Counter while looking at the
+  // Background layer should take you to Blocks, not quietly do nothing.
+  function layerForBrush(brush) {
+    if (brush.kind === "tile") return window.Palette.defaultLayerFor("tile");
+    if (brush.kind === "entity") return window.Palette.defaultLayerFor("entity");
+    if (brush.kind === "decor") {
+      // Already on a background layer? Stay there — that's the one being built.
+      return editor.layerHolds() === "decor"
+        ? editor.activeLayer : window.Palette.defaultLayerFor("decor");
+    }
+    return null;   // Select, Move and Remove work on whatever you're looking at
+  }
+
   function selectBrush(brush, button) {
-    editor.setBrush(brush);
-    document.querySelectorAll(".pal-btn").forEach(function (b) {
-      b.classList.remove("active");
-    });
-    if (button) button.classList.add("active");
+    const want = layerForBrush(brush);
+    if (want) {
+      // Only a plane change counts as the editor moving you: reaching for a
+      // Counter while already on Blocks because you said so is not a move.
+      if (editor.setLayer(want)) layerPickedByHand = false;
+    } else if (returnsToAll(brush) && !layerPickedByHand
+        && !editor.isAllLayers() && !editor.hasSelection()) {
+      // Not while something is picked: that selection belongs to the plane it
+      // was made on, and setLayer would drop it.
+      editor.setLayer(window.Editor.ALL_LAYERS);
+    }
+
+    // Reaching for Remove with a boxful picked means the same thing as pressing
+    // Del: rub that lot out. Before setBrush, which drops the selection — and
+    // one step, so the same Ctrl+Z brings all of it back.
+    const rubbedOut = brush.kind === "erase" && editor.hasSelection()
+      && editor.deleteSelection();
+
+    editor.setBrush(brush);   // which drops out of Look, if you were in it
+    clearActiveButtons();
+    if (button) {
+      button.classList.add("active");
+      activeBrushButton = button;
+    }
     if (brush.kind === "select") {
-      $("#hint").textContent =
-        "Click something on the grid to change its settings. Drag to move it.";
+      $("#hint").textContent = SELECT_HINT;
+    } else if (brush.kind === "move") {
+      $("#hint").textContent = MOVE_HINT;
     } else if (brush.kind === "erase") {
-      $("#hint").textContent = "Drag on the grid to rub things out.";
+      $("#hint").textContent = rubbedOut
+        ? "Removed. Ctrl+Z brings it back. Drag on the grid to remove more."
+        : "Drag on the grid to remove things.";
     } else {
       const name = brush.kind === "entity"
         ? window.Palette.label(brush.id)
@@ -432,7 +864,7 @@
         ? (brush.id === "image" ? "picture" : window.Palette.decorLabel(brush.id))
         : (window.Palette.tile(brush.id) || {}).label;
       $("#hint").textContent = brush.kind === "decor"
-        ? "Click to drop a " + name + " anywhere — background things aren't on the grid. Use Pick to drag it."
+        ? "Click to drop a " + name + " anywhere — background things aren't on the grid. Use Move to drag it."
         : "Drag on the grid to place " + name + ".";
     }
   }
@@ -454,10 +886,6 @@
     });
     $("#btn-grid").classList.add("on");
 
-    $("#btn-preview").addEventListener("click", function () {
-      editor.setPreview(!editor.preview);
-    });
-
     $("#btn-new").addEventListener("click", function () {
       const doc = starterLevel();
       doc.name = "New Meal";
@@ -467,20 +895,99 @@
     $("#btn-duplicate").addEventListener("click", duplicateCurrent);
     $("#btn-example").addEventListener("click", addExample);
 
-    $("#btn-export-one").addEventListener("click", exportCurrent);
     $("#btn-export-all").addEventListener("click", exportEverything);
+
+    $("#btn-new-project").addEventListener("click", newProject);
+
+    $("#btn-reset-ui").addEventListener("click", function () {
+      window.Panels.reset();
+    });
+    refreshResetButton();
   }
 
   // Preview isn't a play mode — nothing moves on its own and nothing can be
   // changed. It's here to answer one question you otherwise can't answer
   // without exporting: what does that background actually do when you walk?
+  const SELECT_HINT =
+    "Click a thing to pick it, or drag a box to pick everything inside. "
+    + "Del removes what's picked.";
+  const MOVE_HINT =
+    "Click to select, drag empty space to box select, drag object to move, right drag to pan.";
+
+  // The hint bar has to keep saying something true: "Del removes the lot" is a
+  // lie the moment the box comes up empty or the lot has just been deleted.
+  // Falls through to whatever the current tool said when nothing is picked and
+  // the marquee isn't the tool — undo can clear a selection without meaning to
+  // change what you were doing.
+  function onSelectionChanged(count) {
+    if (editor.preview) return;      // the looking hint owns the bar in there
+    if (count > 0) {
+      $("#hint").textContent = count + (count === 1 ? " thing" : " things")
+        + " picked. Del removes the lot; Escape lets go.";
+    } else if (editor.brush.kind === "select") {
+      $("#hint").textContent = SELECT_HINT;
+    }
+  }
+
+  // A brush can move you to another layer, so the picker follows the editor
+  // rather than being the only place the choice is recorded.
+  function onLayerChanged(id) {
+    // The whole panel, not just the picker: the depth fields below it belong to
+    // whichever layer is active, and a background layer has them while Blocks
+    // and Things don't.
+    refreshLayersPanel();
+    const layer = window.Palette.layer(id);
+    if (id === window.Editor.ALL_LAYERS) {
+      $("#hint").textContent = "Working on every layer at once. Nothing is "
+        + "faded, and anything can be picked up.";
+    } else if (layer) {
+      $("#hint").textContent = "Working on " + layer.label
+        + ". Everything on the other layers is faded, and left alone.";
+    }
+    renderInspector();
+  }
+
+  // Re-queried rather than held: the button lives in the rail now, and the rail
+  // is thrown away and rebuilt whenever the palette changes.
+  //
+  // It wears `active` like every other mode, and keeps its name whether or not
+  // you are in it. It used to say "Done" and light up alongside whichever brush
+  // you had before, which read as two tools being on at once.
+  function paintLookButton(on, btn) {
+    const b = btn || $("#btn-preview");
+    if (!b) return;
+    b.classList.toggle("active", on);
+    b.textContent = "✋ Look";
+  }
+
+  // The button of whatever brush you were on, so leaving Look can put the
+  // highlight back where it was. Held rather than looked up: an Items tile has
+  // nothing on it that names the brush it carries.
+  let activeBrushButton = null;
+
+  function clearActiveButtons() {
+    // Across every document: Tools and Items can be in windows of their own,
+    // and a stale highlight in one of those is still a stale highlight.
+    window.Panels.roots().forEach(function (root) {
+      root.querySelectorAll(".pal-btn, .mode-btn").forEach(function (b) {
+        b.classList.remove("active");
+      });
+    });
+  }
+
   function onPreviewChanged(on) {
     document.body.classList.toggle("previewing", on);
-    $("#btn-preview").classList.toggle("on", on);
-    $("#btn-preview").textContent = on ? "Stop looking" : "Have a look";
+    clearActiveButtons();
+    paintLookButton(on);
+    // Leaving Look puts you back on the tool you had, so the panel says what
+    // the next drag will do rather than nothing at all.
+    if (!on && activeBrushButton && activeBrushButton.isConnected) {
+      activeBrushButton.classList.add("active");
+    }
     $("#hint").textContent = on
       ? "Drag to look around the level — the background drifts the way it will "
-        + "in the game. Scroll to zoom. Nothing here changes the level."
+        + "in the game. Scroll to zoom. Nothing here changes the level; pick "
+        + "another tool, or press Escape, to carry on building."
       : "Pick something on the left, then drag on the grid.";
     renderInspector(null);
   }
@@ -503,16 +1010,16 @@
         ev.preventDefault();
         editor.redo();
         refresh();
+      } else if (ev.key === "Escape" && editor.hasSelection()) {
+        ev.preventDefault();
+        editor.clearSelection();
+        editor.draw();
       } else if (ev.key === "Delete" || ev.key === "Backspace") {
-        if (editor.selected) {
+        // One path for one thing and for a boxful: the selection is the same
+        // thing either way now.
+        if (editor.hasSelection()) {
           ev.preventDefault();
-          editor.pushUndo();
-          if (isDecor(editor.selected)) editor.doc.removeDecor(editor.selected);
-          else editor.doc.removeEntity(editor.selected);
-          editor.selected = null;
-          editor.draw();
-          renderInspector(null);
-          onDocChanged();
+          editor.deleteSelection();
         }
       }
     });
@@ -543,6 +1050,56 @@
     if (!opts || !opts.silent) renderMealList();
     await openLevel(doc.id);
     renderMealList();
+  }
+
+  // The other end of "Open project": everything goes, and you start on one
+  // empty meal. Destructive and irreversible — Ctrl+Z is per-meal — so it asks
+  // first, in the same shape the open-a-project warning uses.
+  //
+  // Imported pictures survive it, exactly as they survive opening a project:
+  // they are files off someone's computer that may not exist anywhere else,
+  // and they are visible and deletable in the Background row. The background
+  // planes don't — they are the project's own, so a new project gets the
+  // standard ones back.
+  function newProject() {
+    modal("Start a new project?", function (body) {
+      body.appendChild(el("p", null,
+        "This clears all " + levels.length + " meal"
+        + (levels.length === 1 ? "" : "s") + " and starts again with one empty "
+        + "one. The background planes go back to the standard ones."));
+      body.appendChild(el("p", "muted",
+        "Pictures you imported stay in the editor — they're your files, and "
+        + "nothing else here has a copy."));
+      body.appendChild(el("p", "modal-warn",
+        "There's no undo for this. Use \u201cSave project\u201d first if there's "
+        + "anything here you want to keep."));
+    }, [
+      { label: "Cancel" },
+      { label: "Clear it all", danger: true, onClick: startFreshProject },
+    ]);
+  }
+
+  async function startFreshProject() {
+    for (let i = 0; i < levels.length; i++) {
+      await window.Storage.deleteLevel(levels[i].id);
+    }
+    levels = [];
+    currentId = null;
+    await window.Layers.forget();
+    // A plane that no longer exists leaves activeLayer dangling, layerHolds()
+    // null, and every tool silently doing nothing — the same trap as deleting
+    // a layer by hand. Back to All, which always exists.
+    if (editor.activeLayer !== window.Editor.ALL_LAYERS
+        && !window.Palette.layer(editor.activeLayer)) {
+      layerPickedByHand = false;
+      editor.setLayer(window.Editor.ALL_LAYERS);
+    }
+    refreshLayersPanel();
+    const doc = starterLevel();
+    doc.name = "New Meal";
+    doc.id = "new_meal";
+    await createLevel(doc);
+    $("#hint").textContent = "A new project, with one empty meal. Build away.";
   }
 
   async function openLevel(id) {
@@ -620,7 +1177,10 @@
   }
 
   function renderMealList() {
-    const list = $("#meal-list");
+    // The rows only. The panel body also holds the buttons that make meals,
+    // and they are markup rather than something rebuilt here — clearing the
+    // whole body would take them with it.
+    const list = $("#meal-rows");
     list.innerHTML = "";
     levels.forEach(function (record, i) {
       const row = el("div", "meal" + (record.id === currentId ? " current" : ""));
@@ -642,9 +1202,15 @@
       const del = el("button", "mini danger", "🗑");
       del.title = "Delete this meal";
       del.addEventListener("click", function () { deleteLevel(record.id); });
+      // A second line under the three little buttons, in the room the meal's
+      // own name leaves when it wraps — which it usually does.
+      const out = el("button", "mini meal-export", "Export");
+      out.title = "Save this one meal as a .json file";
+      out.addEventListener("click", function () { exportMeal(record); });
       actions.appendChild(up);
       actions.appendChild(down);
       actions.appendChild(del);
+      actions.appendChild(out);
       row.appendChild(actions);
 
       list.appendChild(row);
@@ -652,12 +1218,34 @@
   }
 
   // ---------------------------------------------------------------- inspector
+  // One undo step per field, not one per keystroke. Every inspector field opens
+  // a step the first time it is touched and keeps using it while you carry on
+  // typing into that same field; the tag is dropped when the selection changes
+  // or the next gesture on the grid begins, so moving to another field — or to
+  // another thing — starts a fresh step.
+  //
+  // Fields used to mutate with no undo step at all, which made typing in here
+  // the one thing in the editor you couldn't take back.
+  function editStep(tag) {
+    editor.pushUndoFor("field:" + tag);
+  }
+
+  // Every panel ends with the same button; only its wording changes, and they
+  // all go through the one delete path.
+  function removeButton(label) {
+    const b = el("button", "wide danger", label);
+    b.addEventListener("click", function () { editor.deleteSelection(); });
+    return b;
+  }
+
   function isDecor(obj) {
     return !!obj && editor.doc.decor.indexOf(obj) !== -1;
   }
 
-  function renderInspector(entity) {
-    const panel = $("#inspector");
+  // Reads the editor's selection rather than taking a thing: what the panel
+  // shows depends on how much is picked, not just on which one thing is.
+  function renderInspector() {
+    const panel = window.Panels.body("inspector");
     panel.innerHTML = "";
 
     if (editor && editor.preview) {
@@ -671,6 +1259,17 @@
       return;
     }
 
+    const entity = editor ? editor.selected : null;
+
+    // Anything picked that isn't one entity or prop — a crowd, or a single
+    // block, which has no settings — gets the group panel. Without this a
+    // picked block would silently show the level's own settings, as if nothing
+    // were picked at all.
+    if (editor && editor.hasSelection() && !entity) {
+      renderGroupInspector(panel);
+      return;
+    }
+
     if (isDecor(entity)) {
       renderDecorInspector(panel, entity);
       return;
@@ -681,9 +1280,11 @@
       const hint = window.Palette.hint(entity.type);
       if (hint) panel.appendChild(el("p", "muted", hint));
       panel.appendChild(field("Across", entity.x, "int", function (v) {
+        editStep("x");
         entity.x = v | 0; editor.draw(); onDocChanged();
       }));
       panel.appendChild(field("Down", entity.y, "int", function (v) {
+        editStep("y");
         entity.y = v | 0; editor.draw(); onDocChanged();
       }));
 
@@ -699,6 +1300,7 @@
         const spec = params[key];
         const value = entity.params[key] === undefined ? spec.default : entity.params[key];
         return field(spec.label || key, value, spec.type, function (v) {
+          editStep("param:" + key);
           entity.params[key] = v;
           editor.draw();
           onDocChanged();
@@ -716,19 +1318,12 @@
       }
 
       if (params.dialogue) {
-        panel.appendChild(buildDialogueEditor(entity));
+        panel.appendChild(params.dialogue.editor === "button"
+          ? dialogueButton(entity, params.dialogue)
+          : buildDialogueEditor(entity, params.dialogue));
       }
 
-      const remove = el("button", "wide danger", "Remove this");
-      remove.addEventListener("click", function () {
-        editor.pushUndo();
-        editor.doc.removeEntity(entity);
-        editor.selected = null;
-        editor.draw();
-        renderInspector(null);
-        onDocChanged();
-      });
-      panel.appendChild(remove);
+      panel.appendChild(removeButton("Remove this"));
       return;
     }
 
@@ -775,34 +1370,76 @@
   // Conditions are what let one person say different things at different points
   // in the story without any code: line one sets a name, line two is marked
   // "unless" that name.
-  function buildDialogueEditor(entity) {
+  // `rerender` is how a card redraws itself after add/move/delete. It is the
+  // inspector's own redraw when the editor sits in the panel, and the modal's
+  // when it doesn't — without it a line added inside the modal would rebuild
+  // the panel behind it and never show up.
+  function buildDialogueEditor(entity, spec, rerender) {
+    spec = spec || {};
+    const redraw = rerender || function () { renderInspector(entity); };
     if (!Array.isArray(entity.params.dialogue)) entity.params.dialogue = [];
     const lines = entity.params.dialogue;
 
     const box = el("div", "dialogue");
-    box.appendChild(el("h3", "sub-head", "What they say"));
+    box.appendChild(el("h3", "sub-head", spec.label || "What they say"));
 
     if (!lines.length) {
-      box.appendChild(el("p", "muted",
-        "Nothing yet — they'll fall back to whatever they say by default."));
+      box.appendChild(el("p", "muted", spec.empty_hint
+        || "Nothing yet — they'll fall back to whatever they say by default."));
     }
 
     lines.forEach(function (line, index) {
-      box.appendChild(dialogueLineCard(entity, line, index));
+      box.appendChild(dialogueLineCard(entity, line, index, redraw));
     });
 
     const add = el("button", "wide", "+ Add a line");
     add.addEventListener("click", function () {
       editor.pushUndo();
       lines.push(window.Palette.defaultDialogueLine());
-      renderInspector(entity);
+      redraw();
       onDocChanged();
     });
     box.appendChild(add);
     return box;
   }
 
-  function dialogueLineCard(entity, line, index) {
+  // Dialogue behind a button rather than in the panel. Today the button opens
+  // the same line editor in a modal; the plan is for it to open a dialogue-tree
+  // editor (Yarn Spinner) instead — see docs/NEXT-STEPS.md.
+  function dialogueButton(entity, spec) {
+    if (!Array.isArray(entity.params.dialogue)) entity.params.dialogue = [];
+    const count = entity.params.dialogue.length;
+
+    const box = el("div", "dialogue");
+    box.appendChild(el("h3", "sub-head", spec.label || "What it says"));
+    box.appendChild(el("p", "muted", count
+      ? (count === 1 ? "One line written." : count + " lines written.")
+      : (spec.empty_hint || "Nothing written on it yet.")));
+
+    const open = el("button", "wide", count ? "Change what it says…" : "Write what it says…");
+    open.addEventListener("click", function () {
+      openDialogueModal(entity, spec);
+    });
+    box.appendChild(open);
+    return box;
+  }
+
+  function openDialogueModal(entity, spec) {
+    modal(spec.label || "What it says", function (body) {
+      // Redraw the panel behind as well as the modal: the button's summary
+      // counts the lines, and the modal can also be left by Escape or by
+      // clicking outside it, neither of which runs Done's handler.
+      const draw = function (rebuiltFor) {
+        body.innerHTML = "";
+        body.appendChild(buildDialogueEditor(entity, spec, draw));
+        if (rebuiltFor !== "first") renderInspector();
+      };
+      draw("first");
+    }, [{ label: "Done", primary: true }]);
+  }
+
+  function dialogueLineCard(entity, line, index, rerender) {
+    const redraw = rerender || function () { redraw(); };
     const lines = entity.params.dialogue;
     const card = el("div", "dlg-line");
 
@@ -818,7 +1455,7 @@
       const tmp = lines[index];
       lines[index] = lines[to];
       lines[to] = tmp;
-      renderInspector(entity);
+      redraw();
       onDocChanged();
     };
     const up = el("button", "mini", "↑");
@@ -832,7 +1469,7 @@
     del.addEventListener("click", function () {
       editor.pushUndo();
       lines.splice(index, 1);
-      renderInspector(entity);
+      redraw();
       onDocChanged();
     });
     head.appendChild(up);
@@ -842,6 +1479,7 @@
 
     const specs = window.Palette.dialogueLineParams;
     const set = function (key, value) {
+      editStep("dlg:" + index + ":" + key);
       line[key] = value;
       onDocChanged();
     };
@@ -869,7 +1507,7 @@
       details.appendChild(field(specs.give_kind.label, line.give_kind || "none",
         "enum", function (v) {
           set("give_kind", v);
-          renderInspector(entity);   // showing/hiding the id field
+          redraw();   // showing/hiding the id field
         }, specs.give_kind));
     }
     if (specs.give_id && line.give_kind && line.give_kind !== "none") {
@@ -909,6 +1547,120 @@
     return "";
   }
 
+  // ------------------------------------------------------------ group panel
+  // What a group of picked things has in common. Entities and props both carry
+  // a {key: spec} params map, so one shape covers both — and adding a third
+  // sort of thing later is a matter of returning its map here.
+  function groupParams(group) {
+    if (group.kind === "entity") {
+      const params = window.Palette.params(group.type);
+      const out = {};
+      Object.keys(params).forEach(function (key) {
+        // Dialogue is a whole editor of its own and is per-person by nature.
+        // (Position isn't in here to exclude — the single-item panel adds its
+        // Across/Down by hand. Moving a group is Move's job.)
+        if (params[key].type !== "dialogue") out[key] = params[key];
+      });
+      return out;
+    }
+    if (group.kind === "decor" && group.type !== "image") {
+      return window.Palette.decorParams;
+    }
+    return null;   // blocks have no settings; imported pictures differ per file
+  }
+
+  // "3 Counters, 2 Fruit Gummies, 1 Window" — what's actually picked, counted.
+  function selectionTally() {
+    const s = editor.selection;
+    const counts = new Map();
+    const bump = function (label) {
+      counts.set(label, (counts.get(label) || 0) + 1);
+    };
+    s.tiles.forEach(function (t) {
+      const tile = window.Palette.tile(editor.doc.getTile(t[0], t[1]));
+      bump((tile && tile.label) || "Block");
+    });
+    s.entities.forEach(function (e) { bump(window.Palette.label(e.type)); });
+    s.decor.forEach(function (d) {
+      bump(d.type === "image" ? "Picture" : window.Palette.decorLabel(d.type));
+    });
+    return Array.from(counts, function (pair) {
+      return { label: pair[0], count: pair[1] };
+    }).sort(function (a, b) { return b.count - a.count; });
+  }
+
+  function renderGroupInspector(panel) {
+    const count = editor.selectionCount();
+    const group = editor.selectionKind();
+    const params = group ? groupParams(group) : null;
+    const keys = params ? Object.keys(params) : [];
+
+    panel.appendChild(el("h2", null,
+      count + (count === 1 ? " thing picked" : " things picked")));
+
+    // Greyed out when there's nothing to set: the list is then a report of
+    // what's picked, not a set of controls that happen to do nothing.
+    const tally = el("div", "tally" + (keys.length ? "" : " tally-inert"));
+    selectionTally().forEach(function (row) {
+      const line = el("div", "tally-row");
+      line.appendChild(el("span", "tally-count", String(row.count)));
+      line.appendChild(el("span", "tally-label", row.label));
+      tally.appendChild(line);
+    });
+    panel.appendChild(tally);
+
+    if (!keys.length) {
+      panel.appendChild(el("p", "muted", nothingToSetNote(group)));
+    } else {
+      panel.appendChild(el("p", "muted",
+        "All the same sort of thing, so setting one of these sets all "
+        + count + "."));
+      keys.forEach(function (key) {
+        panel.appendChild(groupField(group, key, params[key]));
+      });
+    }
+
+    panel.appendChild(removeButton(
+      "Remove " + (count === 1 ? "it" : "all " + count)));
+  }
+
+  // Why this selection has no settings to offer — the three ways that happens.
+  function nothingToSetNote(group) {
+    const tail = " Move shifts them; Del removes them.";
+    if (!group) {
+      return "These aren't all the same sort of thing, so there's nothing to set "
+        + "on all of them at once." + tail;
+    }
+    if (group.kind === "tile") return "Blocks have no settings of their own." + tail;
+    return "Nothing to set on these." + tail;
+  }
+
+  // One field standing for every member of the group. The value shown is the
+  // first one's; where they disagree the label says so, and typing here makes
+  // them agree — which is the point of the panel.
+  //
+  // Undo is per field, not per keystroke: `pushUndoFor` opens a step the first
+  // time a field is touched and keeps using it until the selection changes or
+  // the next gesture on the grid begins.
+  function groupField(group, key, spec) {
+    const first = group.items[0];
+    const read = function (item) {
+      return group.kind === "entity" ? item.params[key] : item[key];
+    };
+    const write = function (item, v) {
+      if (group.kind === "entity") item.params[key] = v; else item[key] = v;
+    };
+    const value = read(first) === undefined ? spec.default : read(first);
+    const mixed = group.items.some(function (i) { return read(i) !== read(first); });
+    return field((spec.label || key) + (mixed ? " (mixed)" : ""),
+      value, spec.type, function (v) {
+        editor.pushUndoFor("group:" + group.kind + ":" + group.type + ":" + key);
+        group.items.forEach(function (item) { write(item, v); });
+        editor.draw();
+        onDocChanged();
+      }, spec);
+  }
+
   function renderDecorInspector(panel, item) {
     const isPicture = item.type === "image";
     const pictureId = isPicture ? window.ImageLibrary.idFromSprite(item.sprite) : "";
@@ -932,12 +1684,21 @@
     }
     panel.appendChild(el("p", "muted",
       "A background thing. It's only for looks — you can walk straight through it."));
+    const itemLayer = window.Palette.layer(
+      item.layer || window.Palette.defaultLayerFor("decor"));
+    if (itemLayer) {
+      panel.appendChild(el("p", "muted",
+        "On " + itemLayer.label + ". That's what sets how far away it is. To "
+        + "put it at a different distance, move it to another layer."));
+    }
 
     // Pixels, not tiles: this is the one thing in the editor that isn't snapped.
     panel.appendChild(field("Across (px)", Math.round(item.x), "int", function (v) {
+      editStep("x");
       item.x = v; editor.draw(); onDocChanged();
     }));
     panel.appendChild(field("Down (px)", Math.round(item.y), "int", function (v) {
+      editStep("y");
       item.y = v; editor.draw(); onDocChanged();
     }));
 
@@ -951,22 +1712,14 @@
       }
       const value = item[key] === undefined ? spec.default : item[key];
       panel.appendChild(field(spec.label || key, value, spec.type, function (v) {
+        editStep("param:" + key);
         item[key] = v;
         editor.draw();
         onDocChanged();
       }, spec));
     });
 
-    const remove = el("button", "wide danger", "Remove this");
-    remove.addEventListener("click", function () {
-      editor.pushUndo();
-      editor.doc.removeDecor(item);
-      editor.selected = null;
-      editor.draw();
-      renderInspector(null);
-      onDocChanged();
-    });
-    panel.appendChild(remove);
+    panel.appendChild(removeButton("Remove this"));
   }
 
   function finishField(label, control, extraClass) {
@@ -1052,6 +1805,10 @@
   }
 
   // ---------------------------------------------------------------- validation
+  // A column of the editor used to be spent saying "Ready to play." Now the
+  // answer is one chip in the top bar and the working out is a hover away —
+  // but the full list is still written out every time, because that list is
+  // what the chip is a summary of.
   function validate() {
     const problems = editor.doc.validate();
     const box = $("#validation");
@@ -1061,6 +1818,7 @@
       ok.appendChild(el("span", "check-icon", "✓"));
       ok.appendChild(el("span", null, "Ready to play."));
       box.appendChild(ok);
+      paintChecksChip("ok", "✓", "Ready to play");
       return;
     }
     problems.forEach(function (p) {
@@ -1069,6 +1827,19 @@
       row.appendChild(el("span", null, p.text));
       box.appendChild(row);
     });
+    // The worst thing wrong is what the chip reports: a level with one thing
+    // stopping it playing and three notes is not "3 notes".
+    const bad = problems.filter(function (p) { return p.level !== "warn"; }).length;
+    if (bad) paintChecksChip("bad", "✕", bad + (bad === 1 ? " problem" : " problems"));
+    else paintChecksChip("warn", "!", problems.length
+      + (problems.length === 1 ? " note" : " notes"));
+  }
+
+  function paintChecksChip(state, icon, text) {
+    const chip = $("#checks-chip");
+    chip.className = state;
+    chip.textContent = icon + "  " + text;
+    chip.title = "Checks — hover for the detail";
   }
 
   function refresh() {
@@ -1109,6 +1880,7 @@
     const page = document.body;
     ["dragenter", "dragover"].forEach(function (evt) {
       page.addEventListener(evt, function (ev) {
+        if (window.Panels.isDragging()) return;   // a panel, not a level file
         ev.preventDefault();
         page.classList.add("dropping");
       });
@@ -1178,12 +1950,18 @@
 
     function close() {
       if (back.parentNode) back.parentNode.removeChild(back);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     }
+    // Capture, and swallow the key: Escape is the editor's "drop what's picked"
+    // as well, and closing a modal shouldn't also unpick what the modal was
+    // about — the sign's dialogue button would land you back on the meal's own
+    // settings with no way to see what you just wrote.
     function onKey(ev) {
-      if (ev.key === "Escape") close();
+      if (ev.key !== "Escape") return;
+      ev.stopPropagation();
+      close();
     }
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     back.addEventListener("click", function (ev) {
       if (ev.target === back) close();
     });
@@ -1204,11 +1982,28 @@
   }
 
   function readProjectFiles(files) {
+    // The zip "Save project" wrote is a whole project in one file — pictures
+    // and layers included, which a folder of loose .json files can't carry. So
+    // when there's a zip in the selection it *is* the selection.
+    const zips = files.filter(function (f) { return /\.zip$/i.test(f.name); });
+    if (zips.length > 1) {
+      modal("Open a project", function (body) {
+        body.appendChild(el("p", null,
+          "That's " + zips.length + " project files. Open one at a time."));
+      }, [{ label: "OK", primary: true }]);
+      return;
+    }
+    if (zips.length === 1) {
+      readProjectZip(zips[0], files.length - 1);
+      return;
+    }
+
     const jsons = files.filter(function (f) { return /\.json$/i.test(f.name); });
     if (!jsons.length) {
       modal("Open a project", function (body) {
         body.appendChild(el("p", null,
-          "No .json files in that selection. Pick the whole levels folder — "
+          "No .json or .zip files in that selection. Pick the zip that "
+          + "\u201cSave project\u201d made, or the whole levels folder — "
           + "manifest.json and every level file together."));
       }, [{ label: "OK", primary: true }]);
       return;
@@ -1219,6 +2014,78 @@
       const broken = results.filter(function (r) { return r.data === null; });
       analyseProject(parsed, broken);
     });
+  }
+
+  // Unpacking is by path, not by guesswork about the contents: the zip's own
+  // layout says what each file is, and data/palette.json has a top-level
+  // "tiles" array of its own that would otherwise read as a meal.
+  async function readProjectZip(file, otherFiles) {
+    let result;
+    try {
+      result = await window.Zip.read(await file.arrayBuffer());
+    } catch (err) {
+      result = { files: [], problems: ["Couldn't read " + file.name + "."] };
+    }
+
+    const parsed = [];
+    const broken = [];
+    const pictures = [];
+    const problems = result.problems.slice();
+    let paletteText = null;
+
+    result.files.forEach(function (entry) {
+      const name = entry.name.replace(/^\.\//, "");
+      if (/(^|\/)__MACOSX\//.test(name) || /(^|\/)\._/.test(name)) return;
+      const text = function () { return new TextDecoder("utf-8").decode(entry.bytes); };
+
+      if (/(^|\/)data\/palette\.json$/.test(name)) {
+        paletteText = text();
+        return;
+      }
+      if (/\.json$/i.test(name)) {
+        const short = name.split("/").pop();
+        try {
+          parsed.push({ name: short, data: JSON.parse(text()) });
+        } catch (err) {
+          broken.push({ name: short, data: null });
+        }
+        return;
+      }
+      const picture = pictureFromZip(name, entry.bytes);
+      if (picture) pictures.push(picture);
+      // Anything else — HOW-TO-INSTALL.txt, a stray file someone added — is
+      // not the editor's to bring in, and saying so about a readme is noise.
+    });
+
+    if (otherFiles > 0) {
+      problems.push("Only " + file.name + " was read — a project file already "
+        + "holds the whole project, so the other " + otherFiles
+        + " file(s) in that selection were ignored.");
+    }
+    analyseProject(parsed, broken, {
+      pictures: pictures, paletteText: paletteText, problems: problems,
+    });
+  }
+
+  // art/backgrounds/kitchen.png -> the id "kitchen", which is exactly what the
+  // levels in the same zip name. Anything outside that folder is the game's own
+  // art, which the editor generates rather than stores.
+  //
+  // Matched anywhere in the path, not just at the start: a zip re-made by
+  // dragging the unpacked folder to "Compress" wraps everything in a folder of
+  // its own, and that zip is still this project.
+  function pictureFromZip(name, bytes) {
+    const at = name.indexOf("art/" + window.ImageLibrary.PREFIX);
+    if (at !== 0 && name.charAt(at - 1) !== "/") return null;
+    const base = name.slice(at + ("art/" + window.ImageLibrary.PREFIX).length);
+    const match = /^([^/]+)\.(png|jpe?g)$/i.exec(base);
+    if (!match) return null;
+    return {
+      id: match[1],
+      name: base,
+      bytes: bytes,
+      mime: /^jpe?g$/i.test(match[2]) ? "image/jpeg" : "image/png",
+    };
   }
 
   function readAsJson(file) {
@@ -1236,16 +2103,41 @@
     });
   }
 
-  function analyseProject(parsed, broken) {
+  function analyseProject(parsed, broken, extra) {
+    extra = extra || {};
+    const pictures = extra.pictures || [];
+    const problems = extra.problems || [];
     const manifests = parsed.filter(function (r) {
       return r.data && Array.isArray(r.data.levels) && !r.data.tiles;
     });
+    // A level is a grid with a size. `tiles` alone isn't enough to go on:
+    // data/palette.json has a top-level "tiles" array too — the five block
+    // types — and picking that up as a meal builds a level out of nothing.
     const levelFiles = parsed.filter(function (r) {
-      return r.data && Array.isArray(r.data.tiles);
+      return r.data && Array.isArray(r.data.tiles)
+        && typeof r.data.width === "number" && typeof r.data.height === "number";
     });
+
+    const layers = layersFrom(extra.paletteText);
+
+    // A zip nothing could be read out of gets the reader's own sentence, not
+    // "there's no manifest": a project re-zipped by the computer's own Compress
+    // command is deflated, and being told the manifest is missing from a file
+    // that plainly contains one sends you looking in the wrong place.
+    if (!parsed.length && problems.length) {
+      modal("Open a project", function (body) {
+        problems.forEach(function (line) {
+          body.appendChild(el("div", "file-line bad", "\u2715  " + line));
+        });
+      }, [{ label: "OK", primary: true }]);
+      return;
+    }
 
     if (manifests.length === 0) {
       modal("Open a project", function (body) {
+        problems.forEach(function (line) {
+          body.appendChild(el("div", "file-line warn", "!  " + line));
+        });
         body.appendChild(el("p", null,
           "There's no manifest.json in that selection. The manifest is the list "
           + "of meals and their order — without it there's no project to open."));
@@ -1314,6 +2206,19 @@
         body.appendChild(el("div", "file-line bad",
           "\u2715  " + r.name + " isn't valid JSON"));
       });
+      if (pictures.length) {
+        body.appendChild(el("div", "file-line",
+          "\u2713  " + (pictures.length === 1
+            ? "1 picture comes with it"
+            : pictures.length + " pictures come with it")));
+      }
+      if (layers) {
+        body.appendChild(el("div", "file-line",
+          "\u2713  its own background planes (" + layers.length + ")"));
+      }
+      problems.forEach(function (line) {
+        body.appendChild(el("div", "file-line warn", "!  " + line));
+      });
 
       if (complete) {
         body.appendChild(el("p", "modal-warn",
@@ -1330,7 +2235,9 @@
           { label: "Cancel" },
           {
             label: "Replace everything", danger: true,
-            onClick: function () { replaceProject(found, planned, extras); },
+            onClick: function () {
+              replaceProject(found, planned, extras, pictures, layers);
+            },
           },
         ]
       : [{ label: "OK", primary: true }]);
@@ -1343,7 +2250,20 @@
     return row;
   }
 
-  async function replaceProject(found, planned, extras) {
+  // The layers out of an opened project's data/palette.json, or null when the
+  // zip didn't carry one — which is the common case: it only goes in the zip
+  // when the planes were changed away from the shipped ones.
+  function layersFrom(text) {
+    if (!text) return null;
+    try {
+      const data = JSON.parse(text);
+      return Array.isArray(data.layers) && data.layers.length ? data.layers : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  async function replaceProject(found, planned, extras, pictures, layers) {
     // Wipe first, so a half-finished import can't leave a mix of two projects.
     for (let i = 0; i < levels.length; i++) {
       await window.Storage.deleteLevel(levels[i].id);
@@ -1376,9 +2296,52 @@
       levels.push(record);
     }
 
+    // Pictures land before the first meal is drawn, or a level that uses one
+    // opens full of grey boxes and looks broken. Same id overwrites: the levels
+    // arriving with them already name it.
+    const pictureProblems = [];
+    let restored = 0;
+    let unsaved = 0;
+    for (let i = 0; i < (pictures || []).length; i++) {
+      const p = pictures[i];
+      const outcome = await window.ImageLibrary.put(p.id, p.name, p.bytes, p.mime);
+      if (!outcome.ok) {
+        pictureProblems.push(outcome.problem);
+        continue;
+      }
+      restored++;
+      // Same as importing one by hand: it's here now, but the store had no room
+      // to keep it, and saying nothing means it vanishes on the next reload.
+      if (!outcome.saved) unsaved++;
+    }
+
+    const layersTaken = layers ? window.Layers.adopt(layers) : false;
+
     renderMealList();
     if (levels.length) await openLevel(levels[0].id);
-    $("#hint").textContent = "Opened " + levels.length + " meals from the project.";
+    if (layersTaken) refreshLayersPanel();
+    $("#hint").textContent = "Opened " + levels.length + " meals from the project."
+      + (restored ? " " + restored + " picture" + (restored === 1 ? "" : "s")
+        + " came with them." : "")
+      + (layersTaken ? " Its background planes came too." : "");
+
+    if (pictureProblems.length) {
+      modal("Some pictures couldn't be opened", function (body) {
+        pictureProblems.forEach(function (line) {
+          body.appendChild(el("div", "file-line bad", "\u2715  " + line));
+        });
+        body.appendChild(el("p", "muted",
+          "The meals opened anyway; anything that used those will draw as a "
+          + "grey box until the picture is added under Background."));
+      }, [{ label: "OK", primary: true }]);
+    } else if (unsaved) {
+      modal("Pictures not saved", function (body) {
+        body.appendChild(el("p", null,
+          unsaved + " of the project's pictures are here for now, but there "
+          + "wasn't room to keep them — they'll be gone when you close the tab. "
+          + "The meals themselves are saved."));
+      }, [{ label: "OK", primary: true }]);
+    }
   }
 
   // ---------------------------------------------------------------- export
@@ -1393,15 +2356,19 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  function exportCurrent() {
-    const doc = editor.doc;
-    const name = window.LevelUtil.slugify(doc.id) + ".json";
+  // One meal as one .json. Takes a record rather than reading the open one, so
+  // a meal can be exported from the list without opening it first — but the
+  // open meal's live document wins over its saved record, which may be a
+  // second or two behind the last thing you did.
+  function exportMeal(record) {
+    const doc = record.id === currentId ? editor.doc : new window.LevelDoc(record.data);
+    const name = window.LevelUtil.slugify(record.id) + ".json";
     download(new Blob([doc.exportText()], { type: "application/json" }), name);
     // One .json can't carry the pictures with it, so say so rather than letting
     // the meal land in the game full of missing scenery.
     const used = window.ImageLibrary.usedIn(doc).length;
     $("#hint").textContent = "Saved " + name + " — put it in the game's levels folder."
-      + (used ? " This meal uses pictures; use \u201cSave everything for the game\u201d "
+      + (used ? " This meal uses pictures; use \u201cSave project\u201d "
         + "to get those as well." : "");
   }
 
@@ -1452,7 +2419,14 @@
       name: "levels/manifest.json",
       text: JSON.stringify(buildManifest(), null, "\t") + "\n",
     });
-    files.push({ name: "HOW-TO-INSTALL.txt", text: installNote() });
+    // Only when the background layers have been changed here: the game reads
+    // layers from data/palette.json, so a project with custom planes has to
+    // carry the file. Untouched, it stays out of the zip and nothing to copy.
+    const layersChanged = window.Palette.layersDifferFromShipped();
+    if (layersChanged) {
+      files.push({ name: "data/palette.json", text: window.Layers.paletteJsonText() });
+    }
+    files.push({ name: "HOW-TO-INSTALL.txt", text: installNote(layersChanged) });
 
     download(window.Zip.build(files), "amy-levels.zip");
     const pictureNote = pictureIds.length
@@ -1479,27 +2453,46 @@
     }
   }
 
-  function installNote() {
+  function installNote(hasPalette) {
+    const paletteSteps = hasPalette ? [
+      "3. If there's an art/ folder in the zip, copy that in too. It adds the",
+      "   pictures to the game's art rather than replacing anything.",
+      "4. Copy data/palette.json from this zip in too, replacing the old one.",
+      "   It carries the background layers you added or changed.",
+      "   Then, in a terminal in the project folder, run:",
+      "       python3 buildtools/gen_web_assets.py",
+      "   so the editor's copy of the palette matches. (run_tests.sh does this",
+      "   for you, and fails until it's done.)",
+      "5. Open the project in Godot 4.7 and press F5.",
+    ] : [
+      "3. If there's an art/ folder in the zip, copy that in too. It adds the",
+      "   pictures to the game's art rather than replacing anything.",
+      "4. Open the project in Godot 4.7 and press F5.",
+    ];
     return [
       "Amy's Food Game — installing these levels",
       "=========================================",
       "",
       "This zip contains a levels/ folder, and an art/ folder if any meal uses",
-      "a picture you imported.",
+      "a picture you imported" + (hasPalette
+        ? ", plus a data/palette.json because you changed the background layers."
+        : "."),
       "",
       "1. Find the game project folder (the one with project.godot in it).",
       "2. Copy the levels/ folder from this zip into it, replacing the old one.",
-      "3. If there's an art/ folder in the zip, copy that in too. It adds the",
-      "   pictures to the game's art rather than replacing anything.",
-      "4. Open the project in Godot 4.7 and press F5.",
+    ].concat(paletteSteps).concat([
       "",
       "manifest.json decides the order the meals appear in and which ones are",
       "playable. A meal marked \"planned\" is listed but greyed out, because it",
       "has no level file yet.",
       "",
+      "Keep this file. \"Open project...\" in the editor takes it back whole -",
+      "every meal, its pictures, and the background layers - so it is a backup",
+      "and a way to move the work to another computer as well as an install.",
+      "",
       "Full instructions with pictures: web_editor/EXPORTING-TO-GODOT.md",
       "",
-    ].join("\n");
+    ]).join("\n");
   }
 
   document.addEventListener("DOMContentLoaded", boot);

@@ -37,11 +37,89 @@
   let lastTick = 0;
   let watchdog = null;
   let stalled = false;
+  // The game filling the editor window. A body class rather than an inline
+  // style so the CSS keeps the whole rule in one place — see style.css.
+  let expanded = false;
   // Only a game that has ticked at least once can be said to have stopped.
   // Otherwise an older build in play/ — one with no heartbeat in it — would be
   // reported as frozen for as long as it ran perfectly well.
   let everTicked = false;
   const log = [];
+
+  // ------------------------------------------------------- the build itself
+  // play/ is a *build*, not the code. It is rebuilt by hand, and nothing in the
+  // test suites touches it — so a change to the game can be finished, green and
+  // committed while Play still runs the version from last week, which looks
+  // exactly like the fix not working. The dev server compares the export's date
+  // against the game's source and answers here; the deployed site has no such
+  // server, and a page that can't ask simply doesn't mention it.
+  const BUILD_API = "api/game-build";
+  let buildState = null;      // last answer from the server, or null
+  let onBuildChange = function () {};
+
+  function buildStatus() {
+    return fetch(BUILD_API, { headers: { "Accept": "application/json" } })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        buildState = data;
+        onBuildChange();
+        return data;
+      })
+      .catch(function () {
+        buildState = null;    // no dev server: nothing to say, so say nothing
+        onBuildChange();
+        return null;
+      });
+  }
+
+  function isStale() {
+    return !!(buildState && buildState.stale);
+  }
+
+  // Runs the export and waits for it. Resolves true when play/ is current —
+  // including when it already was — and false when the export failed, with the
+  // reason in the game log where the rest of the game's output goes.
+  function rebuild() {
+    setStatus("Building the game… this takes about half a minute.");
+    addLog("info", "--- rebuilding the game (buildtools/build_web.py) ---", true);
+    return fetch(BUILD_API + "/rebuild", { method: "POST" })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (data === null) return false;
+        buildState = data;
+        onBuildChange();
+        return waitForBuild();
+      })
+      .catch(function () { return false; });
+  }
+
+  function waitForBuild() {
+    return new Promise(function (resolve) {
+      const tick = function () {
+        buildStatus().then(function (data) {
+          if (data === null) {
+            resolve(false);
+            return;
+          }
+          if (data.building) {
+            setTimeout(tick, 700);
+            return;
+          }
+          (data.log || []).forEach(function (line) {
+            addLog(data.failed ? "error" : "info", line, true);
+          });
+          if (data.failed) {
+            setStatus("The game didn't build — see the log.");
+            resolve(false);
+            return;
+          }
+          addLog("info", "--- the game is up to date ---", true);
+          resolve(true);
+        });
+      };
+      tick();
+    });
+  }
 
   // Asked on the first press, not at load: a missing build is a 404, and a 404
   // in the console of an editor that is working fine is a red herring.
@@ -64,9 +142,32 @@
         replay();
         return true;
       }
-      host = document.getElementById("playtest");
-      host.hidden = false;
-      statusEl = document.getElementById("playtest-status");
+      // A build older than the game's source gets rebuilt before it runs,
+      // rather than quietly playing last week's game.
+      if (isStale()) {
+        showPanel();
+        return rebuild().then(function (fresh) {
+          if (!fresh) return false;
+          return startFrame();
+        });
+      }
+      return startFrame();
+    });
+  }
+
+  // The panel, opened before the game exists, so a rebuild has somewhere to
+  // report from. Splitting this out is what lets Play wait on a build first.
+  function showPanel() {
+    host = document.getElementById("playtest");
+    host.hidden = false;
+    statusEl = document.getElementById("playtest-status");
+    onResize();
+    onStateChange();
+  }
+
+  function startFrame() {
+    return Promise.resolve().then(function () {
+      showPanel();
       setStatus("Starting the game…");
 
       frame = document.createElement("iframe");
@@ -161,8 +262,53 @@
     everTicked = false;
   }
 
+  // Two different sizes, on purpose. Expand is the editor's own: the game fills
+  // this window, and everything else the browser draws — tabs, address bar, the
+  // other windows — stays where it is. Full screen is the browser's, for
+  // actually playing. Either can be on without the other.
+  function setExpanded(on) {
+    on = !!on && !!frame;
+    if (on === expanded) return;
+    expanded = on;
+    document.body.classList.toggle("play-expanded", expanded);
+    // Going fixed takes the panel out of the stage's flex flow, so the grid
+    // behind it grows to the full stage — and shrinks back on collapse. The
+    // canvas is sized in pixels and has to be told, both ways.
+    onResize();
+    onStateChange();
+  }
+
+  function isFullscreen() {
+    return !!host && document.fullscreenElement === host;
+  }
+
+  function toggleFullscreen() {
+    if (!host || !frame) return;
+    if (isFullscreen()) {
+      document.exitFullscreen();
+      return;
+    }
+    if (!host.requestFullscreen) {
+      addLog("warn", "this browser won't do full screen here", true);
+      return;
+    }
+    // Rejects rather than throwing — a browser can refuse this outright, and an
+    // unhandled rejection in the console is a red herring later.
+    host.requestFullscreen().catch(function (err) {
+      addLog("warn", "full screen refused: " + (err && err.message || err), true);
+    });
+  }
+
+  // Escape and F11 leave full screen without going through the button, so the
+  // label has to follow the browser rather than the other way round.
+  document.addEventListener("fullscreenchange", function () { onStateChange(); });
+
   function stop() {
     stopWatchdog();
+    // Before the panel is hidden: a leftover class would bring the next Play
+    // back expanded with no button saying so.
+    setExpanded(false);
+    if (isFullscreen()) document.exitFullscreen();
     if (pushTimer) {
       clearTimeout(pushTimer);
       pushTimer = null;
@@ -251,11 +397,20 @@
     setLive: setLive,
     isLive: function () { return live; },
     isPlaying: isPlaying,
+    setExpanded: setExpanded,
+    isExpanded: function () { return expanded; },
+    toggleFullscreen: toggleFullscreen,
+    isFullscreen: isFullscreen,
     isStalled: function () { return stalled; },
     isWatched: function () { return everTicked; },
     log: function () { return log.slice(); },
     isReady: function () { return ready; },
     isBuilt: function () { return built; },
+    buildStatus: buildStatus,
+    buildState: function () { return buildState; },
+    isStale: isStale,
+    rebuild: rebuild,
+    onBuildChange: function (fn) { onBuildChange = fn; },
     gamePath: GAME_PATH,
     onStateChange: function (fn) { onStateChange = fn; },
     onResize: function (fn) { onResize = fn; },

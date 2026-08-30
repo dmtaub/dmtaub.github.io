@@ -1,0 +1,12 @@
+{
+	"fingerprint": "742d478252d6b4caa986e31e24a724a738dd9333",
+	"sources": [
+		"scripts",
+		"scenes",
+		"data",
+		"levels",
+		"art",
+		"project.godot",
+		"export_presets.cfg"
+	]
+}

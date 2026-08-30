@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor panel</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<!-- A window for one panel of the editor. It holds nothing of its own: the
+     editor adopts the live panel element into #popped-mount, so what is in
+     here is the same element, still being drawn by the editor's own code.
+     See js/panels.js. -->
+<body class="popped-window">
+<div id="popped-mount"></div>
+<p id="popped-note">Waiting for the editor…</p>
+<script src="js/popped.js"></script>
+</body>
+</html>

@@ -99,9 +99,30 @@
       ? [camera.x + w / (2 * zoom), camera.y + h / (2 * zoom)]
       : null;
 
+    // A boxful highlights the same way a single pick does, so both go through
+    // one "is this thing picked?" test.
+    const picked = pickedSet(opts.selection);
+
+    // Everything off the layer being worked on is faded: it can't be picked or
+    // moved, and saying so quietly beats a click that silently does nothing.
+    // Preview is meant to look like the game, so it fades nothing.
+    const onLayer = opts.preview || !opts.onLayer
+      ? function () { return true; }
+      : opts.onLayer;
+    const offAlpha = opts.showOtherLayers ? 1 : OFF_LAYER_ALPHA;
+    const fade = function (kind, item) {
+      return onLayer(kind, item) ? 1 : offAlpha;
+    };
+
     // Decor first: it is background, and it must never hide a block you placed.
-    (doc.decor || []).forEach(function (item) {
-      drawDecor(ctx, item, camera, item === opts.selected, cameraCentre);
+    // Far props behind near ones, matching the z the game gives them; ties keep
+    // the order they were placed in, which is what a stable sort gives us.
+    decorInDrawOrder(doc).forEach(function (item) {
+      ctx.save();
+      ctx.globalAlpha = fade("decor", item);
+      drawDecor(ctx, item, camera, item === opts.selected || picked.has(item),
+        cameraCentre);
+      ctx.restore();
     });
 
     // Visible tile range only — a 232x24 level is 5500 cells and we redraw on
@@ -113,6 +134,8 @@
     const x1 = Math.min(doc.width - 1, bottomRight[0] + 1);
     const y1 = Math.min(doc.height - 1, bottomRight[1] + 1);
 
+    ctx.save();
+    ctx.globalAlpha = fade("tile", null);
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const t = doc.getTile(x, y);
@@ -121,38 +144,116 @@
         drawTileAt(ctx, t, s[0], s[1], zoom);
       }
     }
+    ctx.restore();
 
     if (opts.grid !== false && zoom >= 0.6 && !opts.preview) {
       drawGrid(ctx, camera, doc, x0, y0, x1, y1);
     }
 
+    const entityAlpha = fade("entity", null);
     doc.entities.forEach(function (e) {
-      drawEntity(ctx, e, camera, e === opts.selected);
+      ctx.save();
+      ctx.globalAlpha = entityAlpha;
+      drawEntity(ctx, e, camera, e === opts.selected || picked.has(e));
+      ctx.restore();
     });
 
-    // A block being dragged is lifted out of the level for the duration, so
-    // draw it under the cursor — otherwise it vanishes while you carry it.
-    if (opts.carrying) {
-      const s = camera.toScreen(opts.carrying.tile[0] * TILE, opts.carrying.tile[1] * TILE);
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      drawTileAt(ctx, opts.carrying.id, s[0], s[1], zoom);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = "#ffd166";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(s[0] + 0.5, s[1] + 0.5, TILE * zoom - 1, TILE * zoom - 1);
-      ctx.restore();
+    // Not while moving: those blocks are lifted out and drawn at the offset
+    // below, so washing their old cells would highlight where they aren't.
+    if (opts.selection && !opts.moving) {
+      drawSelectedTiles(ctx, camera, opts.selection.tiles);
     }
+    if (opts.marquee) drawMarquee(ctx, camera, opts.marquee);
 
-    if (opts.hover && opts.brush && !opts.preview && !opts.carrying) {
+    // Blocks being moved are lifted out of the level for the duration, so draw
+    // them at the offset — otherwise they vanish while you carry them.
+    if (opts.moving) drawMovingTiles(ctx, camera, opts.moving);
+
+    if (opts.hover && opts.brush && !opts.preview && !opts.moving) {
       if (opts.brush.kind === "decor" && opts.hoverPx) {
         drawDecorGhost(ctx, camera, opts.hoverPx, opts.brush);
-      } else if (opts.brush.kind !== "decor") {
+      } else if (opts.brush.kind !== "decor"
+          && opts.brush.kind !== "select" && opts.brush.kind !== "move") {
+        // No cell ghost for Select or Move — neither places anything, and a
+        // highlighted cell under the cursor says they do.
         drawBrushGhost(ctx, camera, opts.hover, opts.brush);
       }
     }
 
     if (!opts.preview) drawBounds(ctx, originScreen, levelW, levelH);
+  }
+
+  // -------------------------------------------------------------- selection
+  const SELECT_BLUE = "#8fd0f5";
+  // Faded, not hidden: you keep your bearings on the planes you aren't editing.
+  const OFF_LAYER_ALPHA = 0.3;
+  const SELECT_WASH = "rgba(143,208,245,0.3)";    // picked blocks
+  const SELECT_FILL = "rgba(143,208,245,0.12)";   // inside the box being drawn
+
+  function layerZ(item) {
+    const l = window.Palette.layer(item.layer || window.Palette.defaultLayerFor("decor"));
+    return l && l.z !== undefined ? l.z : 0;
+  }
+
+  function decorInDrawOrder(doc) {
+    return (doc.decor || []).slice().sort(function (a, b) {
+      return layerZ(a) - layerZ(b);
+    });
+  }
+
+  // Entities and props are picked by identity, so one Set answers for both and
+  // the two draw loops don't each have to walk the selection.
+  function pickedSet(selection) {
+    const set = new Set();
+    if (!selection) return set;
+    (selection.entities || []).forEach(function (e) { set.add(e); });
+    (selection.decor || []).forEach(function (d) { set.add(d); });
+    return set;
+  }
+
+  // Selected blocks get a wash rather than an outline each: a box over a wall
+  // picks hundreds of cells, and hundreds of separate outlines read as noise.
+  function drawSelectedTiles(ctx, camera, tiles) {
+    if (!tiles || !tiles.length) return;
+    const size = TILE * camera.zoom;
+    ctx.save();
+    ctx.fillStyle = SELECT_WASH;
+    tiles.forEach(function (t) {
+      const s = camera.toScreen(t[0] * TILE, t[1] * TILE);
+      ctx.fillRect(s[0], s[1], size, size);
+    });
+    ctx.restore();
+  }
+
+  function drawMovingTiles(ctx, camera, m) {
+    const zoom = camera.zoom;
+    const size = TILE * zoom;
+    const dx = m.tileDelta[0];
+    const dy = m.tileDelta[1];
+    ctx.save();
+    m.tiles.forEach(function (t) {
+      const s = camera.toScreen((t.x + dx) * TILE, (t.y + dy) * TILE);
+      ctx.globalAlpha = 0.85;
+      drawTileAt(ctx, t.id, s[0], s[1], zoom);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "#ffd166";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(s[0] + 0.5, s[1] + 0.5, size - 1, size - 1);
+    });
+    ctx.restore();
+  }
+
+  function drawMarquee(ctx, camera, m) {
+    const a = camera.toScreen(Math.min(m.from[0], m.to[0]), Math.min(m.from[1], m.to[1]));
+    const b = camera.toScreen(Math.max(m.from[0], m.to[0]), Math.max(m.from[1], m.to[1]));
+    ctx.save();
+    ctx.fillStyle = SELECT_FILL;
+    ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    ctx.strokeStyle = SELECT_BLUE;
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(a[0] + 0.5, a[1] + 0.5, b[0] - a[0], b[1] - a[1]);
+    ctx.restore();
   }
 
   // A prop's picture: either one of the game's own, or one Amy imported.
@@ -171,7 +272,10 @@
   // Any other formula and the preview would disagree with the game, which is
   // the only thing the preview is for.
   function parallaxOffset(item, cameraCentre) {
-    const p = item.parallax === undefined ? 0.9 : Number(item.parallax);
+    // A prop's layer is what decides how far away it reads; its own `parallax`
+    // still wins if it has one. Palette.decorParallax settles that, and the
+    // game reads the same rule, so the preview keeps agreeing with it.
+    const p = window.Palette.decorParallax(item);
     if (!cameraCentre || p === 1) return [0, 0];
     return [(cameraCentre[0] - item.x) * (1 - p), (cameraCentre[1] - item.y) * (1 - p)];
   }
@@ -241,9 +345,12 @@
   }
 
   // Topmost first, so clicking picks the one drawn last.
-  function decorAt(doc, camera, screenPoint) {
-    const list = doc.decor || [];
+  // `accepts` lets the caller ignore props it isn't working on — the layer
+  // filter passes one here so a click can't reach through to another plane.
+  function decorAt(doc, camera, screenPoint, accepts) {
+    const list = decorInDrawOrder(doc);
     for (let i = list.length - 1; i >= 0; i--) {
+      if (accepts && !accepts(list[i])) continue;
       const r = decorRect(list[i], camera);
       if (screenPoint[0] >= r.x && screenPoint[0] <= r.x + r.w
           && screenPoint[1] >= r.y && screenPoint[1] <= r.y + r.h) {

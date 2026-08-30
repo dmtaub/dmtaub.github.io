@@ -2,6 +2,12 @@
 // from the game's data/palette.json. Nothing here invents content — if a tile
 // or entity is missing, add it to data/palette.json and re-run
 // buildtools/gen_web_assets.py.
+//
+// The one exception is `layers`: the editor lets you add, tune and remove the
+// background planes (see the Layers panel), and those edits are persisted
+// separately and merged back in via `setLayers` on boot. `baseLayers` keeps the
+// shipped list so the exporter can tell whether a data/palette.json needs to go
+// in the zip.
 
 (function () {
   "use strict";
@@ -16,6 +22,23 @@
 
   const decorById = {};
   (DATA.decor || []).forEach(function (item) { decorById[item.id] = item; });
+
+  if (!Array.isArray(DATA.layers)) DATA.layers = [];
+  // The list as shipped, frozen for comparison. Deep copy: the live array is
+  // mutated in place by setLayers so every `Palette.layers` holder stays valid.
+  const BASE_LAYERS = JSON.parse(JSON.stringify(DATA.layers));
+
+  const layersById = {};
+  function reindexLayers() {
+    Object.keys(layersById).forEach(function (k) { delete layersById[k]; });
+    DATA.layers.forEach(function (l) { layersById[l.id] = l; });
+  }
+  reindexLayers();
+
+  function defaultDecorLayer() {
+    const first = (DATA.layers || []).find(function (l) { return l.holds === "decor"; });
+    return first ? first.id : null;
+  }
 
   window.Palette = {
     raw: DATA,
@@ -78,6 +101,61 @@
       return out;
     },
 
+    // ------------------------------------------------------------ layers
+    // Which plane of the level a thing lives on. Blocks and Things are one
+    // layer each — a tile is an [x,y,id] triple with nowhere to put a tag —
+    // so only background props subdivide, and only those carry a `layer`.
+    layers: DATA.layers,
+    baseLayers: BASE_LAYERS,
+
+    layer: function (id) { return layersById[id] || null; },
+    layersHolding: function (holds) {
+      return DATA.layers.filter(function (l) { return l.holds === holds; });
+    },
+
+    // Replace the whole layer list, in place, and rebuild the id index. Called
+    // once on boot with the persisted list, and again after every edit in the
+    // Layers panel. The array identity never changes, so anything holding
+    // `Palette.layers` keeps working.
+    setLayers: function (arr) {
+      DATA.layers.length = 0;
+      (arr || []).forEach(function (l) { DATA.layers.push(l); });
+      reindexLayers();
+    },
+
+    // Whether the current layer list differs from the one this editor shipped
+    // with — the exporter uses this to decide if data/palette.json belongs in
+    // the zip.
+    layersDifferFromShipped: function () {
+      return JSON.stringify(DATA.layers) !== JSON.stringify(BASE_LAYERS);
+    },
+    // Where a thing goes when nothing says otherwise: the first layer that
+    // holds its sort. Props placed before layers existed land on the near one.
+    defaultLayerFor: function (holds) {
+      if (holds === "decor") return defaultDecorLayer();
+      const first = DATA.layers.find(function (l) { return l.holds === holds; });
+      return first ? first.id : null;
+    },
+
+    // Which layer a prop is on. THE rule, and the only place it is written: a
+    // prop with no `layer` of its own belongs to the first background layer.
+    // The game says the same thing in PaletteRegistry.decor_parallax, and
+    // saying it twice on this side is how a prop ends up ignoring its layer —
+    // see docs/GOTCHAS.md, "One concept, one place".
+    layerOf: function (item) {
+      return (item && item.layer) || defaultDecorLayer();
+    },
+    // How far away a prop reads. Its layer decides, and only its layer: a prop
+    // used to be able to carry its own, and every prop created before layers
+    // silently did — which meant the layer never got a look in. A stray one on
+    // an old item is ignored rather than honoured, so those props join the
+    // layer they are on instead of being stuck at whatever was copied onto
+    // them. The game applies the same rule in PaletteRegistry.decor_parallax.
+    decorParallax: function (item) {
+      const l = layersById[window.Palette.layerOf(item)];
+      return l && l.parallax !== undefined ? Number(l.parallax) : 0.9;
+    },
+
     // ------------------------------------------------------------ decor
     // Background props: placed in pixels, never collidable, never affect play.
     decor: DATA.decor || [],
@@ -96,9 +174,7 @@
     defaultDecorParams: function () {
       const out = {};
       const params = DATA.decor_params || {};
-      Object.keys(params).forEach(function (k) {
-        out[k] = params[k].default;
-      });
+      Object.keys(params).forEach(function (k) { out[k] = params[k].default; });
       return out;
     },
 

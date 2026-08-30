@@ -14,27 +14,36 @@
 
   <div id="topbar">
     <h1>Amy's Level Editor</h1>
+    <button id="btn-reset-ui" class="shrink-2" title="Put every panel back where it started, windows and all"><span class="wide-only">↺ Reset UI</span><span class="tight-only">↺</span></button>
 
-    <button id="btn-new" title="Start a brand new meal">New meal</button>
-    <button id="btn-duplicate" title="Make a copy of this meal">Duplicate</button>
-    <button id="btn-example" title="Open a copy of a level from the game">Add example</button>
-    <button id="btn-import" title="Open a level file from your computer">Open file…</button>
-    <button id="btn-open-project" title="Open a whole project: manifest.json plus all its level files">Open project…</button>
+    <!-- Undo and redo are about what you are doing right now, so they sit by
+         the hand: next to the title, on the side you are working from. -->
+    <button id="btn-undo" class="shrink-2" title="Undo (Ctrl+Z)"><span class="wide-only">↶ Undo</span><span class="tight-only">↶</span></button>
+    <button id="btn-redo" class="shrink-2" title="Redo (Ctrl+Y)"><span class="wide-only">↷ Redo</span><span class="tight-only">↷</span></button>
 
     <span class="spacer"></span>
 
-    <button id="btn-undo" title="Undo (Ctrl+Z)">↶ Undo</button>
-    <button id="btn-redo" title="Redo (Ctrl+Y)">↷ Redo</button>
+    <!-- The whole project — open one, start one, save one — together in the
+         corner. Making and exporting a single meal lives in the Meals panel,
+         beside the meal it acts on. -->
+    <button id="btn-open-project" class="shrink-1" title="Open a project file saved here, or a levels folder: manifest.json plus all its level files"><span class="wide-only">Open project…</span><span class="tight-only">Open…</span></button>
+    <button id="btn-new-project" class="shrink-1" title="Clear every meal and start a project from scratch"><span class="wide-only">New project…</span><span class="tight-only">New…</span></button>
+    <button id="btn-export-all" class="primary shrink-2" title="Save every meal, its pictures and the manifest, as one project file the game reads and this editor can open again"><span class="wide-only">Save project</span><span class="tight-only">Save</span></button>
 
-    <button id="btn-export-one" title="Save just this meal as a .json file">Save this meal</button>
-    <button id="btn-export-all" class="primary" title="Save every meal plus the manifest, as one zip for the game">Save everything for the game</button>
-
-    <span id="save-state"></span>
+    <!-- Checks used to be a panel of its own, which spent a column on a green
+         tick. Now it is one word up here, and the detail is a breath away —
+         and it is the last thing in the bar, so "is it ready?" is always in
+         the same corner. -->
+    <div id="checks">
+      <button id="checks-chip" type="button" aria-describedby="checks-pop">Checks</button>
+      <div id="checks-pop" role="tooltip">
+        <h2>Checks</h2>
+        <div id="validation"></div>
+      </div>
+    </div>
   </div>
 
-  <div id="rail">
-    <div id="palette"></div>
-  </div>
+  <div id="dock-left" class="dock"></div>
 
   <div id="stage">
     <canvas id="canvas"></canvas>
@@ -49,6 +58,8 @@
           <input type="checkbox" id="chk-live" checked>
           Update as I build
         </label>
+        <button id="btn-expand" title="Fill the editor window with the game">⤢ Expand</button>
+        <button id="btn-fullscreen" title="Take over the whole screen">⛶ Full screen</button>
         <button id="btn-replay" title="Start this level again from the beginning">↻ Start again</button>
         <button id="btn-stop-play" title="Back to building">✕ Stop</button>
       </div>
@@ -63,41 +74,56 @@
       <button id="btn-zoom-in" title="Zoom in">+</button>
       <button id="btn-fit" title="Fit the whole level on screen">Fit</button>
       <button id="btn-grid" title="Show or hide the grid">Grid</button>
-      <button id="btn-preview" title="Look at the level the way the game does, with the background drifting behind you">Have a look</button>
+      <!-- Only ever shown by a dev server that can see the game's source: play/
+           is a build, and a build can be behind the code. -->
+      <span id="build-stale" hidden>
+        <span id="build-stale-text">The game build is behind your changes</span>
+        <button id="btn-rebuild-game" title="Run buildtools/build_web.py and pick up the new build">Rebuild</button>
+      </span>
       <button id="btn-play" title="Play this level, right here">▶ Play</button>
     </div>
   </div>
 
-  <div id="side">
-    <div class="section">
-      <h2>Checks</h2>
-      <div id="validation"></div>
-    </div>
+  <div id="dock-right" class="dock"></div>
 
-    <div class="section">
-      <h2>Meals, in order</h2>
-      <div id="meal-list"></div>
+  <!-- The panel bodies. js/panels.js wraps each one in a titled box and puts it
+       in a dock; app.js renders into these elements by reference, so a panel
+       dragged to the other side — or pushed out into its own window — carries
+       on being drawn without anything having to be told. -->
+  <div id="panel-bodies" hidden>
+    <div id="layer-panel"></div>
+    <div id="tool-panel"></div>
+    <div id="palette"></div>
+    <!-- The list and the buttons that change it. Only the rows are redrawn,
+         so the buttons keep the ids everything binds to at boot. -->
+    <div id="meal-list">
+      <div id="meal-rows"></div>
+      <div id="meal-tools">
+        <button id="btn-new" title="Start a brand new meal">New meal</button>
+        <button id="btn-duplicate" title="Make a copy of this meal">Duplicate</button>
+        <button id="btn-example" title="Open a copy of a level from the game">Add example</button>
+        <button id="btn-import" title="Add one level file from your computer to this list">Import level…</button>
+      </div>
     </div>
-
-    <div class="section">
-      <div id="inspector"></div>
-    </div>
+    <div id="inspector"></div>
   </div>
 
   <div id="hintbar">
     <span id="hint">Pick something on the left, then drag on the grid.</span>
     <span class="keys">
-      <kbd>Space</kbd>+drag or middle-drag to move around ·
+      <kbd>Space</kbd>+drag, middle-drag or right-drag to move around ·
       <kbd>scroll</kbd> to zoom ·
-      right-click to rub out ·
       <kbd>Del</kbd> removes what's picked
     </span>
+    <!-- Down here with the other running commentary, rather than up in the bar
+         you press things in. It reports; it isn't something you do. -->
+    <span id="save-state"></span>
   </div>
 
 </div>
 
 <input type="file" id="file-input" accept=".json,application/json" multiple hidden>
-<input type="file" id="project-input" accept=".json,application/json" multiple hidden>
+<input type="file" id="project-input" accept=".json,application/json,.zip,application/zip" multiple hidden>
 <input type="file" id="picture-input" accept="image/*" multiple hidden>
 
 <!-- Generated from the game's own data. Re-run buildtools/gen_web_assets.py
@@ -110,10 +136,12 @@
      off the filesystem. -->
 <script src="js/palette.js"></script>
 <script src="js/level.js"></script>
+<script src="js/layers.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/images.js"></script>
 <script src="js/zip.js"></script>
 <script src="js/render.js"></script>
+<script src="js/panels.js"></script>
 <script src="js/playtest.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/app.js"></script>

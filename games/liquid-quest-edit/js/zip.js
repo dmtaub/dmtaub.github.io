@@ -1,12 +1,14 @@
-// A minimal store-only ZIP writer, ~80 lines, no dependencies.
+// A minimal ZIP writer and reader, no dependencies.
 //
-// "Store-only" means no compression — the entries go in verbatim. Level JSON is
-// small and this avoids pulling a compression library into what is meant to be
-// a double-clickable folder of static files. Every unzip tool reads it.
+// The writer is store-only — no compression, entries go in verbatim. Level JSON
+// is small and this avoids pulling a compression library into what is meant to
+// be a double-clickable folder of static files. Every unzip tool reads it. The
+// reader takes those back, plus deflated entries where the browser can inflate
+// them for us.
 //
-// Used so "Save everything for Godot" produces one file whose inside mirrors
-// the project layout (levels/whatever.json), making the drop-in a drag rather
-// than a dozen separate downloads.
+// Used so "Save project" produces one file whose inside mirrors the project
+// layout (levels/whatever.json), making the drop-in a drag rather than a dozen
+// separate downloads — and so "Open project" can take that same file back.
 
 (function () {
   "use strict";
@@ -126,5 +128,102 @@
     return new Blob(chunks, { type: "application/zip" });
   }
 
-  window.Zip = { build: build, crc32: crc32 };
+  // ------------------------------------------------------------------ read
+  // The other half of build(): "Open project" takes the zip that "Save project"
+  // wrote, so the editor can hand someone a file and take it back again.
+  //
+  // Reads the central directory rather than walking local headers — a local
+  // header is allowed to carry zeroed sizes (flag bit 3, sizes in a trailing
+  // descriptor), and the central directory never is. Store-only is what this
+  // writer emits; a zip re-made by another tool is usually deflated, so method
+  // 8 goes through the browser's own inflater where there is one, and says so
+  // plainly where there isn't.
+  //
+  // Async on every path, so the store-only case doesn't become a different
+  // sort of call from the deflated one.
+  //
+  // Returns {files: [{name, bytes}], problems: [sentence, ...]}.
+  async function read(buffer) {
+    const view = new DataView(buffer);
+    const bytes = new Uint8Array(buffer);
+    const end = findEndRecord(view);
+    if (end < 0) {
+      return { files: [], problems: ["That doesn't look like a zip file."] };
+    }
+
+    const count = view.getUint16(end + 10, true);
+    let offset = view.getUint32(end + 16, true);
+    const files = [];
+    const problems = [];
+
+    for (let i = 0; i < count; i++) {
+      if (offset + 46 > bytes.length || view.getUint32(offset, true) !== 0x02014b50) {
+        problems.push("The zip's contents list is damaged.");
+        break;
+      }
+      const method = view.getUint16(offset + 10, true);
+      const compressedSize = view.getUint32(offset + 20, true);
+      const nameLength = view.getUint16(offset + 28, true);
+      const extraLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const localOffset = view.getUint32(offset + 42, true);
+      const name = decodeName(bytes.subarray(offset + 46, offset + 46 + nameLength));
+      offset += 46 + nameLength + extraLength + commentLength;
+
+      // A folder entry: no bytes, nothing to give back.
+      if (/\/$/.test(name)) continue;
+
+      // The local header's own name and extra lengths are what say where the
+      // data starts; they are allowed to differ from the central copy's.
+      const localName = view.getUint16(localOffset + 26, true);
+      const localExtra = view.getUint16(localOffset + 28, true);
+      const start = localOffset + 30 + localName + localExtra;
+      const raw = bytes.subarray(start, start + compressedSize);
+
+      if (method === 0) {
+        files.push({ name: name, bytes: raw.slice() });
+        continue;
+      }
+      if (method === 8 && typeof window.DecompressionStream === "function") {
+        try {
+          files.push({ name: name, bytes: await inflateRaw(raw) });
+        } catch (err) {
+          problems.push(name + " is compressed in a way this browser couldn't open.");
+        }
+        continue;
+      }
+      problems.push(name + " is compressed (zip method " + method + ") and this "
+        + "editor only reads uncompressed zips. Unzip it and open the folder instead.");
+    }
+
+    return { files: files, problems: problems };
+  }
+
+  async function inflateRaw(raw) {
+    const stream = new window.DecompressionStream("deflate-raw");
+    const out = await new Response(
+      new Blob([raw]).stream().pipeThrough(stream)).arrayBuffer();
+    return new Uint8Array(out);
+  }
+
+  // Scanned backwards: the end record is last, but a zip comment can follow it.
+  function findEndRecord(view) {
+    const min = Math.max(0, view.byteLength - 22 - 0xffff);
+    for (let i = view.byteLength - 22; i >= min; i--) {
+      if (view.getUint32(i, true) === 0x06054b50) return i;
+    }
+    return -1;
+  }
+
+  function decodeName(nameBytes) {
+    try {
+      return new TextDecoder("utf-8").decode(nameBytes);
+    } catch (err) {
+      let out = "";
+      for (let i = 0; i < nameBytes.length; i++) out += String.fromCharCode(nameBytes[i]);
+      return out;
+    }
+  }
+
+  window.Zip = { build: build, read: read, inflateRaw: inflateRaw, crc32: crc32 };
 })();

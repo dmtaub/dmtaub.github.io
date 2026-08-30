@@ -54,6 +54,17 @@
     });
   }
 
+  // ...and back the other way, for a picture arriving out of a zip. Chunked
+  // because String.fromCharCode.apply on a whole megabyte overflows the stack.
+  function bytesToDataUrl(bytes, mime) {
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return Promise.resolve("data:" + (mime || "image/png") + ";base64,"
+      + window.btoa(binary));
+  }
+
   // Turn a data URL back into the bytes the ZIP writer wants.
   function dataUrlToBytes(dataUrl) {
     const comma = dataUrl.indexOf(",");
@@ -141,6 +152,35 @@
       if (!r || !r.w) return 1;
       const s = TARGET_WIDTH / r.w;
       return Math.round(Math.min(1, Math.max(0.05, s)) * 1000) / 1000;
+    },
+
+    // A picture arriving from an opened project zip. Unlike add(), the id is
+    // given rather than made up: the levels in that zip already name it, and a
+    // uniquified "kitchen_2" would leave every one of them pointing at nothing.
+    // Same id therefore overwrites, and the rest of the library is left alone —
+    // a picture imported here but not yet placed is not this import's to throw
+    // away.
+    async put(id, name, bytes, mime) {
+      const clean = window.LevelUtil.slugify(id);
+      if (!clean) return { ok: false, problem: name + " has no usable name." };
+      if (bytes.length > MAX_BYTES) {
+        return {
+          ok: false,
+          problem: name + " is too big (" + Math.round(bytes.length / 1024 / 1024)
+            + "MB). Pictures need to be under 6MB.",
+        };
+      }
+      const dataUrl = await bytesToDataUrl(bytes, mime);
+      const record = { id: clean, name: name, data: dataUrl, w: 0, h: 0 };
+      const img = await decode(record);
+      if (!img) {
+        return { ok: false, problem: name + " isn't a picture this browser can open." };
+      }
+      record.w = img.naturalWidth || img.width;
+      record.h = img.naturalHeight || img.height;
+      records[clean] = record;
+      const saved = await window.Storage.saveImage(record);
+      return { ok: true, id: clean, record: record, saved: saved };
     },
 
     // Everything a level actually references, for export and for the "this
