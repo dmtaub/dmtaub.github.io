@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mountain Campaign Map</title>
+<script>
+// The bundle and map.json load relative to the page, so a folder URL needs its trailing slash (the dev server omits it).
+var pageDirOK=/\/$|\.html$/.test(location.pathname);
+if(!pageDirOK)location.replace(location.pathname+'/'+location.search+location.hash);
+</script>
 <style>
 /* Layout: a quiet title row with menus; below it a tool rail, the map as the page's main object with zoom and scale floating on it, and an inspector column (stacked on a phone). */
 :root{
@@ -27,7 +32,14 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);font-si
 .wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
 h1{font-family:var(--map);font-style:italic;font-weight:400;font-size:20px;margin:0}
-#mname{font:inherit;font-style:italic;border:1px solid transparent;background:none;padding:2px 4px;margin-left:-5px;width:auto;max-width:100%}
+#mname{font:inherit;font-style:italic;border:1px solid transparent;background:none;padding:2px 4px;width:auto;max-width:100%}
+/* Standalone page: menus on the left, the map name centred at 33% of the header (44% at tablet width, its own row on a phone). */
+:root:not(.embed) header{display:grid;grid-template-columns:1fr 33% 1fr;gap:4px 12px}
+:root:not(.embed) header>nav{grid-area:1/1;justify-self:start}
+:root:not(.embed) h1{grid-area:1/2;min-width:0}
+:root:not(.embed) #mname{width:100%;text-align:center}
+@media (max-width:900px){:root:not(.embed) header{grid-template-columns:1fr 44% 1fr}}
+@media (max-width:520px){:root:not(.embed) header{grid-template-columns:minmax(0,1fr)}:root:not(.embed) h1{grid-area:2/1}}
 #mname:hover{border-color:var(--line)}
 [hidden]{display:none!important}
 .embed body{padding:0}
@@ -143,7 +155,9 @@ textarea{font-family:var(--mono);font-size:12px;height:110px;resize:vertical}
           <li><b>Select several</b> Cmd/Ctrl-drag a box, Cmd/Ctrl-click to add or remove</li>
           <li><b>Add a point</b> double-click a line</li>
           <li><b>Delete</b> removes the point if you last clicked a handle, the whole feature if you clicked its line</li>
-          <li><b>Measure</b> Shift-drag; Enter keeps it as a trail, Esc clears it</li>
+          <li><b>Measure</b> Shift-drag; Enter keeps it as the current tool's shape (a trail with Select), Esc clears it</li>
+          <li><b>Change a line's type</b> select it, then click Contour, Trail, River or Area (Esc deselects first if you want to draw instead)</li>
+          <li><b>Closed trail</b> tick Closed in the Selected panel</li>
           <li><b>Add a place on a line end</b> right-click the end of a trail or river</li>
           <li><b>Extend a line</b> Shift-drag from a place pinned to its end</li>
           <li><b>Join rivers</b> end one on another, or drag its last handle onto it</li>
@@ -224,6 +238,9 @@ textarea{font-family:var(--mono);font-size:12px;height:110px;resize:vertical}
 </div>
 
 
-<script src="./campaign-map.min.js"></script>
+<script>
+// Added from script rather than as a plain tag so the browser doesn't fetch it from the wrong folder before the redirect.
+if(pageDirOK){var s=document.createElement('script');s.src='campaign-map.min.js';document.body.appendChild(s)}
+</script>
 </body>
 </html>
