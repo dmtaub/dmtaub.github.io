@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mountain Campaign Map</title>
+<style>
+/* Layout: a quiet title row with menus; below it a tool rail, the map as the page's main object with zoom and scale floating on it, and an inspector column (stacked on a phone). */
+:root{
+  --bg:#eef0ea; --panel:#f8f9f5; --fg:#22281f; --muted:#667060; --line:#cdd3c6;
+  --accent:#8a4b1f; --accent-fg:#fff; --danger:#a3321f;
+  --ui:"Avenir Next","Segoe UI",system-ui,sans-serif; --map:Georgia,"Iowan Old Style","Times New Roman",serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#171a15; --panel:#20241d; --fg:#e4e8dc; --muted:#98a28f; --line:#3a4035;
+  --accent:#d99a63; --accent-fg:#1b1408; --danger:#e07a63; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#171a15; --panel:#20241d; --fg:#e4e8dc; --muted:#98a28f; --line:#3a4035;
+  --accent:#d99a63; --accent-fg:#1b1408; --danger:#e07a63; color-scheme:dark}
+/* Embedded in dmtaub.com (hash token "embed"): the site's palette, and menus styled as its inner tab strip. */
+:root.embed{--bg:#F4F0F4;--panel:#ffffff;--fg:#333333;--muted:#666666;--line:rgba(0,0,0,.1);--accent:#8A7B9F;--accent-fg:#fff;--danger:#a3321f;--ui:Arial,sans-serif}
+@media (prefers-color-scheme: dark){:root.embed:not([data-theme="light"]){--bg:#100f1a;--panel:#1c1b2a;--fg:#e8e4f0;--muted:#9b96ae;--line:rgba(155,139,187,.2);--accent:#9b8bbb;--accent-fg:#fff;--danger:#e07a63;color-scheme:dark}}
+:root.embed[data-theme="dark"]{--bg:#100f1a;--panel:#1c1b2a;--fg:#e8e4f0;--muted:#9b96ae;--line:rgba(155,139,187,.2);--accent:#9b8bbb;--accent-fg:#fff;--danger:#e07a63;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-block:14px 28px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
+h1{font-family:var(--map);font-style:italic;font-weight:400;font-size:20px;margin:0}
+#mname{font:inherit;font-style:italic;border:1px solid transparent;background:none;padding:2px 4px;margin-left:-5px;width:auto;max-width:100%}
+#mname:hover{border-color:var(--line)}
+[hidden]{display:none!important}
+.embed body{padding:0}
+.embed .wrap{max-width:none}
+.embed header{border-bottom:1px solid var(--line);gap:0 12px}
+.embed h1{order:2;margin-left:auto;font-size:15px}
+.embed .menus{gap:0}
+.embed .menu>summary{border-radius:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:.35rem .8rem;font-size:.85rem;color:var(--muted)}
+.embed .menu>summary:hover{background:none;color:var(--fg)}
+.embed .menu[open]>summary{background:none;color:var(--accent);border-bottom-color:var(--accent)}
+.embed button{border-radius:6px}
+.bar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.grp>span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.warn{color:var(--danger)}
+.main{display:grid;grid-template-columns:auto minmax(0,1fr) 260px;gap:12px;align-items:start}
+.rail{display:flex;flex-direction:column;gap:4px}
+.rail button{text-align:left;white-space:nowrap}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}.rail{flex-direction:row;flex-wrap:wrap}}
+.menus{display:flex;gap:2px}
+.menu{position:relative}
+.menu>summary{list-style:none;cursor:pointer;padding:5px 10px;border-radius:4px;user-select:none;-webkit-user-select:none}
+.menu>summary::-webkit-details-marker{display:none}
+.menu>summary:hover,.menu[open]>summary{background:var(--panel)}
+.menu>summary:focus-visible{outline:2px solid var(--accent)}
+.pop{position:absolute;top:calc(100% + 2px);left:0;z-index:20;min-width:220px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px;display:flex;flex-direction:column;box-shadow:0 3px 10px rgba(0,0,0,.22)}
+.pop button{border:0;background:none;text-align:left;width:100%}
+.pop button:hover{background:var(--accent);color:var(--accent-fg)}
+.pop label{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:5px 10px;white-space:nowrap}
+.pop label:has(input[type=checkbox]){justify-content:flex-start}
+.pop hr{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
+.pop.help{width:340px}
+@media (max-width:520px){.pop.help{left:-150px}#scalep label{display:none}}
+.pop.help ul{list-style:none;margin:0;padding:6px 10px;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.pop.help b{color:var(--fg);font-weight:600;margin-right:4px}
+.mapbox{position:relative}
+.float{position:absolute;z-index:4;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 6px;display:flex;gap:6px;align-items:center;font-size:12.5px}
+#zoomp{right:8px;bottom:8px}
+#zoomp button{padding:2px 9px}
+#zlabel{min-width:42px;text-align:center;font-variant-numeric:tabular-nums}
+#scalep{left:8px;bottom:8px;gap:10px}
+#sbar{height:6px;border:1.5px solid var(--fg);border-top:0;min-width:20px}
+#sbarl{text-align:center;font-variant-numeric:tabular-nums;margin-top:1px}
+#scalep label{display:flex;gap:5px;align-items:center;white-space:nowrap;color:var(--muted)}
+#scalep input{width:52px;padding:1px 4px}
+.status{display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between;padding:6px 10px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;min-height:30px}
+.sheet{border:1px solid var(--line);background:var(--panel);min-width:0}
+#map{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+#map .lod{visibility:hidden}
+#map g[data-id]:hover>.lod{visibility:visible}
+#chk.bad{color:var(--danger);font-weight:600}
+#chklist{list-style:none;margin:6px 0;padding:0;max-height:150px;overflow:auto}
+#chklist li{padding:3px 0 3px 10px;border-left:3px solid var(--danger);margin-bottom:4px;cursor:pointer;font-size:12.5px}
+#chklist li:hover{text-decoration:underline}
+.sheet{position:relative}
+#ctx{position:absolute;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column;padding:4px;min-width:150px;box-shadow:0 3px 10px rgba(0,0,0,.22)}
+#ctx b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 8px}
+#ctx button{border:0;text-align:left;background:none}
+#ctx button:hover{background:var(--accent);color:var(--accent-fg)}
+#hint{min-width:0}
+aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+section h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 6px}
+.form{display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px 8px;align-items:center}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 6px;width:100%;min-width:0}
+input[type=checkbox]{width:auto;justify-self:start}
+textarea{font-family:var(--mono);font-size:12px;height:110px;resize:vertical}
+#list{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;border:1px solid var(--line)}
+#list li{display:flex;gap:8px;padding:4px 8px;cursor:pointer;border-bottom:1px solid var(--line)}
+#list li:last-child{border-bottom:0}
+#list li[aria-selected="true"]{background:var(--accent);color:var(--accent-fg)}
+#list small{margin-left:auto;opacity:.7;font-variant-numeric:tabular-nums;white-space:nowrap}
+#list span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+#msg{color:var(--fg);text-align:right}
+#pngout img{border:1px solid var(--line);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><input id="mname" aria-label="Map name" spellcheck="false"></h1>
+    <nav class="menus" aria-label="Menus">
+      <details class="menu"><summary>File</summary><div class="pop">
+        <button id="xjson">Export JSON</button>
+        <button id="xpng">Export PNG image</button>
+        <button id="xsvg">Export SVG image</button>
+        <button id="xsel" aria-pressed="false" hidden>Selected only</button>
+        <hr>
+        <button id="jtoggle">Load or paste JSON…</button>
+        <hr>
+        <button id="reset" class="warn">Reset to empty map</button>
+        <button id="example" class="warn">Reset to example</button>
+      </div></details>
+      <details class="menu"><summary>Edit</summary><div class="pop">
+        <button id="undo">Undo</button>
+        <button id="del" class="warn">Delete selected</button>
+        <hr>
+        <label for="xfid" class="keep">Freehand fidelity <select id="xfid" style="width:auto"><option value="loose">Loose</option><option value="medium">Medium</option><option value="fine">Fine</option><option value="exact">Exact</option></select></label>
+      </div></details>
+      <details class="menu"><summary>View</summary><div class="pop">
+        <label for="xdetail" class="keep"><input type="checkbox" id="xdetail" checked> Extra detail when zoomed in</label>
+        <button id="ltoggle" aria-expanded="false">Show feature list</button>
+      </div></details>
+      <details class="menu"><summary>Help</summary><div class="pop help">
+        <ul>
+          <li><b>Pan</b> drag empty space, or right-drag anywhere</li>
+          <li><b>Zoom</b> scroll or pinch</li>
+          <li><b>Select</b> click a feature; drag it or its handles</li>
+          <li><b>Select several</b> Cmd/Ctrl-drag a box, Cmd/Ctrl-click to add or remove</li>
+          <li><b>Add a point</b> double-click a line</li>
+          <li><b>Delete</b> removes the point if you last clicked a handle, the whole feature if you clicked its line</li>
+          <li><b>Measure</b> Shift-drag; Enter keeps it as a trail, Esc clears it</li>
+          <li><b>Add a place on a line end</b> right-click the end of a trail or river</li>
+          <li><b>Extend a line</b> Shift-drag from a place pinned to its end</li>
+          <li><b>Join rivers</b> end one on another, or drag its last handle onto it</li>
+          <li><b>Hidden features</b> small ones hide as you zoom out; hover to reveal</li>
+          <li><b>Undo</b> Cmd/Ctrl-Z</li>
+        </ul>
+      </div></details>
+    </nav>
+  </header>
+
+  <div class="main">
+    <div class="rail" id="tools" role="toolbar" aria-label="Tools">
+      <button data-tool="select" aria-pressed="true">Select</button>
+      <button data-tool="box">Box select</button>
+      <button data-tool="contour">Contour</button>
+      <button data-tool="path">Trail</button>
+      <button data-tool="river">River</button>
+      <button data-tool="area">Area</button>
+      <button data-tool="point">Place</button>
+      <button data-tool="label">Label</button>
+      <button id="finish" hidden>Finish shape</button>
+    </div>
+    <div class="sheet">
+      <div class="mapbox">
+        <svg id="map" viewBox="0 0 1000 760" style="aspect-ratio:1000/760" role="img" aria-label="Topographic map of the mountain range"></svg>
+        <div id="ctx" hidden><b>Add at this end</b><button data-kind="town">Village</button><button data-kind="peak">Peak</button><button data-kind="cave">Cave entrance</button><button data-kind="shrine">Shrine</button><button data-kind="site">Site</button></div>
+        <div class="float" id="scalep">
+          <div><div id="sbar"></div><div id="sbarl"></div></div>
+          <label for="xscale"><input id="xscale" type="number" min="0.1" step="0.5" aria-label="Miles per 100 map units"> mi per 100</label>
+        </div>
+        <div class="float" id="zoomp">
+          <button id="zout" aria-label="Zoom out">−</button>
+          <span id="zlabel"></span>
+          <button id="zin" aria-label="Zoom in">+</button>
+          <button id="zfit">Fit</button>
+        </div>
+      </div>
+      <div class="status"><div id="hint"></div><div id="msg"></div></div>
+    </div>
+    <aside>
+      <section id="csec" hidden>
+        <h2>Contour check</h2>
+        <div id="chk"></div>
+        <ul id="chklist"></ul>
+        <button id="fix" hidden>Auto-fix contours</button>
+      </section>
+      <section>
+        <h2>Selected</h2>
+        <div class="form" id="props"></div>
+      </section>
+      <section id="lsec" hidden>
+        <h2>Features</h2>
+        <div id="lbox">
+          <div class="row" style="margin-bottom:6px;align-items:center">
+            <select id="ltype" aria-label="Feature type" style="flex:1 1 120px">
+              <option value="">All types</option><option value="point">Places</option><option value="label">Labels</option><option value="contour">Contours</option><option value="path">Trails</option><option value="river">Rivers</option><option value="area">Areas</option>
+            </select>
+            <label for="lall" style="display:flex;gap:6px;align-items:center;white-space:nowrap"><input type="checkbox" id="lall"> Entire map</label>
+          </div>
+          <div id="lcount" style="color:var(--muted);font-size:12.5px;margin-bottom:4px"></div>
+          <ul id="list"></ul>
+        </div>
+      </section>
+      <section id="jsec" hidden>
+        <h2>Load or paste JSON</h2>
+        <textarea id="jsonbox" spellcheck="false" placeholder="Paste map JSON here, then Load"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button id="load">Load from box</button>
+          <button id="merge">Merge into map</button>
+          <button id="show">Show current</button>
+          <button id="copy">Copy</button>
+          <input type="file" id="file" accept=".json,application/json" style="flex:1 1 140px">
+        </div>
+        <div id="pngout"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+
+<script src="./campaign-map.min.js"></script>
+</body>
+</html>
