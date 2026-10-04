@@ -271,6 +271,33 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   if (btn) btn.click();
 })();
 
+// ─── MAP ─────────────────────────────────────────────────────────────────────
+// Campaign map (games/campaign-map/, built elsewhere) in an iframe. Built on first
+// show, not at load: the map measures itself on startup and gets zero size in a
+// display:none panel. Theme follows via the hash, which the map applies live.
+(function mapTab() {
+  const holder = document.getElementById('map-frame');
+  const opts = () => (document.body.classList.contains('dark') ? 'dark' : 'light') + '.embed';
+  let frame = null;
+  function ensureMap() {
+    if (frame) return;
+    frame = document.createElement('iframe');
+    frame.src = '../../games/campaign-map/#' + opts();
+    frame.title = 'Campaign map';
+    holder.appendChild(frame);
+  }
+  document.querySelector('.tab-btn[data-tab="map"]').addEventListener('click', ensureMap);
+  // restoreTab above already clicked Map before this listener existed.
+  if (document.getElementById('tab-map').classList.contains('active')) ensureMap();
+  document.addEventListener('themechange', () => {
+    // replace(), not hash assignment: same live hashchange, but no extra Back-button entry per toggle.
+    // Absolute URL: a bare '#…' would resolve against this page and navigate the frame away.
+    if (!frame) return;
+    const loc = frame.contentWindow.location;
+    loc.replace(loc.href.split('#')[0] + '#' + opts());
+  });
+})();
+
 // ─── INNER TABS (Rolls panel) ────────────────────────────────────────────────
 document.querySelectorAll('.inner-tabs').forEach(group => {
   const btns   = group.querySelectorAll('.inner-tab-btn');
