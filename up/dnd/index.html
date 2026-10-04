@@ -88,6 +88,15 @@
         .roll-result-text { font-size:0.9rem; color:var(--text); font-style:italic; }
         .roll-section-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:0.3rem; margin:0.25rem 0 0.6rem; }
         .roll-section-label + * { margin-top:0; }
+        .roll-section-group + .roll-section-group { margin-top:1.5rem; }
+        .quick-npc { background:var(--surface); border:1px solid var(--accent-soft); border-radius:8px; padding:0.7rem 1rem; margin-bottom:1.5rem; }
+        .quick-npc-head { display:flex; justify-content:space-between; align-items:center; gap:0.75rem; }
+        .quick-npc-head h3 { margin:0; font-size:0.95rem; color:var(--text); }
+        #quickNpcCard { margin-top:0.5rem; }
+        .quick-npc-empty { font-size:0.82rem; color:var(--text-muted); }
+        .quick-npc-row { display:grid; grid-template-columns:4.5rem 1fr; gap:0.5rem; padding:0.28rem 0.35rem; border-radius:4px; cursor:pointer; font-size:0.88rem; color:var(--text); }
+        .quick-npc-row:hover { background:var(--bg); }
+        .quick-npc-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); padding-top:0.18rem; }
         #prTooltip { position:fixed; z-index:999; max-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; font-size:0.82rem; color:var(--text-muted); box-shadow:0 4px 12px var(--shadow); pointer-events:none; display:none; line-height:1.45; }
         #prTooltip.visible { display:block; }
 
@@ -548,40 +557,31 @@
     <!-- ══ ROLLS ═══════════════════════════════════════════════════════════ -->
     <div id="tab-rolls" class="tab-panel">
         <div class="inner-tabs">
-            <button class="inner-tab-btn active" data-inner-tab="social">Social</button>
-            <button class="inner-tab-btn" data-inner-tab="encounters">Encounters</button>
-            <button class="inner-tab-btn" data-inner-tab="environment">Environment</button>
+            <button class="inner-tab-btn active" data-inner-tab="people">People</button>
+            <button class="inner-tab-btn" data-inner-tab="town">Town</button>
+            <button class="inner-tab-btn" data-inner-tab="wilds">Wilds</button>
+            <button class="inner-tab-btn" data-inner-tab="dungeon">Dungeon</button>
+            <button class="inner-tab-btn" data-inner-tab="combat">Combat</button>
+            <button class="inner-tab-btn" data-inner-tab="intrigue">Intrigue</button>
+            <button class="inner-tab-btn" data-inner-tab="other" style="display:none">Other</button>
         </div>
 
-        <div id="inner-tab-social" class="inner-tab-panel active">
-            <div class="roll-section-label">One</div>
-            <div id="rollTablesNpcsContainer"></div>
-            <div id="playerRollsNpcsContainer"></div>
-            <div id="narrativeNpcsContainer"></div>
-            <div class="roll-section-label" style="margin-top:1.5rem">Many</div>
-            <div id="rollTablesInvitingContainer"></div>
-            <div id="playerRollsInvitingContainer"></div>
-            <div id="narrativeInvitingContainer"></div>
+        <!-- Sections inside each panel are generated from ROLL_SECTIONS in 5e.js -->
+        <div id="inner-tab-people" class="inner-tab-panel active">
+            <div class="quick-npc">
+                <div class="quick-npc-head">
+                    <h3>Quick NPC</h3>
+                    <button class="btn-roll" id="btnQuickNpc">Generate NPC</button>
+                </div>
+                <div id="quickNpcCard"></div>
+            </div>
         </div>
-
-        <div id="inner-tab-encounters" class="inner-tab-panel">
-            <div class="roll-section-label">Setup</div>
-            <div id="rollTablesEncSetupContainer"></div>
-            <div id="playerRollsEncSetupContainer"></div>
-            <div class="roll-section-label" style="margin-top:1.5rem">Active</div>
-            <div id="rollTablesEncActiveContainer"></div>
-            <div id="playerRollsEncActiveContainer"></div>
-            <div id="narrativeEncActiveContainer"></div>
-            <div class="roll-section-label" style="margin-top:1.5rem">After</div>
-            <div id="rollTablesEncAfterContainer"></div>
-            <div id="playerRollsEncAfterContainer"></div>
-        </div>
-
-        <div id="inner-tab-environment" class="inner-tab-panel">
-            <div id="rollTablesEnvironmentContainer"></div>
-            <div id="playerRollsEnvironmentContainer"></div>
-            <div id="narrativeEnvironmentContainer"></div>
-        </div>
+        <div id="inner-tab-town" class="inner-tab-panel"></div>
+        <div id="inner-tab-wilds" class="inner-tab-panel"></div>
+        <div id="inner-tab-dungeon" class="inner-tab-panel"></div>
+        <div id="inner-tab-combat" class="inner-tab-panel"></div>
+        <div id="inner-tab-intrigue" class="inner-tab-panel"></div>
+        <div id="inner-tab-other" class="inner-tab-panel"></div>
     </div>
 
     <!-- ══ ROSTER ═══════════════════════════════════════════════════════════ -->
