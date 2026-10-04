@@ -19,8 +19,11 @@
     margin-bottom: 1.5rem;
 }
 
-/* Shared pill styling for the back link + theme toggle */
-.back-link, .theme-toggle {
+/* Right-hand group when the topbar has more than the theme toggle */
+.topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+/* Shared pill styling for the back link + theme/fullscreen toggles */
+.back-link, .theme-toggle, .fullscreen-toggle {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--title-btn-radius);
@@ -32,8 +35,9 @@
     transition: color 0.2s, border-color 0.2s;
 }
 .back-link  { color: var(--accent); text-decoration: none; }
-.theme-toggle { color: var(--text); }
-.back-link:hover, .theme-toggle:hover { border-color: var(--accent); }
+.theme-toggle, .fullscreen-toggle { color: var(--text); }
+.fullscreen-toggle { display: inline-flex; align-items: center; align-self: stretch; }
+.back-link:hover, .theme-toggle:hover, .fullscreen-toggle:hover { border-color: var(--accent); }
 .back-link:hover { color: var(--text); }
 
 /* ── Page heading ── */
