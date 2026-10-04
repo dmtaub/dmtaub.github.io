@@ -9,7 +9,8 @@
               main site's nav-pill style; the span is hidden on mobile)
 
    <fullscreen-toggle>
-     Enters/exits browser fullscreen for the whole page (Esc also exits).
+     Enters/exits browser fullscreen for the whole page (Esc also exits), and
+     sets html.is-fullscreen meanwhile; util.css uses it to collapse <page-topbar>.
      Hides itself where the Fullscreen API is unavailable (e.g. iPhone Safari).
 
    <page-topbar back="href" back-label="text" title="text" subtitle="text" fullscreen status-banner>
@@ -97,6 +98,7 @@ if (!customElements.get('fullscreen-toggle')) {
         }
         _sync() {
             const on = active();
+            el.classList.toggle('is-fullscreen', on);
             this.innerHTML = on ? ICON_EXIT : ICON_ENTER;
             this.title = on ? 'Exit fullscreen (Esc)' : 'Fullscreen';
             this.setAttribute('aria-label', this.title);

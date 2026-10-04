@@ -472,6 +472,10 @@
         #map-frame iframe { display:block; width:100%; border:0; background:var(--bg); min-height:360px;
             height:calc(100vh - 225px); height:calc(100dvh - 225px); }
         @media (max-width:560px) { #map-frame iframe { height:calc(100vh - 280px); height:calc(100dvh - 280px); } }
+        /* Fullscreen hides the heading (util.css): 84px, then one more tab row per step down. */
+        .is-fullscreen #map-frame iframe { height:calc(100vh - 84px); height:calc(100dvh - 84px); }
+        @media (max-width:649px) { .is-fullscreen #map-frame iframe { height:calc(100vh - 121px); height:calc(100dvh - 121px); } }
+        @media (max-width:414px) { .is-fullscreen #map-frame iframe { height:calc(100vh - 158px); height:calc(100dvh - 158px); } }
     </style>
 </head>
 <body class="dark"><script>if(localStorage.getItem('theme')==='light')document.body.classList.remove('dark');</script>

@@ -40,6 +40,17 @@
 .back-link:hover, .theme-toggle:hover, .fullscreen-toggle:hover { border-color: var(--accent); }
 .back-link:hover { color: var(--text); }
 
+/* Fullscreen: drop the back link and heading. The toggles stay reachable (to exit) in the
+   top-right corner, beside whatever follows the topbar (a tab row, say), which keeps
+   room for them with padding so its own borders still run full width. */
+.is-fullscreen .page-wrap { padding-top: 1rem; position: relative; }
+.is-fullscreen page-topbar .back-link,
+.is-fullscreen page-topbar .page-title,
+.is-fullscreen page-topbar .page-subtitle { display: none; }
+.is-fullscreen page-topbar .topbar { position: absolute; top: 1rem; right: 1.25rem; margin: 0; }
+.is-fullscreen page-topbar .status-banner { margin-right: 6.5rem; }
+.is-fullscreen page-topbar + * { padding-right: 6.5rem; }
+
 /* ── Page heading ── */
 h1.page-title { font-size: 1.7rem; margin: 0 0 0.2rem; color: var(--text); }
 .page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.25rem; }
