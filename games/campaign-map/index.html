@@ -139,6 +139,7 @@ textarea{font-family:var(--mono);font-size:12px;height:110px;resize:vertical}
       </div></details>
       <details class="menu"><summary>Edit</summary><div class="pop">
         <button id="undo">Undo</button>
+        <button id="redo">Redo</button>
         <button id="del" class="warn">Delete selected</button>
         <hr>
         <label for="xfid" class="keep">Freehand fidelity <select id="xfid" style="width:auto"><option value="loose">Loose</option><option value="medium">Medium</option><option value="fine">Fine</option><option value="exact">Exact</option></select></label>
@@ -162,7 +163,7 @@ textarea{font-family:var(--mono);font-size:12px;height:110px;resize:vertical}
           <li><b>Extend a line</b> Shift-drag from a place pinned to its end</li>
           <li><b>Join rivers</b> end one on another, or drag its last handle onto it</li>
           <li><b>Hidden features</b> small ones hide as you zoom out; hover to reveal</li>
-          <li><b>Undo</b> Cmd/Ctrl-Z</li>
+          <li><b>Undo</b> Cmd/Ctrl-Z; <b>Redo</b> Cmd/Ctrl-Shift-Z or Ctrl-Y</li>
         </ul>
       </div></details>
     </nav>
